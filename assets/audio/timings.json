@@ -1,0 +1,2685 @@
+{
+  "schemaVersion": 1,
+  "timeUnit": "milliseconds",
+  "tracks": {
+    "h1": {
+      "sourceFile": "1. A MI SALVADOR.mp3",
+      "title": "A MI SALVADOR",
+      "sha256": "91655bd5725d27a1fe137a0dbc230767765467dbf268cd0ac10c82bc7fa0bb73",
+      "bytes": 3823783,
+      "timingStatus": "needs_review",
+      "cues": [
+        {
+          "startMs": 22720,
+          "endMs": 28820,
+          "sectionIndex": 0,
+          "lineIndex": 0
+        },
+        {
+          "startMs": 29440,
+          "endMs": 30100,
+          "sectionIndex": 0,
+          "lineIndex": 1
+        },
+        {
+          "startMs": 30100,
+          "endMs": 37480,
+          "sectionIndex": 0,
+          "lineIndex": 1
+        },
+        {
+          "startMs": 37540,
+          "endMs": 45080,
+          "sectionIndex": 0,
+          "lineIndex": 2
+        },
+        {
+          "startMs": 45680,
+          "endMs": 50980,
+          "sectionIndex": 0,
+          "lineIndex": 3
+        },
+        {
+          "startMs": 51760,
+          "endMs": 60580,
+          "sectionIndex": 1,
+          "lineIndex": 0
+        },
+        {
+          "startMs": 61820,
+          "endMs": 66880,
+          "sectionIndex": 1,
+          "lineIndex": 1
+        },
+        {
+          "startMs": 68100,
+          "endMs": 75640,
+          "sectionIndex": 1,
+          "lineIndex": 2
+        },
+        {
+          "startMs": 75640,
+          "endMs": 85340,
+          "sectionIndex": 1,
+          "lineIndex": 3
+        },
+        {
+          "startMs": 88060,
+          "endMs": 95140,
+          "sectionIndex": 2,
+          "lineIndex": 0
+        },
+        {
+          "startMs": 95600,
+          "endMs": 101600,
+          "sectionIndex": 2,
+          "lineIndex": 1
+        },
+        {
+          "startMs": 105880,
+          "endMs": 108120,
+          "sectionIndex": 2,
+          "lineIndex": 2
+        },
+        {
+          "startMs": 108120,
+          "endMs": 117220,
+          "sectionIndex": 2,
+          "lineIndex": 3
+        },
+        {
+          "startMs": 117220,
+          "endMs": 126560,
+          "sectionIndex": 1,
+          "lineIndex": 0
+        },
+        {
+          "startMs": 126560,
+          "endMs": 133100,
+          "sectionIndex": 1,
+          "lineIndex": 1
+        },
+        {
+          "startMs": 133880,
+          "endMs": 141600,
+          "sectionIndex": 1,
+          "lineIndex": 2
+        },
+        {
+          "startMs": 143260,
+          "endMs": 151080,
+          "sectionIndex": 1,
+          "lineIndex": 3
+        },
+        {
+          "startMs": 153860,
+          "endMs": 166480,
+          "sectionIndex": 3,
+          "lineIndex": 1
+        },
+        {
+          "startMs": 166480,
+          "endMs": 177480,
+          "sectionIndex": 3,
+          "lineIndex": 2
+        },
+        {
+          "startMs": 177520,
+          "endMs": 184260,
+          "sectionIndex": 3,
+          "lineIndex": 3
+        },
+        {
+          "startMs": 184260,
+          "endMs": 192600,
+          "sectionIndex": 1,
+          "lineIndex": 0
+        },
+        {
+          "startMs": 193800,
+          "endMs": 199160,
+          "sectionIndex": 1,
+          "lineIndex": 1
+        },
+        {
+          "startMs": 199860,
+          "endMs": 207960,
+          "sectionIndex": 1,
+          "lineIndex": 2
+        },
+        {
+          "startMs": 207960,
+          "endMs": 217780,
+          "sectionIndex": 1,
+          "lineIndex": 3
+        },
+        {
+          "startMs": 237740,
+          "endMs": 239256,
+          "sectionIndex": 1,
+          "lineIndex": 0
+        }
+      ]
+    },
+    "h10": {
+      "sourceFile": "10. CANTAD A DIOS.mp3",
+      "title": "CANTAD A DIOS",
+      "sha256": "8536f6585339af9b0226ba92736074b808e6199df59914bd5501e472deab7ccc",
+      "bytes": 633000,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h100": {
+      "sourceFile": "100. LA CENA DEL SEÑOR, LA CENA ESPIRITUAL.mp3",
+      "title": "LA CENA DEL SEÑOR, LA CENA ESPIRITUAL",
+      "sha256": "2bfb5c211d4be4ecfd2d00597a72775f78c1a4b59610721254df0924f253c604",
+      "bytes": 4441360,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h101": {
+      "sourceFile": "101. LÁVAME, LÍMPIAME.mp3",
+      "title": "LÁVAME, LÍMPIAME",
+      "sha256": "bd66ca4783b6bd4c521b5051a2cbb223aa1131d9926c0d1082c0ea51bb5e959e",
+      "bytes": 1503048,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h102": {
+      "sourceFile": "102. LO QUE TÚ HAS DE UNIR.mp3",
+      "title": "LO QUE TÚ HAS DE UNIR",
+      "sha256": "d1b5e81c024ca25ab8030f087588e56ad1bbdca0900b331a907bb5ac7d67e8a5",
+      "bytes": 4606816,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h103": {
+      "sourceFile": "103. MATRIMONIO HONROSO.mp3",
+      "title": "MATRIMONIO HONROSO",
+      "sha256": "7e37e339ec4eed6e2ada56295cf6e670f5903dce21d8c9293c61d9189840fda0",
+      "bytes": 3687222,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h104": {
+      "sourceFile": "104. MI PETICIÓN.mp3",
+      "title": "MI PETICIÓN",
+      "sha256": "fe01f5ec9ed48d08c47dcd7d694d04c87aa269e94f4c9fe844a2b3b9c6f6bd48",
+      "bytes": 3084442,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h105": {
+      "sourceFile": "105. OBRA DE TUS MANOS.mp3",
+      "title": "OBRA DE TUS MANOS",
+      "sha256": "c24d1c81a0ac75d9dfe286e7dcd9a80d975f25ae0aaee96839f16c2fe77ea000",
+      "bytes": 3179935,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h106": {
+      "sourceFile": "106. PIENSA BIEN.mp3",
+      "title": "PIENSA BIEN",
+      "sha256": "0b0fd31deb6ec39af77fa64be30336d022f6c5618daea5bb13c4b4ebc45be3f1",
+      "bytes": 4373944,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h107": {
+      "sourceFile": "107. TE PEDIMOS.mp3",
+      "title": "TE PEDIMOS",
+      "sha256": "733b09c7a85dbf690d9458c953beb478e0ed00c413a730ef2592210aea53e8bc",
+      "bytes": 3307120,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h108": {
+      "sourceFile": "108. TU SACRIFICIO.mp3",
+      "title": "TU SACRIFICIO",
+      "sha256": "4213474e44774cc5351b32f8661bffe6e97896b8c538240c2d8162bffec1dd53",
+      "bytes": 3387601,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h109": {
+      "sourceFile": "109. UN HOGAR EN EL SEÑOR.mp3",
+      "title": "UN HOGAR EN EL SEÑOR",
+      "sha256": "e1abbd5d173353d4f450cde34f885bfb89b335d0a0373cf3b2c58d666f7874a6",
+      "bytes": 4672546,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h11": {
+      "sourceFile": "11. CANTARÉ A MI DIOS.mp3",
+      "title": "CANTARÉ A MI DIOS",
+      "sha256": "2866b9a447b1305c55cf514c44b2da46c2b886972711f8d758cba891c8173d1b",
+      "bytes": 4989430,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h110": {
+      "sourceFile": "110. UN PACTO CON DIOS.mp3",
+      "title": "UN PACTO CON DIOS",
+      "sha256": "70b486392a6ec66ae8a6ae64bb4831863e9ce3fcc75afe96ae9941b9737ea918",
+      "bytes": 1957205,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h111": {
+      "sourceFile": "111. UN VÍNCULO PERFECTO.mp3",
+      "title": "UN VÍNCULO PERFECTO",
+      "sha256": "82884f4a6f194024201835eac490975193049af1a9ac8d451aafd8e3230655c5",
+      "bytes": 4106092,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h112": {
+      "sourceFile": "112. UNO, SON.mp3",
+      "title": "UNO, SON",
+      "sha256": "e2c32c1defc9a9f89d91bee68deba27819fed8de14f7c4b85ad09221802c6d9d",
+      "bytes": 4931710,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h113": {
+      "sourceFile": "113. VENGAMOS A ÉL COMO NIÑOS.mp3",
+      "title": "VENGAMOS A ÉL COMO NIÑOS",
+      "sha256": "601c7613883303d5972caaaffb65b04cea66ac2ef60f9daf68792952814c3e38",
+      "bytes": 3221478,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h114": {
+      "sourceFile": "114. Y TODAS LAS VECES.mp3",
+      "title": "Y TODAS LAS VECES",
+      "sha256": "5c59c7b1c6b70c9576deae9e6f2536fb45fde8108d2627f5e0a728caea4ed62f",
+      "bytes": 6138390,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h115": {
+      "sourceFile": "115. ACEPTA A TU SEÑOR.mp3",
+      "title": "ACEPTA A TU SEÑOR",
+      "sha256": "c1d8df250683a633a5c4757efba4db8c46f693d34fc5c53d0f3d730da1bac4d9",
+      "bytes": 983352,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h116": {
+      "sourceFile": "116. ACUÉRDATE DE ÉL.mp3",
+      "title": "ACUÉRDATE DE ÉL",
+      "sha256": "d5e8ca3eff3a744dc118f4fa37a42408d70f3bef27dad51357c28a402cb1dd37",
+      "bytes": 1055280,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h117": {
+      "sourceFile": "117. CONFÍA EN ÉL.mp3",
+      "title": "CONFÍA EN ÉL",
+      "sha256": "5a7f9cfad02753f8adbe4441e8c7d5bc30b0bf42e2e0fa39095e237b7499fa87",
+      "bytes": 2286304,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h118": {
+      "sourceFile": "118. DAME HIJO MÍO TÚ CORAZÓN.mp3",
+      "title": "DAME HIJO MÍO TÚ CORAZÓN",
+      "sha256": "d403b55ff50db48937e94c6ed01c87342135252b655ab8b9f994b9b77f2cde58",
+      "bytes": 977952,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h119": {
+      "sourceFile": "119. EL LLAMADO.mp3",
+      "title": "EL LLAMADO",
+      "sha256": "d1e1aa5157512a8d8ccbfe86e4ff021946fe14a7edb1aaeff8b2729ce46a7226",
+      "bytes": 3285853,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h12": {
+      "sourceFile": "12. CANTO CON GOZO.mp3",
+      "title": "CANTO CON GOZO",
+      "sha256": "dc1a50b6aadae1e06c3037fc11d6dc42b8ad9fbfcb3e7b399cda7628a2a0855e",
+      "bytes": 4504295,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h120": {
+      "sourceFile": "120. EL PREGÓN DE SALVACIÓN.mp3",
+      "title": "EL PREGÓN DE SALVACIÓN",
+      "sha256": "408f87a65e34f77867f5f752599407e2a460ba3ba32625ffd98e5aad1b32c485",
+      "bytes": 1415136,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h121": {
+      "sourceFile": "121. ES TIEMPO DE BUSCAR A DIOS.mp3",
+      "title": "ES TIEMPO DE BUSCAR A DIOS",
+      "sha256": "80639c5c4e5eb449b78d5c05480cdd816e913b651eb0e5c5fe76336a6fcfad58",
+      "bytes": 640992,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h122": {
+      "sourceFile": "122. GRACIAS SEÑOR.mp3",
+      "title": "GRACIAS SEÑOR",
+      "sha256": "0e86eec60df5c9c85816dc1197663f9c0fac3dbd3bc60581592ad0115adf9ae8",
+      "bytes": 2622823,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h123": {
+      "sourceFile": "123. ¿HAS PENSADO.mp3",
+      "title": "¿HAS PENSADO …?",
+      "sha256": "834e7f420760543c00de4aadc1b0af820ee7c92f13c1c53cc8122f333a9bc1a4",
+      "bytes": 6088558,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h124": {
+      "sourceFile": "124. HEME AQUÍ.mp3",
+      "title": "HEME AQUÍ",
+      "sha256": "05a59a05a04b96e851d05f4d7ff6fc37010112bb4fa0a2162dfdce6f45f9575f",
+      "bytes": 899112,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h125": {
+      "sourceFile": "125. LLAMA CRISTO.mp3",
+      "title": "LLAMA CRISTO",
+      "sha256": "681b181a06d05641de53df09b7b1546596b604f337c9fc89cfad267aa8b747cc",
+      "bytes": 828792,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h126": {
+      "sourceFile": "126. LLAMA HOY.mp3",
+      "title": "LLAMA HOY",
+      "sha256": "de5ac2d6d2285de81a5bc5bdfab3273626d7675f1c428a6b5e9f5bc2afd468ff",
+      "bytes": 6930244,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h127": {
+      "sourceFile": "127. LOS ÚLTIMOS TIEMPOS.mp3",
+      "title": "LOS ÚLTIMOS TIEMPOS",
+      "sha256": "4b03b8c69ff13d5999b8412ba541dd2a768269ab91c39fe398d929642a1b08fa",
+      "bytes": 5041260,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h128": {
+      "sourceFile": "128. POR TI Y POR MI.mp3",
+      "title": "POR TI Y POR MI",
+      "sha256": "a22dca2c5eede3b8b5b74be4367730a14fd7fd849d9602ce1e8c07022d96d73e",
+      "bytes": 4323371,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h129": {
+      "sourceFile": "129. SI TE CONVIRTIERES.mp3",
+      "title": "SI TE CONVIRTIERES",
+      "sha256": "ab9a34a95da39d29b4b621bc7e31d2652d0f6cebfe53a29d422c92a99bf7b2f3",
+      "bytes": 1129032,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h13": {
+      "sourceFile": "13. CLAMARÉ, ALABARÉ, ADORARÉ.mp3",
+      "title": "CLAMARÉ, ALABARÉ, ADORARÉ",
+      "sha256": "097ed01c9310875bbb9e3ab179930d0b438db05b5f5f9a6162e7af1a0da72d0c",
+      "bytes": 1163064,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h130": {
+      "sourceFile": "130. SUFRIÓ POR TI, SUFRIÓ POR MÍ.mp3",
+      "title": "SUFRIÓ POR TI, SUFRIÓ POR MÍ",
+      "sha256": "12c748584a034bcf3566be831abe5fe58fe653e2bd51add9b88c14d09c40f70a",
+      "bytes": 971256,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h131": {
+      "sourceFile": "131. SU GRACIA Y SU PERDÓN.mp3",
+      "title": "SU GRACIA Y SU PERDÓN",
+      "sha256": "340430e7b1a105b830c5750b92111d0a08c14061b233731daab050c317a0c1df",
+      "bytes": 4382385,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h132": {
+      "sourceFile": "132. TOMA TU CRUZ Y SÍGUEME.mp3",
+      "title": "TOMA TU CRUZ Y SÍGUEME",
+      "sha256": "fe1ba79a3d139d21eae2fc2e4fcb8d6af6cb302c52ca7dd8ec52d3412347101b",
+      "bytes": 1084872,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h133": {
+      "sourceFile": "133. TÚ ME LLAMASTE.mp3",
+      "title": "TÚ ME LLAMASTE",
+      "sha256": "28f705252a09ec6583ea2cff7e9a3b0639ed9a688860cff442e04838e8a5b4ee",
+      "bytes": 965640,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h134": {
+      "sourceFile": "134. VEN A ÉL.mp3",
+      "title": "VEN A ÉL",
+      "sha256": "2259a93d3d6ea848feb3452685693b5242c06b169f35deb5c3c348ca33519172",
+      "bytes": 2174548,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h135": {
+      "sourceFile": "135. A TI CLAMO.mp3",
+      "title": "A TI CLAMO",
+      "sha256": "5c851e9e6132fe6ce10b02ee61e8b5b4c50df37b01a9a84671671980cebdb75c",
+      "bytes": 4221230,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h136": {
+      "sourceFile": "136. ANTE TI.mp3",
+      "title": "ANTE TI",
+      "sha256": "2f73bf4a7a85797fa16a7a6e4bc8b45bb46094b666e9cde280742121c785efd9",
+      "bytes": 789816,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h137": {
+      "sourceFile": "137. DIOS MÍO VENGO A TI.mp3",
+      "title": "DIOS MÍO VENGO A TI",
+      "sha256": "d2986f16d458f59615ab108df36da178da4f312fab69dcce09d36af9eeab098f",
+      "bytes": 1109064,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h138": {
+      "sourceFile": "138. DULCES MOMENTOS DISFRUTO.mp3",
+      "title": "DULCES MOMENTOS DISFRUTO",
+      "sha256": "031dbd01a5ec17678c4f7102c25c9f7a54bf4f587be7958609b328ccfe8d1527",
+      "bytes": 5106330,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h139": {
+      "sourceFile": "139. EL MUNDO NO ES PARA MÍ.mp3",
+      "title": "EL MUNDO NO ES PARA MÍ",
+      "sha256": "3cf98ab6a7da69703df43fd1c63b371a88d8cc36dd2f13570347dfdc6bb053fb",
+      "bytes": 2733328,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h14": {
+      "sourceFile": "14. ¿CÓMO PODRÉ DIOS MÍO.mp3",
+      "title": "¿CÓMO PODRÉ DIOS MÍO?",
+      "sha256": "6c1872b653c55cca8a80b81f8eb2d07eb475d788fea7df84f2573b5595e176c2",
+      "bytes": 2917207,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h140": {
+      "sourceFile": "140. FORTALECE MI ESPÍRITU.mp3",
+      "title": "FORTALECE MI ESPÍRITU",
+      "sha256": "a16de6f80afd1dda98c8c509bddfd516070366857103628b38906c7cb9f6100f",
+      "bytes": 3411370,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h141": {
+      "sourceFile": "141. HALLAR GRACIA.mp3",
+      "title": "HALLAR GRACIA",
+      "sha256": "3a74936dab6f0ae268588b59923619923a2c237c1aa75c76e0137ff547d27dd2",
+      "bytes": 1148376,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h142": {
+      "sourceFile": "142. HOY VENGO A TÍ.mp3",
+      "title": "HOY VENGO A TI",
+      "sha256": "47c9d736428201727e0992fcf32f42e2fb096fb1e13dbc83c3112f40518cd009",
+      "bytes": 2789007,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h143": {
+      "sourceFile": "143. HUMILDE VENGO A TÍ.mp3",
+      "title": "HUMILDE VENGO A TI",
+      "sha256": "962fc81ccdbe1cbbe66894a99ae227b226987fde8cb2a2ecbae66978b53925b2",
+      "bytes": 937008,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h144": {
+      "sourceFile": "144. LLEGADA LA ORACIÓN.mp3",
+      "title": "LLEGADA LA ORACIÓN",
+      "sha256": "c9e100d24b2a93de59669b427a5a264d732dc874f52310419cb08e30a27f16df",
+      "bytes": 10113409,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h145": {
+      "sourceFile": "145. MI ALFARERO ERES TÚ.mp3",
+      "title": "MI ALFARERO ERES TÚ",
+      "sha256": "a21edc9fd5aa3b186f7d723c1c6b710c51f9340ae07ce67ea8bbd0c4dc96be01",
+      "bytes": 5140794,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h146": {
+      "sourceFile": "146. NO TARDES MÁS.mp3",
+      "title": "NO TARDES MÁS",
+      "sha256": "c507f97d6a6be09678a98211be26b5681269a1c38f14bd660047c6e0b37563f8",
+      "bytes": 4501263,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h147": {
+      "sourceFile": "147. NUEVO SER.mp3",
+      "title": "NUEVO SER",
+      "sha256": "a5c9a5a52e16a83b4e6103d799098f31144a2734e0d7d5b9547d443f002c89b9",
+      "bytes": 3148243,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h148": {
+      "sourceFile": "148. ¡OH, SEÑOR!.mp3",
+      "title": "¡OH, SEÑOR!",
+      "sha256": "18f35c36194240ce720e753189aee7cf7c6f9d70cc46f85b2288181c89648291",
+      "bytes": 3381070,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h149": {
+      "sourceFile": "149. PADRE, A TI CLAMO.mp3",
+      "title": "PADRE, A TI CLAMO",
+      "sha256": "d9c07c6371a83c951a11891b7cea52e0e92bc2165d23f7f67dd54c2a43a1d2ee",
+      "bytes": 3141135,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h15": {
+      "sourceFile": "15. CRISTO BENDITO, TE ALABARÉ.mp3",
+      "title": "CRISTO BENDITO, TE ALABARÉ",
+      "sha256": "f3642777217798c4092254370400de58222562dfd93d4fdfac32d90bfe7509ae",
+      "bytes": 1044792,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h150": {
+      "sourceFile": "150. PERDÓN TE PIDO.mp3",
+      "title": "PERDÓN TE PIDO",
+      "sha256": "7071bb6698ef5282edb3d4e1ed540d9c9bf219e4b6be4a470ea9d6841b628dc0",
+      "bytes": 899112,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h151": {
+      "sourceFile": "151. PIDIÉNDOTE EN ORACIÓN.mp3",
+      "title": "PIDIÉNDOTE EN ORACIÓN",
+      "sha256": "096f6f7f2b92713af2f7f6686450ae768ed8fe24124cabf8df6e7e9232fa60c9",
+      "bytes": 4986925,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h152": {
+      "sourceFile": "152. POSTRADO ANTE TI.mp3",
+      "title": "POSTRADO ANTE TI",
+      "sha256": "637c0a610f5a15c6c70628de93b4df2152da79937786f2548c355adb57c429d8",
+      "bytes": 960984,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h153": {
+      "sourceFile": "153. POSTRADO DE RODILLAS.mp3",
+      "title": "POSTRADO DE RODILLAS",
+      "sha256": "37a5fa32aac07e8a3b50fbb99c4e082c5b9b1992fcbbd159055535d945380142",
+      "bytes": 7095166,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h154": {
+      "sourceFile": "154. QUIERO IR EN POS DE TI.mp3",
+      "title": "QUIERO IR EN POS DE TI",
+      "sha256": "2a192b496651016cc8e3b6c1f912a2376cb85b93f35e8da5c450162a93557e83",
+      "bytes": 2757082,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h155": {
+      "sourceFile": "155. ROCA DE SALVACIÓN.mp3",
+      "title": "ROCA DE SALVACIÓN",
+      "sha256": "6a5439ec6e5677a0d3cf1d856321eca210e6f5f3561de97d662991fddd0a6c9d",
+      "bytes": 8074476,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h156": {
+      "sourceFile": "156. SE ACERCA EL MOMENTO.mp3",
+      "title": "SE ACERCA EL MOMENTO",
+      "sha256": "d85f781e5c68d3bbbc2adb4b1c0ae1fbc02b69080edc53779e486e278031377f",
+      "bytes": 1246008,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h157": {
+      "sourceFile": "157. SÉ MI COLIRIO.mp3",
+      "title": "SÉ MI COLIRIO",
+      "sha256": "678bb464fe55b16a08672cc297a9cceb4f8a1b2d321b8616a601b32fa85f6361",
+      "bytes": 5461263,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h158": {
+      "sourceFile": "158. TEN GRAN PIEDAD.mp3",
+      "title": "TEN GRAN PIEDAD",
+      "sha256": "45c409a58d0becd5fb8e8ddd21bdfcae46b7c8f5f704e632a5f139a863e95394",
+      "bytes": 5531345,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h159": {
+      "sourceFile": "159. TEN MISERICORDIA DE MÍ.mp3",
+      "title": "TEN MISERICORDIA DE MÍ",
+      "sha256": "0cc34bac5bddc96852cff0bda950a3edef8bf0942b61f4b5a88a2e8fc7b2c250",
+      "bytes": 4169476,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h16": {
+      "sourceFile": "16. DÍA DE AGRADECIMIENTO.mp3",
+      "title": "DIA DE AGRADECIMIENTO",
+      "sha256": "8d0f3ff2d74b047965d90e279aaa434eeb1cfe3deb66ac49c323c3b348accb2c",
+      "bytes": 2260953,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h160": {
+      "sourceFile": "160. TE PIDO MISERICORDIA.mp3",
+      "title": "TE PIDO MISERICORDIA",
+      "sha256": "da1525519609093482d649537479cb328e918b5448a011d0c531f28ef843a279",
+      "bytes": 3765135,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h161": {
+      "sourceFile": "161. VENGO A TI.mp3",
+      "title": "VENGO A TI",
+      "sha256": "9f1a5d83965b9ef77c367d7e12070a61b726d2200f0cd140668dc2b0eacd72cb",
+      "bytes": 1312734,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h162": {
+      "sourceFile": "162. A LA PUERTA.mp3",
+      "title": "A LA PUERTA",
+      "sha256": "17282f43a3b47026ab63d3928bc871a12c2a0bf288880f1b1dd8265c38f7f209",
+      "bytes": 8556785,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h163": {
+      "sourceFile": "163. AMA A TU PRÓJIMO COMO A TI MISMO.mp3",
+      "title": "AMA A TU PRÓJIMO COMO A TI MISMO",
+      "sha256": "215a53842776a5f61de9eee271145809f70a1ac3068ad7f5b0bf49486510c5f0",
+      "bytes": 761520,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h164": {
+      "sourceFile": "164. BIENAVENTURADO.mp3",
+      "title": "BIENAVENTURADO",
+      "sha256": "c8ca142e9bf17aa67f05e1b20c883d882e53835f79603f1774d6a6ad630a7076",
+      "bytes": 1547328,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h165": {
+      "sourceFile": "165. ¡CLAMA A DIOS!.mp3",
+      "title": "¡CLAMA A DIOS!",
+      "sha256": "bc898d9c05f7fe98dcb834634de1ffd4c39df399c80c3dc8c00c39784fe972ec",
+      "bytes": 3787087,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h166": {
+      "sourceFile": "166. CONGREGADOS EN UNO.mp3",
+      "title": "CONGREGADOS EN UNO",
+      "sha256": "da6feb3eb38ac60f8c12920f00eab07b9760618e64ab2ba9f982792616405ad6",
+      "bytes": 2461027,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h167": {
+      "sourceFile": "167. CRISTO ES ALFA Y OMEGA.mp3",
+      "title": "CRISTO ES ALFA Y OMEGA",
+      "sha256": "5ed4e11bf918ae7ab60fca9c3ea8c8909cc6af96d8caaa40ffb54f23267fda38",
+      "bytes": 7957168,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h168": {
+      "sourceFile": "168. DAME LA MANO HERMANO.mp3",
+      "title": "DAME LA MANO HERMANO",
+      "sha256": "012726263b074a22794084400022a5d3b370eac251c23eca55797e0131eaf66d",
+      "bytes": 5801050,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h169": {
+      "sourceFile": "169. EL ÁNGEL DE JEHOVÁ.mp3",
+      "title": "EL ÁNGEL DE JEHOVÁ",
+      "sha256": "3a6f229028654a18a092dd70513959b64a26df6f8c2f7919ee320ea7243a51ff",
+      "bytes": 2485206,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h17": {
+      "sourceFile": "17. DIOS.mp3",
+      "title": "DIOS",
+      "sha256": "fcc581c12e1e7118064c23896817b9c315bfc78ff5184963f8e78a0a6f4b67eb",
+      "bytes": 4889142,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h170": {
+      "sourceFile": "170. EL GÉNESIS.mp3",
+      "title": "EL GÉNESIS",
+      "sha256": "7a335d9164d4e83bffd290c3f8907dbf2df1c46ad41f1688ce05e7e9921730f3",
+      "bytes": 2110747,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h171": {
+      "sourceFile": "171. EL OLIVO DE DIOS.mp3",
+      "title": "EL OLIVO DE DIOS",
+      "sha256": "ae31a11309be64d05d0a6cb9eb6c79f907e39aae23ae75e9d2622236e8bd03a8",
+      "bytes": 7214732,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h172": {
+      "sourceFile": "172. EN LAS MANOS DEL SEÑOR.mp3",
+      "title": "EN LAS MANOS DEL SEÑOR",
+      "sha256": "e052afba630647fe5547f83950d232ab72ff89697d4a1e3eaf7a19a0758c5145",
+      "bytes": 3604954,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h173": {
+      "sourceFile": "173. ENTRE NOSOTROS UNÁNIMES.mp3",
+      "title": "ENTRE NOSOTROS UNÁNIMES",
+      "sha256": "84d285fed4a69ec23402fe31ec7850f0d18af791e282dbe13bbd30d880f46e0c",
+      "bytes": 839712,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h174": {
+      "sourceFile": "174. ERAN CIEN OVEJAS.mp3",
+      "title": "ERAN CIEN OVEJAS",
+      "sha256": "168ff2556142e22932d3b56f66b349178030f67d6ffed3216b1dfe03b1b06490",
+      "bytes": 8221340,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h175": {
+      "sourceFile": "175. ESCUCHA A DIOS.mp3",
+      "title": "ESCUCHA A DIOS",
+      "sha256": "cd7747643dbd197525f05451ac395bb2f05d284534cf516135651165a58ce419",
+      "bytes": 2117007,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h176": {
+      "sourceFile": "176. ESPERA EN EL SEÑOR.mp3",
+      "title": "ESPERA EN EL SEÑOR",
+      "sha256": "1db452237ade2115df8bf0f5923c91906ff2a171dea37ef86a110f1630755664",
+      "bytes": 3579421,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h177": {
+      "sourceFile": "177. LA FAMILIA DE DIOS.mp3",
+      "title": "LA FAMILIA DE DIOS",
+      "sha256": "d97fe0fa02f5390c9f468e32b500e38c861c43e097f8c50009b98284998680e0",
+      "bytes": 2021007,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h178": {
+      "sourceFile": "178. LA IGLESIA DE DIOS.mp3",
+      "title": "LA IGLESIA DE DIOS",
+      "sha256": "f029edf9d1f156d01968dbc1f2e62c254b873fd8132ea5c8f6a516cdc00a43bf",
+      "bytes": 5950515,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h179": {
+      "sourceFile": "179. LA MUERTE FUE VENCIDA.mp3",
+      "title": "LA MUERTE FUE VENCIDA",
+      "sha256": "a1d4f010a994bd9d1d60013881f61fa5c68f29eb46c2bbb6bffdbfd3b7dde8b8",
+      "bytes": 5127022,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h18": {
+      "sourceFile": "18. DIOS DE BONDAD.mp3",
+      "title": "DIOS DE BONDAD",
+      "sha256": "cd483d008fcde2b74710afe8c79e0d952b0fe2c7f35b9901617b6c8a2cc9f39b",
+      "bytes": 6809730,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h180": {
+      "sourceFile": "180. LA VIDA ES FUGAZ.mp3",
+      "title": "LA VIDA ES FUGAZ",
+      "sha256": "c76da11ebfe29a55a06e35fd1929fcf799a899de8a103a9f458082ced6756775",
+      "bytes": 4791535,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h181": {
+      "sourceFile": "181. MARCHA HACIA ADELANTE.mp3",
+      "title": "MARCHA HACIA ADELANTE",
+      "sha256": "64bc2750f9bce9088e643400f4488d3561f8de722bfad3b6022c36069ffb6eab",
+      "bytes": 2870918,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h182": {
+      "sourceFile": "182. MEJORANDO NUESTROS CAMINOS.mp3",
+      "title": "MEJORANDO NUESTROS CAMINOS",
+      "sha256": "c667ec1e3aca4d237bd9899d9b31e3ae64c18903cf63563e3cc244381d54321b",
+      "bytes": 4478410,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h183": {
+      "sourceFile": "183. MENSAJERO FIEL.mp3",
+      "title": "MENSAJERO FIEL",
+      "sha256": "cf6c6080d90fc6fc1b54c9c0266345dd23496744ce8564272f08f5c109407fec",
+      "bytes": 5337358,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h184": {
+      "sourceFile": "184. MI VIDA EN TI.mp3",
+      "title": "MI VIDA EN TI",
+      "sha256": "c6b6cb4d36bbc550c52256bcb791d09b3e5cde6f2011ba0325b0eb4b3993f067",
+      "bytes": 5063745,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h185": {
+      "sourceFile": "185. MIRAD A LAS COSAS DE ARRIBA.mp3",
+      "title": "MIRAD A LAS COSAS DE ARRIBA",
+      "sha256": "0009916ee210828b422a361f430951118ecc7a3a04375f368ddeed40676f2ab6",
+      "bytes": 2452959,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h186": {
+      "sourceFile": "186. NO TENGAS MIEDO.mp3",
+      "title": "NO TENGAS MIEDO",
+      "sha256": "6e4d236ca09572fd8ef250fe8af67009dc60aa3a09ca2b542c4b378adfe3ba25",
+      "bytes": 1109496,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h187": {
+      "sourceFile": "187. PONED LA MIRA EN LAS COSAS DE ARRIBA.mp3",
+      "title": "PONED LA MIRA EN LAS COSAS DE ARRIBA",
+      "sha256": "aea8fd3f5216d74304907e52b00eb40145a36181276d664e450fdf965f0f689a",
+      "bytes": 3093096,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h188": {
+      "sourceFile": "188. QUE SE CONVIERTAN ELLOS A TI.mp3",
+      "title": "QUE SE CONVIERTAN ELLOS A TI",
+      "sha256": "800b009f638d1c73d149a2700185f36a51678b7ca817275528096a6a1ac01adb",
+      "bytes": 2322583,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h189": {
+      "sourceFile": "189. QUISIERA CANTAR.mp3",
+      "title": "QUISIERA CANTAR",
+      "sha256": "ed84ce628c0d76c4f621274ff2d4f7b41d2aeb874353d6cced64b285008ed7ab",
+      "bytes": 5544564,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h19": {
+      "sourceFile": "19. DIOS ES TODO.mp3",
+      "title": "DIOS ES TODO",
+      "sha256": "036b76a4c7f0ed779830e766abbaa3472fc54beee8e99c371656174f4e6b9308",
+      "bytes": 715296,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h190": {
+      "sourceFile": "190. SALID DE EGIPTO YA.mp3",
+      "title": "SALID DE EGIPTO YA",
+      "sha256": "aacb5ffb0a48caf04d41b8996eaff79e96130b1bd449a5b10a5080aa23d7c0de",
+      "bytes": 4842192,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h191": {
+      "sourceFile": "191. SED COMO NIÑOS.mp3",
+      "title": "SED COMO NIÑOS",
+      "sha256": "24a237a88c0f0995580ddcf9caeac73321331eb08dbedda413eb68a391f1b4e7",
+      "bytes": 2500946,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h192": {
+      "sourceFile": "192. SI BUSCAS EL AMOR.mp3",
+      "title": "SI BUSCAS EL AMOR",
+      "sha256": "e86559a83ea03bac3c0ae5e741cf0aac709804a8ffe440ab531c2ec9007f607c",
+      "bytes": 1075032,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h193": {
+      "sourceFile": "193. SI TÚ CONFIAS EN CRISTO.mp3",
+      "title": "SI TÚ CONFIAS EN CRISTO",
+      "sha256": "530e3e2d77a5e0bc6bcfec9347489e256592a1b1d52b5f4fa02df457691f9909",
+      "bytes": 2434600,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h194": {
+      "sourceFile": "194. SUFRID CON GOZO.mp3",
+      "title": "SUFRID CON GOZO",
+      "sha256": "2dcc24ad61c9a701d8a5953d7b7c1d5e970fcdf98dbdfdf3d5b48c31c014c708",
+      "bytes": 2216748,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h195": {
+      "sourceFile": "195. TIERNO CONSUELO.mp3",
+      "title": "TIERNO CONSUELO",
+      "sha256": "2c9287b4ce55054348b732e45cef17f44f90d3bdd69bacf5ece2965206c673bb",
+      "bytes": 6907425,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h196": {
+      "sourceFile": "196. ¿TÚ AMAS A CRISTO.mp3",
+      "title": "¿TÚ AMAS A CRISTO?",
+      "sha256": "7c1d5a0d3faedbdf52a084339ea568015fa766ffbad2fdd96f3128b82e605b26",
+      "bytes": 2389263,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h197": {
+      "sourceFile": "197. UN SEÑOR, UNA FE.mp3",
+      "title": "UN SEÑOR, UNA FE",
+      "sha256": "a9c9b5cafcac07af2e8ae6e7c97362807c000d6711bcbfca2f89e5c84a419905",
+      "bytes": 2238349,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h198": {
+      "sourceFile": "198. VANIDAD DE VANIDADES.mp3",
+      "title": "VANIDAD DE VANIDADES",
+      "sha256": "6db640829cae28fcdd55e4fdb1d3973e83920f97de7ca93bfd822ca87fc4152d",
+      "bytes": 8389108,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h199": {
+      "sourceFile": "199. VESTIDO BLANCO, EL ATUENDO.mp3",
+      "title": "VESTIDO BLANCO, EL ATUENDO",
+      "sha256": "856d36395cdf23d88c091aa0859770851545be1332ef441959731a62dd0e0377",
+      "bytes": 1966882,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h2": {
+      "sourceFile": "2. ACLAMAD A DIOS.mp3",
+      "title": "ACLAMAD A DIOS",
+      "sha256": "89583ceba3fe1b44b0ba91051e8a58a22907059490971c28b76b3e94400fe991",
+      "bytes": 4822430,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h20": {
+      "sourceFile": "20. ELEVA HOY TU CANTO A DIOS.mp3",
+      "title": "ELEVA HOY TU CANTO A DIOS",
+      "sha256": "c8975fd25f6eb305356633591e40cca122f58e8c6d9089b335cb33397a2638d3",
+      "bytes": 1361352,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h200": {
+      "sourceFile": "200. VESTÍOS DE TODA ARMADURA DE DIOS.mp3",
+      "title": "VESTÍOS DE TODA ARMADURA DE DIOS",
+      "sha256": "08fa7e250af2f735b9508f946789c8db516853cc73d2f511599ca43bb39d3ce0",
+      "bytes": 3332280,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h201": {
+      "sourceFile": "201. ¿Y QUIÉN HA CREÍDO.mp3",
+      "title": "¿Y QUIÉN HA CREÍDO?",
+      "sha256": "17bca222f8179ed6acfc6f54eba8e32da04043b848aa1ead4b42b516dbcded2d",
+      "bytes": 935400,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h202": {
+      "sourceFile": "202. ALLÁ EN LOS CIELOS ESTÁ TU TRONO.mp3",
+      "title": "ALLÁ EN LOS CIELOS ESTÁ TU TRONO",
+      "sha256": "6bba84f38c58dbd09b60ff83b827e68dd857d99af3244d208f67b558374986f4",
+      "bytes": 899760,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h203": {
+      "sourceFile": "203. ANDANDO EL CAMINO.mp3",
+      "title": "ANDANDO EL CAMINO",
+      "sha256": "7fa0201486f7e201f68c4b414dde8b9180ded609760bd1c455e02545d2d3bd3f",
+      "bytes": 4391320,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h204": {
+      "sourceFile": "204. ANDAR JUNTO A TI.mp3",
+      "title": "ANDAR JUNTO A TI",
+      "sha256": "5f5568dceb0e576aa64d676b972f7625290f5ed7b6eafa750ab54ef520ae5635",
+      "bytes": 3013204,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h205": {
+      "sourceFile": "205. AYER QUE EN EL MUNDO ESTABA.mp3",
+      "title": "AYER QUE EN EL MUNDO ESTABA",
+      "sha256": "9ea8f3a14ec7710d4f8a80a3a04a90b84624cf6bb4f21c9d79f8f1ebeece4b7d",
+      "bytes": 4196180,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h206": {
+      "sourceFile": "206. ASÍ LO HA DICHO EL SEÑOR.mp3",
+      "title": "ASÍ LO HA DICHO EL SEÑOR",
+      "sha256": "47dfe3d43fa3c864f0724c868f0f75a6a1bc097c725501635f1909a176da18ac",
+      "bytes": 2493553,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h207": {
+      "sourceFile": "207. AUMENTA MI FE.mp3",
+      "title": "AUMENTA MI FE",
+      "sha256": "c63db38d81ea0cd84c8ec89aca1030610d31bdd9fd20d35abd72cbec15b3dda3",
+      "bytes": 4062580,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h208": {
+      "sourceFile": "208. BUSCA A DIOS.mp3",
+      "title": "BUSCA A DIOS",
+      "sha256": "4dc90cb9ae2f320edcaa2e99c8f9616b8a19bbb53cb2fd3dd4939bbd96b21736",
+      "bytes": 704064,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h209": {
+      "sourceFile": "209. BUSCANDO AL SALVADOR.mp3",
+      "title": "BUSCANDO AL SALVADOR",
+      "sha256": "e5da442e49cccbedd799134423c3b4bf052dedf330dcc492dc221ec9286fea38",
+      "bytes": 790680,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h21": {
+      "sourceFile": "21. EN ESPÍRITU Y VERDAD.mp3",
+      "title": "EN ESPÍRITU Y VERDAD",
+      "sha256": "2f2a257ee611da4af90861b568313d71532f48e7fa9bd032066f077d56211e9f",
+      "bytes": 2101208,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h210": {
+      "sourceFile": "210. CAMINO QUE LLEVA A DIOS.mp3",
+      "title": "CAMINO QUE LLEVA A DIOS",
+      "sha256": "e0d4cb626561006b92a644fa861497fe8990fde4670133001230cd27d2fb5680",
+      "bytes": 1355088,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h211": {
+      "sourceFile": "211. CONCÉDEME SEÑOR SERVIRTE.mp3",
+      "title": "CONCÉDEME SEÑOR SERVIRTE",
+      "sha256": "f28214f3149300983959943c6e135f45515dcba1113f26601dc7d313bcde7a1a",
+      "bytes": 1038960,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h212": {
+      "sourceFile": "212. CONMIGO ESTÁS.mp3",
+      "title": "CONMIGO ESTÁS",
+      "sha256": "447b7558c6ad3a82839eea56936bd4ac6f8d31851473f23ce8a9d3927a3e1a43",
+      "bytes": 3205201,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h213": {
+      "sourceFile": "213. CONSERVANDO NUESTRA FE.mp3",
+      "title": "CONSERVANDO NUESTRA FE",
+      "sha256": "77f2c476dec3e9dfaee41a8aae8a50bf77803c49e2c40e247a202a7113a904d3",
+      "bytes": 750816,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h214": {
+      "sourceFile": "214. CUANDO LLEGASTE.mp3",
+      "title": "CUANDO LLEGASTE",
+      "sha256": "22fb601e9e2dad794fef16543e136061dffe52056f89bde0543996fdc8aa4db9",
+      "bytes": 960984,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h215": {
+      "sourceFile": "215. ¡CUÁNTO TE AMO MI JESÚS!.mp3",
+      "title": "¡CUÁNTO TE AMO MI JESÚS!",
+      "sha256": "d521a42c6c09abd7e5c1087ea252848beef0144ec96f4f867919b86af4ef82be",
+      "bytes": 3121138,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h216": {
+      "sourceFile": "216. DAME TU MANO.mp3",
+      "title": "DAME TU MANO",
+      "sha256": "16462f1b2df7b1b8587fffcb607ff5aeb4f7507b4f1eab3b51379a4072e0f0fc",
+      "bytes": 5641565,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h217": {
+      "sourceFile": "217. DE SU MANO YO CAMINARÉ.mp3",
+      "title": "DE SU MANO YO CAMINARÉ",
+      "sha256": "36e244d11dc9110105a8e1f282a817a3b8ffdd6355a9c0f0723b1fb08011a961",
+      "bytes": 749424,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h218": {
+      "sourceFile": "218. EL AMOR DE DIOS.mp3",
+      "title": "EL AMOR DE DIOS",
+      "sha256": "f2fff2d8321b3c3306958972b84a08bde1aa4e707447eb2841607555dafd8ba0",
+      "bytes": 1643232,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h219": {
+      "sourceFile": "219. EL AMOR DE DIOS NO ESTÁ OCULTO.mp3",
+      "title": "EL AMOR DE DIOS NO ESTÁ OCULTO",
+      "sha256": "6282e182a5286238fb62f367b69efdb63741cb8cea5f477186c56ac3e78bf48b",
+      "bytes": 984960,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h22": {
+      "sourceFile": "22. GLORIA A NUESTRO DIOS.mp3",
+      "title": "GLORIA A NUESTRO DIOS",
+      "sha256": "7a848b230353a53881dd01c35c57b621a7d9130c0050ce9bd8bd7efa87e4c211",
+      "bytes": 990792,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h220": {
+      "sourceFile": "220. EL PODER DE TU MIRAR.mp3",
+      "title": "EL PODER DE TU MIRAR",
+      "sha256": "87e19aef1715f12e0476a5a70b52c37d4654e7a7a5a966b86611e500255826f5",
+      "bytes": 971040,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h221": {
+      "sourceFile": "221. ÉL PROVEERÁ.mp3",
+      "title": "ÉL PROVEERÁ",
+      "sha256": "0c55f03dba39514e3a4088cc46582c3f7f8fbceb6891f534cce0ae3c2e3ea5ec",
+      "bytes": 3563158,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h222": {
+      "sourceFile": "222. EL SEÑOR ES MI PASTOR.mp3",
+      "title": "EL SEÑOR ES MI PASTOR",
+      "sha256": "ea90bc33834d88f87e0b17f3c60b984e2fa8bdcd1a5230432639dad49f233f05",
+      "bytes": 5547068,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h223": {
+      "sourceFile": "223. EN ÉL CONFIARÉ.mp3",
+      "title": "EN ÉL CONFIARÉ",
+      "sha256": "47f098288d7171eeab70cb7ae95c74c0a6b1ab59a827a7f85dbf313336a770fd",
+      "bytes": 1084872,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h224": {
+      "sourceFile": "224. ¿EN DÓNDE ESTÁS.mp3",
+      "title": "¿EN DÓNDE ESTÁS?",
+      "sha256": "f6c0e146162ac1ee3a1766514965e1592c8f3e33e8834b307f6d4671a9968f69",
+      "bytes": 4169893,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h225": {
+      "sourceFile": "225. EN MALDAD VIVÍ.mp3",
+      "title": "EN MALDAD VIVÍ",
+      "sha256": "4d621fbfd6035ee1920f9e1d75b3e5730e72f9b90484cf37ea696b9eeb9612f3",
+      "bytes": 993504,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h226": {
+      "sourceFile": "226. EN MI VIDA PERMANECES.mp3",
+      "title": "EN MI VIDA PERMANECES",
+      "sha256": "137e6e2c91727dbb1fc184a5938634780713f1e38d4960b437ab56f931eb6e8e",
+      "bytes": 3541209,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h227": {
+      "sourceFile": "227. EN PAZ DORMIRÉ.mp3",
+      "title": "EN PAZ DORMIRÉ",
+      "sha256": "c5f71401f04c6aced8f47efed0ee4440f00869543457fc9ec01dbdd6c41ec323",
+      "bytes": 1308960,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h228": {
+      "sourceFile": "228. ENSÉÑAME.mp3",
+      "title": "ENSÉÑAME",
+      "sha256": "988e15cae1321fba268d1696537a2fe676aa14a30d2b6a9b96aab01e60518eb3",
+      "bytes": 5701064,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h229": {
+      "sourceFile": "229. ENTIENDO HOY EL SACRIFICIO.mp3",
+      "title": "ENTIENDO HOY EL SACRIFICIO",
+      "sha256": "5a1f77021f77f7ded173a3ca8e48a6036575c7934b69897ab48552752ed7f5b6",
+      "bytes": 3836210,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h23": {
+      "sourceFile": "23. GLORIA SEA AL CREADOR.mp3",
+      "title": "GLORIA SEA AL CREADOR",
+      "sha256": "e95b54554f084aa0ba842aeb6f040c2bcf40366e6f8c6dc327fc2cb63fb3a9b6",
+      "bytes": 1212840,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h230": {
+      "sourceFile": "230. ENTRA HOY A MI VIDA.mp3",
+      "title": "ENTRA HOY A MI VIDA",
+      "sha256": "bcb1e507ca90fc0be332c2a94906ccfc5850ade8c51beb473a1be09ca5023a9f",
+      "bytes": 3349207,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h231": {
+      "sourceFile": "231. JEHOVÁ, MI GRAN ESCUDO.mp3",
+      "title": "JEHOVÁ, MI GRAN ESCUDO",
+      "sha256": "1fa02d98d0178213106802c1a97a1903c0a1a672e864c37dc02a70c716d85fbb",
+      "bytes": 1001280,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h232": {
+      "sourceFile": "232. JESUCRISTO ME HA CAMBIADO.mp3",
+      "title": "JESUCRISTO ME HA CAMBIADO",
+      "sha256": "434193421d918b7b19f774546d2bc41641cfb3f26d8bca2a16cc899268f9321a",
+      "bytes": 2789007,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h233": {
+      "sourceFile": "233. LA BÚSQUEDA DE LO SANTO.mp3",
+      "title": "LA BÚSQUEDA DE LO SANTO",
+      "sha256": "f7fffb2e360904098e36491b3085aa5a791a1e6f333c74cfc1ae9d42389029f6",
+      "bytes": 2229135,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h234": {
+      "sourceFile": "234. LA FE.mp3",
+      "title": "LA FE",
+      "sha256": "fbfc295fce3debc6c0082cd92999bfc11a5b8cdcabf28daad219407d7c2cc640",
+      "bytes": 1291032,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h235": {
+      "sourceFile": "235. LA LUZ DE CRISTO.mp3",
+      "title": "LA LUZ DE CRISTO",
+      "sha256": "66ca2bca0fcfcf2d6d9ba294cfc5b34593cb401bd6c54c4d7cab72651734a467",
+      "bytes": 1822183,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h236": {
+      "sourceFile": "236. LA MISERICORDIA DE DIOS.mp3",
+      "title": "LA MISERICORDIA DE DIOS",
+      "sha256": "3c284789870ccceb6b9becd5a8c689ffcf14eaaf2bed8a7742c34344145f32e9",
+      "bytes": 1420968,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h237": {
+      "sourceFile": "237. LEJOS DEL MUNDO.mp3",
+      "title": "LEJOS DEL MUNDO",
+      "sha256": "d67acd5a101673867cdeba08e05c792aaae88078f2ffe620b10325c331b38183",
+      "bytes": 1345032,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h238": {
+      "sourceFile": "238. LLAMAMIENTO DIVINO.mp3",
+      "title": "LLAMAMIENTO DIVINO",
+      "sha256": "7280dd3ca379e721261b52049818db9c69616665b6474b60c0cfd9f08a3f05c2",
+      "bytes": 2498974,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h239": {
+      "sourceFile": "239. MI ALMA CLAMA.mp3",
+      "title": "MI ALMA CLAMA",
+      "sha256": "3fd3154160712c0231f08ce1cdc9cee85f99302d693d5e54bada8d4792c3c389",
+      "bytes": 1187256,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h24": {
+      "sourceFile": "24. GRACIAS POR AMARME ASÍ.mp3",
+      "title": "GRACIAS POR AMARME ASÍ",
+      "sha256": "8fbd9181d92490c406308d5b74f60fce0fcb92c6a3a544c74ff5e7262c581ae3",
+      "bytes": 906984,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h240": {
+      "sourceFile": "240. MI AMIGO ES ÉL.mp3",
+      "title": "MI AMIGO ES ÉL",
+      "sha256": "33cceb66cd08c2eaa470be2861e8b9f9bef22c39d48cec934c5b739b63e389a2",
+      "bytes": 1187040,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h241": {
+      "sourceFile": "241. MI AMIGO Y PROTECTOR.mp3",
+      "title": "MI AMIGO Y PROTECTOR",
+      "sha256": "78c146cc39fe722dbef6e9974dd33b69a54e92d85ebd493c32d40c80ab76a734",
+      "bytes": 3659068,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h242": {
+      "sourceFile": "242. MI ESCUDO.mp3",
+      "title": "MI ESCUDO",
+      "sha256": "d28ed1b8be02017037ec7c6e9a966eb01592085bb69aff0cbb5a34f657f1789e",
+      "bytes": 1649064,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h243": {
+      "sourceFile": "243. NUEVA CRIATURA.mp3",
+      "title": "NUEVA CRIATURA",
+      "sha256": "ab7487424a23c876b47afd228539dcee625ddab3810152d28275bb1e00c489fd",
+      "bytes": 851808,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h244": {
+      "sourceFile": "244. NUEVA LUZ.mp3",
+      "title": "NUEVA LUZ",
+      "sha256": "f46a29773132e9bc77090cd1d10041e4c9a8a9f6013d1dd31678ed776a5e8d38",
+      "bytes": 1032696,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h245": {
+      "sourceFile": "245. NUNCA DESMAYES.mp3",
+      "title": "NUNCA DESMAYES",
+      "sha256": "0d9cc1343ad27766ad696d03a02308238ab99c56a48068c0a0c6103ce27ee721",
+      "bytes": 2549014,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h246": {
+      "sourceFile": "246. ¡OH CUÁN GRANDE GRATITUD!.mp3",
+      "title": "¡OH CUÁN GRANDE GRATITUD!",
+      "sha256": "17ba6ccdbe4bc2f3ccbfb46f453250ef63fbc82983d23cabed40e41f83bb797d",
+      "bytes": 1254960,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h247": {
+      "sourceFile": "247. ¡QUÉ HERMOSO ES SER NIÑO!.mp3",
+      "title": "¡QUÉ HERMOSO ES SER NIÑO!",
+      "sha256": "481be7c060134598304c0c165da56ca7bd8ab96f66156c1984dfa970c7977c67",
+      "bytes": 3595826,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h248": {
+      "sourceFile": "248. ¿QUIÉN COMO TU SEÑOR.mp3",
+      "title": "¿QUIÉN COMO TU SEÑOR?",
+      "sha256": "599746e393b86daa432964453b2d2ba7f28c4dc6e338fe8cc555ec7368bb9717",
+      "bytes": 899112,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h249": {
+      "sourceFile": "249. RECONFORTA MI EXISTIR.mp3",
+      "title": "RECONFORTA MI EXISTIR",
+      "sha256": "b6f7121a11db9c55499cfa18043a677d37944071b30105cd3541290ffc3c84a6",
+      "bytes": 10412115,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h25": {
+      "sourceFile": "25. GRACIAS POR TU AMOR.mp3",
+      "title": "GRACIAS POR TU AMOR",
+      "sha256": "53a17285b878a712f51d78d31b8b0371caefc02c644b02a4423ec3ea57b7cb70",
+      "bytes": 8695995,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h250": {
+      "sourceFile": "250. SI JEHOVÁ NO EDIFICARE LA CASA.mp3",
+      "title": "SI JEHOVÁ NO EDIFICARE LA CASA",
+      "sha256": "88019f5c4037edec61c015a44f5dc05592ba6ead935b1d55c790f96104da31e8",
+      "bytes": 419376,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h251": {
+      "sourceFile": "251. SI ORAS CON FE.mp3",
+      "title": "SI ORAS CON FE",
+      "sha256": "0a27b6b4358b75421cae4597647258dc6e1bc42fb81d361490554fc2890ad086",
+      "bytes": 3674914,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h252": {
+      "sourceFile": "252. SOLDADOS DE CRISTO.mp3",
+      "title": "SOLDADOS DE CRISTO",
+      "sha256": "99dffe4dcd0be7e698be62fec717673a6f0fc88f3132daeaad8867a16f9e5a89",
+      "bytes": 5852820,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h253": {
+      "sourceFile": "253. SOY NADA SIN TI.mp3",
+      "title": "SOY NADA SIN TI",
+      "sha256": "2267e0d57e05d4445d96062c6f6a0ac9f839436aaf99b5f9370458e21fc04f72",
+      "bytes": 2228341,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h254": {
+      "sourceFile": "254. SOY UN SOLDADO.mp3",
+      "title": "SOY UN SOLDADO",
+      "sha256": "649d1ecf92dae8c42d64e442e30d76e9dc755bdafe5e01b70af6239f6553cdea",
+      "bytes": 2684370,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h255": {
+      "sourceFile": "255. SUSTENTA MIS PASOS.mp3",
+      "title": "SUSTENTA MIS PASOS",
+      "sha256": "1a7aa998d1996f10cb5b14d604670994eedaecb42eafffde1922a2c915daa53d",
+      "bytes": 6332110,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h256": {
+      "sourceFile": "256. TESTIFICANDO LA VERDADERA GRACIA DE DIOS.mp3",
+      "title": "TESTIFICANDO LA VERDADERA GRACIA DE DIOS",
+      "sha256": "3e71d35d24bb4e48870c433aa26182720bcefa69d2ee4a9ae7bc22efb1631e91",
+      "bytes": 1151184,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h257": {
+      "sourceFile": "257. TOMA MI CORAZÓN.mp3",
+      "title": "TOMA MI CORAZÓN",
+      "sha256": "613befe473ba3045e7c23986ad16078be8c1d4af891e4da40e15e9311b17f1bc",
+      "bytes": 1457238,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h258": {
+      "sourceFile": "258. TOMA MI MANO.mp3",
+      "title": "TOMA MI MANO",
+      "sha256": "0ee32e2482784bc1413f073807b018e9bd71df53fd49eec170c9d24ce87af4c2",
+      "bytes": 3547312,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h259": {
+      "sourceFile": "259. TU AMOR POR MÍ.mp3",
+      "title": "TU AMOR POR MÍ",
+      "sha256": "a301b45b9ff7ccce444a7cd08bb912915c1f43d790c25c78034444c444a1e916",
+      "bytes": 3563158,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h26": {
+      "sourceFile": "26. GRACIAS SEÑOR POR ESTE DÍA.mp3",
+      "title": "GRACIAS SEÑOR POR ESTE DÍA",
+      "sha256": "84a999a4d5ff30860b04a1eb6b44e961b7748074d1d237c4ade95d1ee6f14512",
+      "bytes": 2334259,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h260": {
+      "sourceFile": "260. TU GRACIA DIVINA.mp3",
+      "title": "TU GRACIA DIVINA",
+      "sha256": "31adf79685b89b5b17e0dc9d0907a8bcc74afafaabd1527d457fd1a740f361e2",
+      "bytes": 5219055,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h261": {
+      "sourceFile": "261. TÚ JUZGAS CON VERDAD.mp3",
+      "title": "TÚ JUZGAS CON VERDAD",
+      "sha256": "4c2d349085cc17f0b6445c1ea767310717d5e008a1d18ba523dcfdff54ca47c4",
+      "bytes": 921576,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h262": {
+      "sourceFile": "262. TU PRESENCIA EN MI, SEÑOR.mp3",
+      "title": "TU PRESENCIA EN MI, SEÑOR",
+      "sha256": "7fcf232acd4af3b495128348be2dcf165480ae17b7fac0ca034fe1609ce77eb1",
+      "bytes": 1264998,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h263": {
+      "sourceFile": "263. UN FAVOR A MI CRISTO YO IMPLORO.mp3",
+      "title": "UN FAVOR A MI CRISTO YO IMPLORO",
+      "sha256": "cb385eecb6ebc5c0fe2556002e346eca3314432dc57f140ff58e924b1ce57eb1",
+      "bytes": 851160,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h264": {
+      "sourceFile": "264. VIVES EN MÍ.mp3",
+      "title": "VIVES EN MÍ",
+      "sha256": "e8effd268ca5110c17060a8ae6096e75fbfb280ade16f8233c61e357c085529b",
+      "bytes": 988968,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h265": {
+      "sourceFile": "265. ¿Y CÓMO YO PODRÉ PAGAR.mp3",
+      "title": "¿Y CÓMO YO PODRÉ PAGAR?",
+      "sha256": "9bba62642640b9f6eaffed582f7116519438ab256c1d08bf11f177ecc57179b1",
+      "bytes": 2629208,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h266": {
+      "sourceFile": "266. YA NO SEGUÍ PECANDO.mp3",
+      "title": "YA NO SEGUÍ PECANDO",
+      "sha256": "593ffff6ab2bd5b60f274fe962ede3204d7bdef2028c766ca80ac2026224616f",
+      "bytes": 1450992,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h267": {
+      "sourceFile": "267. YO DESEO SERVIRLE.mp3",
+      "title": "YO DESEO SERVIRLE",
+      "sha256": "1dd05b9146394d953a291703f593e055861807599b7978a0a58adc793c9e9327",
+      "bytes": 2949135,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h268": {
+      "sourceFile": "268. YO Y MI CASA SERVIREMOS AL SEÑOR.mp3",
+      "title": "YO Y MI CASA SERVIREMOS AL SEÑOR",
+      "sha256": "32f998cb760f95dd2c33ef2854cfc5987a1583a459a1b85b386e8d5091c4801d",
+      "bytes": 2254195,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h269": {
+      "sourceFile": "269. CERCA ESTÁ EL DÍA DEL SEÑOR.mp3",
+      "title": "CERCA ESTÁ EL DÍA DEL SEÑOR",
+      "sha256": "35f82cecb1e972e731ac3bab29583475a70a36d8afe98b0456c2ff8e76d69a21",
+      "bytes": 8640050,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h27": {
+      "sourceFile": "27. GRACIAS TE DOY.mp3",
+      "title": "GRACIAS TE DOY",
+      "sha256": "f31306aaed6da29be1e631e3f13fca18bb17a801ef8fe2d0920ca3068647bb25",
+      "bytes": 4669416,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h270": {
+      "sourceFile": "270. CRISTO REY DE REYES.mp3",
+      "title": "CRISTO REY DE REYES",
+      "sha256": "e26952ebda5adf7458e0f3cf862aaa052c3e717e0fdcf21f2a4eaec2f9f97f6e",
+      "bytes": 1784712,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h271": {
+      "sourceFile": "271. EL BANQUETE DEL SEÑOR.mp3",
+      "title": "EL BANQUETE DEL SEÑOR",
+      "sha256": "52cdb8059dfb449ac208ce5c77a166ce4e172370fe1b524c53dbffc37f5be101",
+      "bytes": 679872,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h272": {
+      "sourceFile": "272. ÉL VOLVERÁ.mp3",
+      "title": "ÉL VOLVERÁ",
+      "sha256": "0b0fd31deb6ec39af77fa64be30336d022f6c5618daea5bb13c4b4ebc45be3f1",
+      "bytes": 4373944,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h273": {
+      "sourceFile": "273. EN EL REINO DEL SEÑOR.mp3",
+      "title": "EN EL REINO DEL SEÑOR",
+      "sha256": "da5ee5d3813e17eff301f3e40bc950512f6a2490d4610173cf9bc1da18a6afc4",
+      "bytes": 6281907,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h274": {
+      "sourceFile": "274. EN TU PRESENCIA PUEDA ESTAR.mp3",
+      "title": "EN TU PRESENCIA PUEDA ESTAR",
+      "sha256": "137e6e2c91727dbb1fc184a5938634780713f1e38d4960b437ab56f931eb6e8e",
+      "bytes": 3541209,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h275": {
+      "sourceFile": "275. ESPERANZA TENGO.mp3",
+      "title": "ESPERANZA TENGO",
+      "sha256": "c5abc1a471e2f893705b2ed7ba2adcbbc7c3f67d7896c64d12f9977a0d23d331",
+      "bytes": 3765135,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h276": {
+      "sourceFile": "276. GOZOSOS EN LA ESPERANZA.mp3",
+      "title": "GOZOSOS EN LA ESPERANZA",
+      "sha256": "7be5c9251e4f1395a59ec8f7e1e35f7fe46ec1684e1b00148124f8fb21db5074",
+      "bytes": 1120944,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h277": {
+      "sourceFile": "277. LA GRAN JERUSALÉN.mp3",
+      "title": "LA GRAN JERUSALÉN",
+      "sha256": "17b3b914579f2155ab69f29e88ef7eafaf409de3184d7423debbf7f9b0561f24",
+      "bytes": 765408,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h278": {
+      "sourceFile": "278. LA PROMESA DEL REY.mp3",
+      "title": "LA PROMESA DEL REY",
+      "sha256": "1d3d916262d466db64b1d29f3d19960c336c7179f65d7a2277495aa8483445c8",
+      "bytes": 2940577,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h279": {
+      "sourceFile": "279. LA VENIDA DE CRISTO.mp3",
+      "title": "LA VENIDA DE CRISTO",
+      "sha256": "9e17ff7d37dc4dd421452bfc74c213cedfabec1ffceeaa0f7bca4accc70bb216",
+      "bytes": 726840,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h28": {
+      "sourceFile": "28. GRAN DIOS DE AMOR ERES TÚ.mp3",
+      "title": "GRAN DIOS DE AMOR ERES TÚ",
+      "sha256": "de0fb9bc7021174f48befa8d2a026b4685a2fd55829dcb087699a131b3d2273c",
+      "bytes": 3589263,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h280": {
+      "sourceFile": "280. NECESARIO ES QUE PROFETICES OTRA VEZ.mp3",
+      "title": "NECESARIO ES QUE PROFETICES OTRA VEZ",
+      "sha256": "b3288989798ac4d7f288a2420b45077973a7c30d7f557cc7cdd789bbc4f48dfb",
+      "bytes": 3563900,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h281": {
+      "sourceFile": "281. NO ES EL FIN.mp3",
+      "title": "NO ES EL FIN",
+      "sha256": "00b842714aa4533bc8e9cb969508eedd8a0ed16aa6dfacb0ccc3669abaaf55df",
+      "bytes": 2860930,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h282": {
+      "sourceFile": "282. POR LA FE.mp3",
+      "title": "POR LA FE",
+      "sha256": "6cf1ed1570c84f585017ffb2c6a0664c3e8d347461e77ef8d63f75990a634703",
+      "bytes": 797376,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h283": {
+      "sourceFile": "283. PRONTÓ VOLVERA.mp3",
+      "title": "PRONTÓ VOLVERA",
+      "sha256": "1736039bc032e7363d58d63d79cabe4b270b6c77af0f0c734155cb4f7b335205",
+      "bytes": 5411229,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h284": {
+      "sourceFile": "284. REINO DE PAZ.mp3",
+      "title": "REINO DE PAZ",
+      "sha256": "32e37a609ee6dfdcfb1acc15212aee99d9e4b6b7e09c6a48b7dc75c39caa31cd",
+      "bytes": 5470735,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h285": {
+      "sourceFile": "285. SÉ QUE VENDRÁ.mp3",
+      "title": "SÉ QUE VENDRÁ",
+      "sha256": "64f539dcc3fbc63dd9e73080f0b8ea9094fe6bea69574520f752c77c0664ca0c",
+      "bytes": 3499357,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h286": {
+      "sourceFile": "286. SEÑOR, CENA CONMIGO.mp3",
+      "title": "SEÑOR, CENA CONMIGO",
+      "sha256": "5d84dcbd11c3740d1a6644462243c208f2d34bbfbb5eb08a1fb0c5fe5533f889",
+      "bytes": 1170720,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h287": {
+      "sourceFile": "287. TE ESPERARÉ.mp3",
+      "title": "TE ESPERARÉ",
+      "sha256": "2a299f86a01453b0a51c303797afec3b4fabf043e9c2fcfa1cf72426f526bfca",
+      "bytes": 809022,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h288": {
+      "sourceFile": "288. TU FIDELIDAD SIEMPRE SERÁ.mp3",
+      "title": "TU FIDELIDAD SIEMPRE SERÁ",
+      "sha256": "c74138d4d9c25f31f178ec391b2a99d4ae01bf0843ee03184290487f9041fbe8",
+      "bytes": 3772075,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h289": {
+      "sourceFile": "289. TU REGRESO ESTÁ CERCA.mp3",
+      "title": "TU REGRESO ESTÁ CERCA",
+      "sha256": "ff7eaa6ca4765790f04a6629ce7a2493db80b268e9791625bea7580794be6a3f",
+      "bytes": 8855612,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h29": {
+      "sourceFile": "29. GRANDE ES JEHOVÁ.mp3",
+      "title": "GRANDE ES JEHOVÁ",
+      "sha256": "7c99f4c16789410af64cbb0732795f4c8820de4b25422dfef84b9d67111c4a68",
+      "bytes": 995664,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h290": {
+      "sourceFile": "290. ÚLTIMOS TIEMPOS.mp3",
+      "title": "ÚLTIMOS TIEMPOS",
+      "sha256": "8213c3c8cff2aec49fea9dd73e9aeda7a71fe64abbfe7dc21d256767ec89f016",
+      "bytes": 5656618,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h291": {
+      "sourceFile": "291. UN DÍA VENDRÁ.mp3",
+      "title": "UN DÍA VENDRÁ",
+      "sha256": "43713b11d7b96e712bce71330b66f7dc73d3ce618e05f376bd833cd1e763fc38",
+      "bytes": 2005201,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h292": {
+      "sourceFile": "292. UN REINO FELIZ.mp3",
+      "title": "UN REINO FELIZ",
+      "sha256": "f38cea1ddf21a0619693f4ff4aaaedc41af4d1ca8ec6fa7401ab6b2ea5679f81",
+      "bytes": 1247070,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h293": {
+      "sourceFile": "293. VELAD Y ORAD.mp3",
+      "title": "VELAD Y ORAD",
+      "sha256": "95cc2c46344bacb02eb3e80609f74e0e3d94d5e1444196fc2203bea1ea342505",
+      "bytes": 2381797,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h294": {
+      "sourceFile": "294. VEN SEÑOR JESÚS.mp3",
+      "title": "VEN SEÑOR JESÚS",
+      "sha256": "a90f0d78a921cada3fbab14e529a6cac9cc57cbd01ea9d39508007a1d828e5c9",
+      "bytes": 1223112,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h295": {
+      "sourceFile": "295. ANUNCIANDO EL EVANGELIO.mp3",
+      "title": "ANUNCIANDO EL EVANGELIO",
+      "sha256": "7a8da522ac750ebbe1566e228ef403413b9f30a41bed8bbf6314a89b748a02b9",
+      "bytes": 2094484,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h296": {
+      "sourceFile": "296. BUSCA A JEHOVÁ.mp3",
+      "title": "BUSCA A JEHOVÁ",
+      "sha256": "781bc68ba70855d1bce2ec5b2a2abda21debbb663bc4067331e1f757fe4948b4",
+      "bytes": 1025040,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h297": {
+      "sourceFile": "297. ¡CUAN HERMOSOS SON LOS PIES!.mp3",
+      "title": "¡CUAN HERMOSOS SON LOS PIES!",
+      "sha256": "c674744fd05ab4cb5797b2a02de9bed8781e78208fc8f05bbf7b77923cde8911",
+      "bytes": 3164089,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h298": {
+      "sourceFile": "298. DA DE CORAZÓN.mp3",
+      "title": "DA DE CORAZÓN",
+      "sha256": "c6e2365c8335a2295b280659a5fc1ec6544b37956979d92f5b83398ce1ab0dc9",
+      "bytes": 3461862,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h299": {
+      "sourceFile": "299. DESPIERTA HERMANO.mp3",
+      "title": "DESPIERTA HERMANO",
+      "sha256": "2b1c94f3fe7ce2186971bf56a18d416815b784fce00e8280df7ba7a81df678f6",
+      "bytes": 900720,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h3": {
+      "sourceFile": "3. ALABAD.mp3",
+      "title": "ALABAD",
+      "sha256": "71963ddf9b3f8978c10e20b477cf3f7a82eb618369ae28d4e9332a1e1e4ab758",
+      "bytes": 617880,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h30": {
+      "sourceFile": "30. GRANDE ES NUESTRO DIOS.mp3",
+      "title": "GRANDE ES NUESTRO DIOS",
+      "sha256": "5b5013a3914f893fc96ad3bf08ba251681a19feb737944981d0c6e4e6e2e6c06",
+      "bytes": 2485263,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h300": {
+      "sourceFile": "300. ECHA TU PAN SOBRE LAS AGUAS.mp3",
+      "title": "ECHA TU PAN SOBRE LAS AGUAS",
+      "sha256": "9f8a39e849908cab2125a24f181926eab02bed74847b0c1a3b031f2990498273",
+      "bytes": 2421087,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h301": {
+      "sourceFile": "301. ES MOMENTO DE LUCHAR.mp3",
+      "title": "ES MOMENTO DE LUCHAR",
+      "sha256": "6d305d06a1ee773c66ff97d5eee8be3d8e49c1c1610c040a2460ef832e6a2f79",
+      "bytes": 1877007,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h302": {
+      "sourceFile": "302. JEHOVÁ ES MI FORTALEZA.mp3",
+      "title": "JEHOVÁ ES MI FORTALEZA",
+      "sha256": "bc1b8a6d1181b32e35b7d439c52d689c46476c89f80442e35d32cb02923d0644",
+      "bytes": 773832,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h303": {
+      "sourceFile": "303. JOVEN SALID A LUCHAR.mp3",
+      "title": "JOVEN SALID A LUCHAR",
+      "sha256": "f0710ae153bcd96c562e5e3fe62e84b85c1a67aaa0fab09834237e7948dc4260",
+      "bytes": 2005263,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h304": {
+      "sourceFile": "304. LA ESCUELA SABÁTICA.mp3",
+      "title": "LA ESCUELA SABÁTICA",
+      "sha256": "bd37b68df011031ff7eea5e8393a3f314c26c543931835eb0e9ab46070daa789",
+      "bytes": 2837007,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h305": {
+      "sourceFile": "305. LA JUVENTUD.mp3",
+      "title": "LA JUVENTUD",
+      "sha256": "27b470e5238115ddb3002e75c8499845c80adda7cd65941a3ebad714c7becd08",
+      "bytes": 1134864,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h306": {
+      "sourceFile": "306. LA GLORIA DEL JOVEN ES SU FORTALEZA.mp3",
+      "title": "LA GLORIA DEL JOVEN ES SU FORTALEZA",
+      "sha256": "6ff15646048b1a4a578a5087e6754f01466af6d3f40a046cf83a47feed59d168",
+      "bytes": 1019208,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h307": {
+      "sourceFile": "307. LA LECCIÓN DE HOY.mp3",
+      "title": "LA LECCIÓN DE HOY",
+      "sha256": "b5ad3fceffdeecb07b66bf2ecea3dc749ecc6f68d338e2ea65d1e4b11dcf1de2",
+      "bytes": 3168894,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h308": {
+      "sourceFile": "308. LOS DIEZMOS VOY A DAR.mp3",
+      "title": "LOS DIEZMOS VOY A DAR",
+      "sha256": "93902fa31c05d40964b423eb2c7d899fb31cf8b77ab1e0b91dcbae5d298af3db",
+      "bytes": 738936,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h309": {
+      "sourceFile": "309. MARCHAD JUVENTUD.mp3",
+      "title": "MARCHAD JUVENTUD",
+      "sha256": "bf69c8785a097db251444f634763c74fa47312ad18a0dd0e475cbe63bd179700",
+      "bytes": 723720,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h31": {
+      "sourceFile": "31. GRATAS BENDICIONES.mp3",
+      "title": "GRATAS BENDICIONES",
+      "sha256": "806fc341cdcfbc7eb1ac2172d5d1266151017cde39b990b2b50ad8529d3cb18e",
+      "bytes": 8387651,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h310": {
+      "sourceFile": "310. MENSAJEROS DE SU PALABRA.mp3",
+      "title": "MENSAJEROS DE SU PALABRA",
+      "sha256": "48ce665de0c53256cc39d6af1357fd0eded02a41348f89b4ed1049bec9a1e275",
+      "bytes": 726840,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h311": {
+      "sourceFile": "311. MI DIEZMO PARA TI.mp3",
+      "title": "MI DIEZMO PARA TI",
+      "sha256": "a7dd4700ffed1861e47c9c453d8955b910a7dd41e1aaf5c8ab75aaa9daa285c6",
+      "bytes": 1456057,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h312": {
+      "sourceFile": "312. ¡OH JUVENTUD ACUÉRDATE DE ALABAR A DIOS!.mp3",
+      "title": "¡OH JUVENTUD: ACUÉRDATE DE ALABAR A DIOS!",
+      "sha256": "ac0dbea036d4e6d1c4ff2d8b4fd29672ab80db120a36bade033452776a2a2dcf",
+      "bytes": 2917263,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h313": {
+      "sourceFile": "313. UNA MENTE, UN MISMO PARECER.mp3",
+      "title": "UNA MENTE, UN MISMO PARECER",
+      "sha256": "8fe0d682f8db28248c850d56b7dd049403af7024a709b587fe12882d8c4969e1",
+      "bytes": 689142,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h314": {
+      "sourceFile": "314. VALIOSA JUVENTUD.mp3",
+      "title": "VALIOSA JUVENTUD",
+      "sha256": "0eda410339e7d07208c81d8711e7770434fe5b851f18c7d2a4e6121b1e2055ad",
+      "bytes": 971040,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h315": {
+      "sourceFile": "315. VENID EN POS DE MÍ.mp3",
+      "title": "VENID EN POS DE MÍ",
+      "sha256": "300258f3d4ab41cb51ab859d6c2a3192e9698dea8e9f2e61cd88bd6da5906a85",
+      "bytes": 2197206,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h316": {
+      "sourceFile": "316. VE, Y ANUNCIA EL REINO DE DIOS.mp3",
+      "title": "VE, Y ANUNCIA EL REINO DE DIOS",
+      "sha256": "a038efd2c3133f21fbfa57b8c5cf4e7ffe5b07120822b6290b0eee3d84f95145",
+      "bytes": 786360,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h32": {
+      "sourceFile": "32. GRATITUD.mp3",
+      "title": "GRATITUD",
+      "sha256": "e6b32775ea388172f89688fddb612de066c1868a35c8164d582308feb5437ec3",
+      "bytes": 2876776,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h33": {
+      "sourceFile": "33. HAY UN DIOS.mp3",
+      "title": "HAY UN DIOS",
+      "sha256": "6510d99b200f791ac19d47c9a908958592bc6ef958eef6f1095b91995de2baa3",
+      "bytes": 5522160,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h34": {
+      "sourceFile": "34. HOY TE AMO SEÑOR.mp3",
+      "title": "HOY TE AMO SEÑOR",
+      "sha256": "77abe40d945df120181a1fd463574d57cdff4fca68b767b47d16f44041c54f12",
+      "bytes": 1236816,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h35": {
+      "sourceFile": "35. HUMILDE OFRENDA.mp3",
+      "title": "HUMILDE OFRENDA",
+      "sha256": "933485cd6c6337e47943f0e8a8b726cd31388511887fc367087c3cf234d77f65",
+      "bytes": 2596947,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h36": {
+      "sourceFile": "36. JEHOVÁ.mp3",
+      "title": "JEHOVÁ",
+      "sha256": "80cfb30c63f7835cb82cac4c7105570519947607a9129cf6521488a606d2cb38",
+      "bytes": 3221007,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h37": {
+      "sourceFile": "37. LA CREACIÓN.mp3",
+      "title": "LA CREACIÓN",
+      "sha256": "2e5a7406e7aa001232cdd3e7b7063814e4a7008429221209887e898cc77f5f4b",
+      "bytes": 4010182,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h38": {
+      "sourceFile": "38. LA GRATITUD DEL CORAZÓN.mp3",
+      "title": "LA GRATITUD DEL CORAZÓN",
+      "sha256": "9b21bc5aaa75b2d4ab20e38c396a8d0bc475962665c5d8469297b71b651cc678",
+      "bytes": 1095024,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h39": {
+      "sourceFile": "39. LEVANTAD LA VOZ.mp3",
+      "title": "LEVANTAD LA VOZ",
+      "sha256": "4368b4a1cb016825aa7be5d5bfefbd45686d5d28c294cb706b951f0c0e26d333",
+      "bytes": 713136,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h4": {
+      "sourceFile": "4. ALABARLE, ADORARLE.mp3",
+      "title": "ALABARLE, ADORARLE",
+      "sha256": "5041eb3c662ba80ab5b4a74959968611df8ce0c2d0264d725e32687ecc6f77df",
+      "bytes": 5660770,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h40": {
+      "sourceFile": "40. MI CANTAR A DIOS.mp3",
+      "title": "MI CANTAR A DIOS",
+      "sha256": "a97abcf7a7e65e23f61cd30cee5c5d4f7b0f65be2296e08b77b7285c0615a799",
+      "bytes": 2005263,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h41": {
+      "sourceFile": "41. MI JESÚS.mp3",
+      "title": "MI JESÚS",
+      "sha256": "50ffe4f2325d116c4061609c86f8e45cb24ac5a2c0e0028424386e5024333813",
+      "bytes": 1188864,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h42": {
+      "sourceFile": "42. NO HAY DIOS TAN GRANDE COMO TÚ.mp3",
+      "title": "NO HAY DIOS TAN GRANDE COMO TÚ",
+      "sha256": "4ac6072b6e943e1e00bfbc159be3b84833d0a3ce8b4b390ba6fce8e4b427ccf0",
+      "bytes": 5627196,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h43": {
+      "sourceFile": "43. NUESTRA CONFIANZA ES DIOS.mp3",
+      "title": "NUESTRA CONFIANZA ES DIOS",
+      "sha256": "4716dd4042181803148e4de214e30d46ab981ad11aa1aaf9ad73142c1259ef6a",
+      "bytes": 862176,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h44": {
+      "sourceFile": "44. ¡OH, GRAN SEÑOR!.mp3",
+      "title": "¡OH, GRAN SEÑOR!",
+      "sha256": "6c940f20fb382755aed51f579c762f0a3a829a6a9998cf772fbe98089d601176",
+      "bytes": 767136,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h45": {
+      "sourceFile": "45. PADRE ETERNO DIOS.mp3",
+      "title": "PADRE ETERNO DIOS",
+      "sha256": "c3a48501904b116667831bac5dfe36ae06e2e2dfc4d47b7ec53f15a17e2161bb",
+      "bytes": 1199136,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h46": {
+      "sourceFile": "46. PARA TI LA ALABANZA.mp3",
+      "title": "PARA TI LA ALABANZA",
+      "sha256": "1491ab5d6c703cc29ed29f7201f67f43db3aa7f19b4d25239227d1a28ae04fb8",
+      "bytes": 2500951,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h47": {
+      "sourceFile": "47. PRECIOSO SALVADOR.mp3",
+      "title": "PRECIOSO SALVADOR",
+      "sha256": "f64edc771832ae37351faf4351f7dfcaf2ea2812040f569ce44c1ad106435a51",
+      "bytes": 2883448,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h48": {
+      "sourceFile": "48. ¡QUÉ GRAN COMPASIÓN!.mp3",
+      "title": "¡QUÉ GRAN COMPASIÓN!",
+      "sha256": "4eecba0b4c8b4cc25368eb920f8da97675914001cc07f69fbfec021a079b30fb",
+      "bytes": 1056672,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h49": {
+      "sourceFile": "49. REY Y SOBERANO.mp3",
+      "title": "REY Y SOBERANO",
+      "sha256": "7a0d5be31353203554ace946884f70b83060387faa8222585fc2724b407dca6c",
+      "bytes": 3361076,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h5": {
+      "sourceFile": "5. ¡ALABEMOS A NUESTRO DIOS!.mp3",
+      "title": "¡ALABEMOS A NUESTRO DIOS!",
+      "sha256": "a94d07189c440f52f6f4fc982596aa09df0d9bc1db7748344b8f9d746c0f0a84",
+      "bytes": 3760464,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h50": {
+      "sourceFile": "50. TE AGRADEZCO SEÑOR.mp3",
+      "title": "TE AGRADEZCO SEÑOR",
+      "sha256": "cacf5eeebe2ca26f5abb09ad8376ec9338f4eb9d894737e0aebffcbed85ca5dd",
+      "bytes": 7761230,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h51": {
+      "sourceFile": "51. TE EXALTAMOS.mp3",
+      "title": "TE EXALTAMOS",
+      "sha256": "56bb373032e40024431cfea7ccd2efe92dad1a2decaeb1e0c8d521530c7fee70",
+      "bytes": 5017472,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h52": {
+      "sourceFile": "52. TÚ ERES DIOS.mp3",
+      "title": "TÚ ERES DIOS",
+      "sha256": "fa56b89fd5f24998459d52b889e6a8fb372cefd6dc4e78aeddb347474048d0f9",
+      "bytes": 5736120,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h53": {
+      "sourceFile": "53. UNA ALABANZA.mp3",
+      "title": "UNA ALABANZA",
+      "sha256": "0b2053cfb48947ed79969617ac4035ec5db1126a59a2b98d871f42cce3306b5f",
+      "bytes": 2853135,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h54": {
+      "sourceFile": "54. YO ADORO.mp3",
+      "title": "YO ADORO",
+      "sha256": "ca69b244258af4047cc064eaf67da0566ccbe6022b274eabe64adc0020560706",
+      "bytes": 701040,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h55": {
+      "sourceFile": "55. ANGUSTIADO Y AFLIGIDO.mp3",
+      "title": "ANGUSTIADO Y AFLIGIDO",
+      "sha256": "a09d146d3155af4848a8dc6e5837b6e3e3621874c102d96ae4d8967f9542ece8",
+      "bytes": 10136370,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h56": {
+      "sourceFile": "56. CORONA DE DOLOR.mp3",
+      "title": "CORONA DE DOLOR",
+      "sha256": "4dde211228412e67358d19458b18f08eab484c3f1381d7b1c98c5f8efa79f7d0",
+      "bytes": 1806840,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h57": {
+      "sourceFile": "57. DÁDIVA DIVINA.mp3",
+      "title": "DÁDIVA DIVINA",
+      "sha256": "79d9a0b45d86156febec94798645db5604efef9758a287f0221d6b1540d2cb57",
+      "bytes": 2680716,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h58": {
+      "sourceFile": "58. DIVINA LUZ.mp3",
+      "title": "DIVINA LUZ",
+      "sha256": "a2cf666c77f05604481b2ff20a76f8f44677c191ea6d23a3a43f3d02b39df0b2",
+      "bytes": 5092942,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h59": {
+      "sourceFile": "59. EL CORDERO INMOLADO.mp3",
+      "title": "EL CORDERO INMOLADO",
+      "sha256": "7260ec99ac7d98cb811b4b10b90f762d4c357eeca1ff825d57b4c7dbb1a07d25",
+      "bytes": 6803050,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h6": {
+      "sourceFile": "6. BATALLÓN DE CRISTO.mp3",
+      "title": "BATALLÓN DE CRISTO",
+      "sha256": "b30b34727b3ee575f679746257d9e3b4db4274f0759a316f49dc8ed6359290db",
+      "bytes": 2548950,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h60": {
+      "sourceFile": "60. EL SACRIFICIO SIN IGUAL.mp3",
+      "title": "EL SACRIFICIO SIN IGUAL",
+      "sha256": "3d57594c4e455cce1684fe0516ed2ee78df0ff41cc072b82f6607cf6d74841d9",
+      "bytes": 4131932,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h61": {
+      "sourceFile": "61. EN LA BILIA LO LEO.mp3",
+      "title": "EN LA BILIA LO LEO",
+      "sha256": "57edbd8cc7969f8da642baedc11253092e74387448128ffd40df3951973fa1f8",
+      "bytes": 2972686,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h62": {
+      "sourceFile": "62. JESUCRISTO ENVIADO DEL PADRE.mp3",
+      "title": "JESUCRISTO ENVIADO DEL PADRE",
+      "sha256": "ef0edd32ad41d0519990dc43a2bb39a9dd779cb50c3592519c8be715ee62fab7",
+      "bytes": 2629263,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h63": {
+      "sourceFile": "63. NO FUE EN VANO EL SACRIFICIO.mp3",
+      "title": "NO FUE EN VANO EL SACRIFICIO",
+      "sha256": "5be9534f4e746083d047532983240c126570083fc1228659d6115ed8f01e9ab3",
+      "bytes": 3349263,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h64": {
+      "sourceFile": "64. NO MERECÍA TANTO DOLOR.mp3",
+      "title": "NO MERECÍA TANTO DOLOR",
+      "sha256": "f0a5829fda8f52d193eedac72892bc5f96bc314a7e0877f72c5e55c2b0a19fea",
+      "bytes": 2901082,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h65": {
+      "sourceFile": "65. ¡OH, JESÚS! VEN A MÍ.mp3",
+      "title": "¡OH, JESÚS! VEN A MÍ",
+      "sha256": "51c7f23abf97e1b1eac2da27cbb29f415d54df9eca58c64fe1e4fbdc694f9b67",
+      "bytes": 5537052,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h66": {
+      "sourceFile": "66. DÍA TAN GRANDE.mp3",
+      "title": "DIA TAN GRANDE",
+      "sha256": "9b50ce52113064b36c80c9a4d7db94315e4fb4230e1253cb9ecb5b4c1ff77a38",
+      "bytes": 3172946,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h67": {
+      "sourceFile": "67. DIEZ HERMOSOS DECRETOS.mp3",
+      "title": "DIEZ HERMOSOS DECRETOS",
+      "sha256": "0684a6974d1db9751c5f849f0f313c54c054a63894a1bec39ecaab9347312fcc",
+      "bytes": 3829210,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h68": {
+      "sourceFile": "68. EL DÍA DE REPOSO.mp3",
+      "title": "EL DÍA DE REPOSO",
+      "sha256": "84c9f5329b04c19f379439cb83e4be8cd36c71098e2af325e622c6bec22f04f1",
+      "bytes": 3052333,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h69": {
+      "sourceFile": "69. EL DÍA DEL SEÑOR.mp3",
+      "title": "EL DÍA DEL SEÑOR",
+      "sha256": "5d4ab914627cb9db53f82addb481fcb667425bb98d4416f583706a1e5963b8c6",
+      "bytes": 2206240,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h7": {
+      "sourceFile": "7. BENDICE ALMA MÍA AL SEÑOR.mp3",
+      "title": "BENDICE ALMA MÍA AL SEÑOR",
+      "sha256": "34edee6880f4658c1d82dc6702e75e697ba18d565c283b4ef97dc2fc9704fff7",
+      "bytes": 3275845,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h70": {
+      "sourceFile": "70. EL GUARDAR TU LEY.mp3",
+      "title": "EL GUARDAR TU LEY",
+      "sha256": "e9cdaf1e905828e08c60ed69190784accb84e74edd7c6525794674f0f8197e2d",
+      "bytes": 6580940,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h71": {
+      "sourceFile": "71. EL SÁBADO GLORIOSO ES.mp3",
+      "title": "EL SÁBADO GLORIOSO ES",
+      "sha256": "4a96faf5146d01276853650c0af01aaa85037c7609412f9637105d187c6f739c",
+      "bytes": 887664,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h72": {
+      "sourceFile": "72. EN EL MONTE SINAÍ.mp3",
+      "title": "EN EL MONTE SINAÍ",
+      "sha256": "f0572836cfc02929cfae0d5a553b8875faad936e50b88d7e4761bebd50d7434d",
+      "bytes": 3934825,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h73": {
+      "sourceFile": "73. EN TU SÁBADO SEÑOR.mp3",
+      "title": "EN TU SÁBADO SEÑOR",
+      "sha256": "ec7ba3151a5dae975496c2e223606a66321c402dd0ad46ae88e49eca83f05792",
+      "bytes": 2924731,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h74": {
+      "sourceFile": "74. ESTOS SON DIEZ MANDAMIENTOS.mp3",
+      "title": "ESTOS SON DIEZ MANDAMIENTOS",
+      "sha256": "2f90cbdbe2b2c52e7490c58402b6ada153220f5226981f8968aa77284a69fcd3",
+      "bytes": 4698838,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h75": {
+      "sourceFile": "75. GUARDA LOS DIEZ MANDAMIENTOS.mp3",
+      "title": "GUARDA LOS DIEZ MANDAMIENTOS",
+      "sha256": "93f74da64dc5e469fb26b6b1ae0eee03f9a074bd17d8979b480d4b93d51d7e51",
+      "bytes": 3232120,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h76": {
+      "sourceFile": "76. HOY ES EL DÍA.mp3",
+      "title": "HOY ES EL DÍA",
+      "sha256": "d38730c2bfb45c317add790a982de09cd58b3ab8902dfde973b15a750018f7f3",
+      "bytes": 3056840,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h77": {
+      "sourceFile": "77. LOS MANDAMIENTOS.mp3",
+      "title": "LOS MANDAMIENTOS",
+      "sha256": "1a787996fc4dc4131f2141cfed02271a41ba471e36d14b4aff754bfea1c9e4c9",
+      "bytes": 2157451,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h78": {
+      "sourceFile": "78. PERFECTA ES TU LEY.mp3",
+      "title": "PERFECTA ES TU LEY",
+      "sha256": "2140660b29f2990d0b5a22a0780a72e3a3c04f03eaad08460c977c48488c431d",
+      "bytes": 2078638,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h79": {
+      "sourceFile": "79. REPOSO.mp3",
+      "title": "REPOSO",
+      "sha256": "1ffa99e04c0b623f8fc5e3c9394ffbfb74fb092213d55a6f89f85e68abdb5bbb",
+      "bytes": 4738902,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h8": {
+      "sourceFile": "8. BENDITO SALVADOR.mp3",
+      "title": "BENDITO SALVADOR",
+      "sha256": "86662b4dbe9d60b2af30911bac687864b1fce1ae770c0278064d2cb522904426",
+      "bytes": 1439112,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h80": {
+      "sourceFile": "80. QUE GRANDE BENDICION.mp3",
+      "title": "QUE GRANDE BENDICION",
+      "sha256": "d721bd9fd2497bc13b005d3e139c3521ee59ed390082563979077338259d3c09",
+      "bytes": 3090037,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h81": {
+      "sourceFile": "81. SÁBADO ES, GLORIOSO DÍA.mp3",
+      "title": "SÁBADO ES, GLORIOSO DÍA",
+      "sha256": "bcd971c3c44dfd657f1d3ed6a9474cce43c4d671c3fab61092b1f28de7c2bc50",
+      "bytes": 5026236,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h82": {
+      "sourceFile": "82. SÁBADO ES HOY.mp3",
+      "title": "SÁBADO ES HOY",
+      "sha256": "421fa0662789a6971dad5ad6cb40a2ea8dda84ca576047c14f20a9cbcd575cb3",
+      "bytes": 3797007,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h83": {
+      "sourceFile": "83. SÁBADO HAS DE REPOSAR.mp3",
+      "title": "SÁBADO HAS DE REPOSAR",
+      "sha256": "99b343bdadf4aa2639b33ae897e6ff19ba178406fcf5f1d25f014dc8af7ba07c",
+      "bytes": 3201254,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h84": {
+      "sourceFile": "84. AL CAER LA TARDE.mp3",
+      "title": "AL CAER LA TARDE",
+      "sha256": "1e14cb2f8c4d9459be63aba08fbf91b0cd81b9534aafcaab6ab5108a27fcb9bb",
+      "bytes": 2452952,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h85": {
+      "sourceFile": "85. BAJARÉ, ME LAVARÉ.mp3",
+      "title": "BAJARÉ, ME LAVARÉ",
+      "sha256": "4b6557b928dcae0cf19d88a67bf0c50ebd938155e40910f2add381ecdc1441d3",
+      "bytes": 2164949,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h86": {
+      "sourceFile": "86. BENDICE ESTA UNIÓN.mp3",
+      "title": "BENDICE ESTA UNIÓN",
+      "sha256": "d5345e9e75a98dc6b10b6b67640cf98ab7f661519bfb48dba5882bb2765d82b9",
+      "bytes": 5291468,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h87": {
+      "sourceFile": "87. CENA DEL SEÑOR.mp3",
+      "title": "CENA DEL SEÑOR",
+      "sha256": "0d142358da2642b1c899473be9a87a33ed2c24f8ff46f24bd9d3b0d0fb48dadd",
+      "bytes": 2557771,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h88": {
+      "sourceFile": "88. DEDICACIÓN.mp3",
+      "title": "DEDICACIÓN",
+      "sha256": "bd9548eadf4f5dd9d5989a9a118ec0b4333ee016f61c5dda2893ccbd9026d077",
+      "bytes": 5468818,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h89": {
+      "sourceFile": "89. DISPUESTOS EN TU CENA.mp3",
+      "title": "DISPUESTOS EN TU CENA",
+      "sha256": "8f0ee70c809cc0d618f18c8ee99885320552139f2f82f6b3e2dc7a3faacf2546",
+      "bytes": 3872989,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h9": {
+      "sourceFile": "9. CANTA A DIOS, CANTO A DIOS.mp3",
+      "title": "CANTA A DIOS, CANTO A DIOS",
+      "sha256": "8ab7755322f24be09bc6f8af844b51e620750c2c73227fc6088cfff7286b05ce",
+      "bytes": 2320081,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h90": {
+      "sourceFile": "90. EL AMOR GRANDE ES.mp3",
+      "title": "EL AMOR GRANDE ES",
+      "sha256": "2d7b1c2d000083398e6896d2acf4d8e5371297f1dab1b32b77eefb57736da255",
+      "bytes": 4473052,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h91": {
+      "sourceFile": "91. EN ESTE RÍO CRISTALINO.mp3",
+      "title": "EN ESTE RÍO CRISTALINO",
+      "sha256": "7db448e8e87a312cc45c3a84dd9d6a1fb1165ef37b67205665cc946ac044aa4a",
+      "bytes": 1966882,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h92": {
+      "sourceFile": "92. EN LAS AGUAS LÍMPIAME.mp3",
+      "title": "EN LAS AGUAS LÍMPIAME",
+      "sha256": "60ea866569ca37155fa60720cffa479ce20c17b57de1052c234a81d588aad52a",
+      "bytes": 2164953,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h93": {
+      "sourceFile": "93. EN MEMORIA DE SU AMOR.mp3",
+      "title": "EN MEMORIA DE SU AMOR",
+      "sha256": "7b7f236d45a808dab4eca892d8750bb1ac29ee8c63bf8c972f9cfdeffb020665",
+      "bytes": 5682910,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h94": {
+      "sourceFile": "94. EN TU CENA.mp3",
+      "title": "EN TU CENA",
+      "sha256": "09357ef87feb7e5df5aae5444984df1162f4d2c0bf32a1e7fdd07a0111d9b693",
+      "bytes": 3021058,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h95": {
+      "sourceFile": "95. ENVIA TU DULCE BENDICIÓN.mp3",
+      "title": "ENVIA TU DULCE BENDICIÓN",
+      "sha256": "e949b37254345896d47e993b702260a880402324bac4fd382e028042250d1894",
+      "bytes": 5003700,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h96": {
+      "sourceFile": "96. ESTE PACTO QUE HOY HARÁS.mp3",
+      "title": "ESTE PACTO QUE HOY HARÁS",
+      "sha256": "d04a137c7ed41b6520c6c2e7065e2757fbee101b8b0ccf753e806a52f1d8c5cb",
+      "bytes": 3173007,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h97": {
+      "sourceFile": "97. HEREDAD SON LOS HIJOS.mp3",
+      "title": "HEREDAD SON LOS HIJOS",
+      "sha256": "de9e8995ab611774c53557a174931ce9623e025047853d954e6c801c4ba14114",
+      "bytes": 2876776,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h98": {
+      "sourceFile": "98. LA CENA.mp3",
+      "title": "LA CENA",
+      "sha256": "f69ce0cf799ab1e015e9c8b0ff9b34de13c5950fe2a2e784035ae10ff7412bb0",
+      "bytes": 2446287,
+      "timingStatus": "pending",
+      "cues": []
+    },
+    "h99": {
+      "sourceFile": "99. LA CENA DEL SEÑOR.mp3",
+      "title": "LA CENA DEL SEÑOR",
+      "sha256": "e98a1b75a7fda335574db1e8f8501957f2c33861332566734fdf22b08b38741a",
+      "bytes": 4085007,
+      "timingStatus": "pending",
+      "cues": []
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "warnings": [
+    "Punto 32: el original imprime 31; se conserva en metadatos."
+  ],
+  "sources": {
+    "himnario.pdf": {
+      "file": "HIMNARIO 2024.pdf",
+      "pages": 340
+    },
+    "partituras.pdf": {
+      "file": "HIMNARIO 2024 PARTITURAS.pdf",
+      "pages": 324
+    },
+    "fe.pdf": {
+      "file": "40 Puntos de Fe (1977).pdf",
+      "pages": 34
+    },
+    "biblia.pdf": {
+      "file": "spaRV1909_all.pdf",
+      "pages": 1004,
+      "edition": "Reina-Valera 1909",
+      "publicDomain": true
+    }
+  },
+  "counts": {
+    "hymns": 316,
+    "faith": 40,
+    "books": 66,
+    "chapters": 1189,
+    "verses": 31102
+  },
+  "bibleImport": {
+    "method": "Official USFM text aligned to the supplied PDF",
+    "edition": "Reina-Valera 1909",
+    "sourcePages": 1004,
+    "outlineBooks": 66,
+    "structurallyValidated": true,
+    "emptyVersificationMarkers": 18
+  }
+}

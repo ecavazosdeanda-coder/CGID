@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Partitura digital CGID</title>
+  <script src="vendor/opensheetmusicdisplay.min.js"></script>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #eef2ef;
+      color: #17231f;
+      font-family: Arial, sans-serif;
+    }
+    body.dark { background: #111715; color: #edf3f0; }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,.96);
+      border-bottom: 1px solid #ced8d2;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    .dark .toolbar { background: rgba(27,34,31,.97); border-color: #3b4943; }
+    button {
+      min-height: 38px;
+      padding: 7px 13px;
+      border: 1px solid #537b6e;
+      border-radius: 20px;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:hover { background: rgba(83,123,110,.12); }
+    #zoom-label { min-width: 52px; text-align: center; font-weight: 700; }
+    .notice { margin-left: auto; font-size: 12px; opacity: .78; }
+    #status { padding: 34px; text-align: center; font-size: 16px; }
+    #score-shell {
+      width: min(1180px, calc(100% - 24px));
+      min-height: calc(100vh - 82px);
+      margin: 12px auto 40px;
+      padding: 18px;
+      overflow: auto;
+      background: white;
+      color: black;
+      border-radius: 12px;
+      box-shadow: 0 5px 24px rgba(0,0,0,.13);
+    }
+    #score { min-width: 620px; }
+    @media (max-width: 700px) {
+      .notice { flex-basis: 100%; margin-left: 0; }
+      #score-shell { width: 100%; margin-top: 0; padding: 8px; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar" aria-label="Controles de la partitura">
+    <button id="minus" type="button" aria-label="Reducir">−</button>
+    <span id="zoom-label">75%</span>
+    <button id="plus" type="button" aria-label="Ampliar">+</button>
+    <button id="fit" type="button">Ajustar al ancho</button>
+    <span class="notice">Reconocimiento Audiveris · pendiente de revisión musical</span>
+  </div>
+  <div id="status" role="status">Cargando partitura digital…</div>
+  <main id="score-shell" hidden><div id="score"></div></main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const source = params.get('score');
+    const dark = params.get('dark') === '1';
+    if (dark) document.body.classList.add('dark');
+
+    const status = document.getElementById('status');
+    const shell = document.getElementById('score-shell');
+    const label = document.getElementById('zoom-label');
+    let zoom = .75;
+    let osmd;
+
+    function updateLabel() { label.textContent = `${Math.round(zoom * 100)}%`; }
+    async function render() {
+      if (!osmd) return;
+      osmd.Zoom = zoom;
+      osmd.render();
+      updateLabel();
+    }
+    async function start() {
+      if (!source) throw new Error('No se indicó una partitura MusicXML.');
+      // OSMD needs a measurable container while calculating staff widths.
+      shell.hidden = false;
+      osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay('score', {
+        autoResize: true,
+        backend: 'svg',
+        drawTitle: true,
+        drawComposer: true,
+        drawLyricist: true,
+      });
+      await osmd.load(source);
+      await render();
+      status.hidden = true;
+    }
+    document.getElementById('minus').addEventListener('click', async () => {
+      zoom = Math.max(.4, zoom - .1); await render();
+    });
+    document.getElementById('plus').addEventListener('click', async () => {
+      zoom = Math.min(1.8, zoom + .1); await render();
+    });
+    document.getElementById('fit').addEventListener('click', async () => {
+      zoom = Math.max(.45, Math.min(1.15, (window.innerWidth - 36) / 1080));
+      await render();
+    });
+    start().catch((error) => {
+      status.textContent = `No se pudo mostrar la partitura: ${error.message}`;
+      status.style.color = '#b3261e';
+    });
+  </script>
+</body>
+</html>
