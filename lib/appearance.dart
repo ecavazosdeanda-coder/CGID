@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import 'glass.dart';
@@ -8,8 +9,9 @@ bool isSabbathBranding([DateTime? date]) =>
     (date ?? DateTime.now()).weekday == DateTime.saturday;
 
 String globalChurchLogoAsset = 'assets/branding/icon_silver_blue.png';
+String globalChurchSabbathLogoAsset = 'assets/branding/icon_gold_blue.png';
 String globalChurchName = 'Conferencia General de la Iglesia de Dios';
-String churchLogoAsset([DateTime? date]) => globalChurchLogoAsset;
+String churchLogoAsset([DateTime? date]) => isSabbathBranding(date) ? globalChurchSabbathLogoAsset : globalChurchLogoAsset;
 
 ThemeData cgidTheme(Brightness brightness) {
   final dark = brightness == Brightness.dark;
@@ -74,14 +76,26 @@ class ChurchLogo extends StatelessWidget {
   final double height;
   const ChurchLogo({super.key, this.height = 46});
   @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(8),
-    child: Image.asset(
-      churchLogoAsset(),
-      height: height,
-      width: height,
-      fit: BoxFit.contain,
-      semanticLabel: 'Logotipo de la Conferencia General de la Iglesia de Dios',
-    ),
-  );
+  Widget build(BuildContext context) {
+    final asset = churchLogoAsset();
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: asset.startsWith('base64:')
+        ? Image.memory(
+            base64Decode(asset.substring(7)),
+            height: height,
+            width: height,
+            fit: BoxFit.contain,
+            semanticLabel: 'Logotipo personalizado',
+            errorBuilder: (c, e, s) => SizedBox(height: height, width: height),
+          )
+        : Image.asset(
+            asset,
+            height: height,
+            width: height,
+            fit: BoxFit.contain,
+            semanticLabel: 'Logotipo de la Conferencia General de la Iglesia de Dios',
+          ),
+    );
+  }
 }

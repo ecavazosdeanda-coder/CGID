@@ -362,6 +362,7 @@ class _WorkspaceState extends State<Workspace> {
     super.initState();
     globalChurchName = widget.prefs.getString('churchName') ?? 'Conferencia General de la Iglesia de Dios';
     globalChurchLogoAsset = widget.prefs.getString('churchLogoAsset') ?? 'assets/branding/icon_silver_blue.png';
+    globalChurchSabbathLogoAsset = widget.prefs.getString('churchSabbathLogoAsset') ?? 'assets/branding/icon_gold_blue.png';
     favorites = (widget.prefs.getStringList('favorites') ?? []).toSet();
     history = widget.prefs.getStringList('history') ?? [];
     try {
@@ -3240,7 +3241,7 @@ class _WorkspaceState extends State<Workspace> {
                           children: [
                             Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                             const SizedBox(height: 4),
-                            Text(url.isNotEmpty ? 'Descargar la versión $version' : 'No disponible en este momento', 
+                            Text(url.isNotEmpty ? 'Descargar la versiÃ³n $version' : 'No disponible en este momento', 
                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                           ],
                         ),
@@ -3268,12 +3269,12 @@ class _WorkspaceState extends State<Workspace> {
           padding: const EdgeInsets.all(32),
           children: [
             const Text(
-              'Descargar Aplicación',
+              'Descargar AplicaciÃ³n',
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             const Text(
-              'Obtén la versión instalable para tu dispositivo. Estas versiones incluyen todas las características avanzadas como proyección a pantalla completa, control remoto y uso sin internet.',
+              'ObtÃ©n la versiÃ³n instalable para tu dispositivo. Estas versiones incluyen todas las caracterÃ­sticas avanzadas como proyecciÃ³n a pantalla completa, control remoto y uso sin internet.',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 32),
@@ -3291,6 +3292,60 @@ class _WorkspaceState extends State<Workspace> {
   void _showChurchSettings() {
     final nameController = TextEditingController(text: globalChurchName);
     String selectedLogo = globalChurchLogoAsset;
+    String selectedSabbathLogo = globalChurchSabbathLogoAsset;
+
+    Widget buildDropdown(String label, String value, void Function(String) onChanged, void Function(void Function()) setState) {
+      final isCustom = value.startsWith('base64:');
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: isCustom ? 'custom' : value,
+            isExpanded: true,
+            decoration: const InputDecoration(border: OutlineInputBorder()),
+            items: [
+              const DropdownMenuItem(value: 'assets/branding/icon_silver_blue.png', child: Text('Icono Plata/Azul (Predeterminado)')),
+              const DropdownMenuItem(value: 'assets/branding/icon_gold_blue.png', child: Text('Icono Dorado/Azul')),
+              const DropdownMenuItem(value: 'assets/branding/logo.png', child: Text('Logotipo Completo')),
+              const DropdownMenuItem(value: 'assets/branding/logodorado.png', child: Text('Logotipo Completo (Dorado)')),
+              if (isCustom) const DropdownMenuItem(value: 'custom', child: Text('Logotipo personalizado (Subido)')),
+            ],
+            onChanged: (v) {
+              if (v != null && v != 'custom') onChanged(v);
+            },
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.upload_file),
+            label: const Text('Subir logotipo personalizado...'),
+            onPressed: () async {
+              final file = await FilePicker.pickFile(type: FileType.image);
+              if (file != null) {
+                final bytes = await file.readAsBytes();
+                if (bytes != null) {
+                  onChanged('base64:' + base64Encode(bytes));
+                  setState(() {});
+                }
+              }
+            },
+          ),
+          if (isCustom)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  base64Decode(value.substring(7)),
+                  height: 80,
+                  errorBuilder: (c, e, s) => const Text('Error de imagen'),
+                ),
+              ),
+            ),
+        ],
+      );
+    }
 
     showDialog(
       context: context,
@@ -3299,55 +3354,32 @@ class _WorkspaceState extends State<Workspace> {
           return AlertDialog(
             title: const Text('Personalizar Iglesia'),
             content: SizedBox(
-              width: 400,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Nombre de la iglesia local o misión:'),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      hintText: 'Ej. Iglesia de Dios - Misión Central',
-                      border: OutlineInputBorder(),
+              width: 500,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Nombre de la congregación:'),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        hintText: 'Ej. Iglesia de Dios - Misión Central',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Logotipo a mostrar:'),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: selectedLogo,
-                    isExpanded: true,
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'assets/branding/icon_silver_blue.png',
-                        child: Text('Icono Plata/Azul (Predeterminado)'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'assets/branding/icon_gold_blue.png',
-                        child: Text('Icono Dorado/Azul'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'assets/branding/logo.png',
-                        child: Text('Logotipo Completo'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'assets/branding/logodorado.png',
-                        child: Text('Logotipo Completo (Dorado)'),
-                      ),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) setState(() => selectedLogo = v);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Estos datos aparecerán en la pantalla de proyección cuando no haya contenido activo.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    buildDropdown('Logotipo habitual (domingo a viernes):', selectedLogo, (v) => selectedLogo = v, setState),
+                    const SizedBox(height: 24),
+                    buildDropdown('Logotipo de sábado (incluye viernes de tarde):', selectedSabbathLogo, (v) => selectedSabbathLogo = v, setState),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'El nombre y logotipo aparecerán automáticamente en la pantalla de proyección inactiva de acuerdo al día.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
               ),
             ),
             actions: [
@@ -3360,9 +3392,11 @@ class _WorkspaceState extends State<Workspace> {
                   globalChurchName = nameController.text.trim();
                   if (globalChurchName.isEmpty) globalChurchName = 'Conferencia General de la Iglesia de Dios';
                   globalChurchLogoAsset = selectedLogo;
+                  globalChurchSabbathLogoAsset = selectedSabbathLogo;
                   
                   widget.prefs.setString('churchName', globalChurchName);
                   widget.prefs.setString('churchLogoAsset', globalChurchLogoAsset);
+                  widget.prefs.setString('churchSabbathLogoAsset', globalChurchSabbathLogoAsset);
                   
                   this.setState(() {});
                   syncOutput();
@@ -3955,6 +3989,8 @@ class _EntryReaderModalState extends State<EntryReaderModal> {
   }
 }
 
+
+
 Widget highlightSearchText(BuildContext context, String text, String query) {
   if (query.trim().isEmpty) return Text(text, maxLines: 3, overflow: TextOverflow.ellipsis);
   final q = normalized(query.trim());
@@ -3967,6 +4003,7 @@ Widget highlightSearchText(BuildContext context, String text, String query) {
   );
   final TextStyle highlightStyle = normalStyle.copyWith(
     fontWeight: FontWeight.bold,
+    color: Theme.of(context).colorScheme.primary,
   );
   while (idx != -1) {
     if (idx > start) {
@@ -3985,4 +4022,3 @@ Widget highlightSearchText(BuildContext context, String text, String query) {
     overflow: TextOverflow.ellipsis,
   );
 }
-
