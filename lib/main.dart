@@ -3244,7 +3244,7 @@ class _WorkspaceState extends State<Workspace> {
                           children: [
                             Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                             const SizedBox(height: 4),
-                            Text(url.isNotEmpty ? 'Descargar la versiÃ³n $version' : 'No disponible en este momento', 
+                            Text(url.isNotEmpty ? 'Descargar la versión $version' : 'No disponible en este momento', 
                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                           ],
                         ),
@@ -3272,12 +3272,12 @@ class _WorkspaceState extends State<Workspace> {
           padding: const EdgeInsets.all(32),
           children: [
             const Text(
-              'Descargar AplicaciÃ³n',
+              'Descargar Aplicación',
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             const Text(
-              'ObtÃ©n la versiÃ³n instalable para tu dispositivo. Estas versiones incluyen todas las caracterÃ­sticas avanzadas como proyecciÃ³n a pantalla completa, control remoto y uso sin internet.',
+              'Obtén la versión instalable para tu dispositivo. Estas versiones incluyen todas las características avanzadas como proyección a pantalla completa, control remoto y uso sin internet.',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 32),
@@ -4019,8 +4019,8 @@ Widget highlightSearchText(BuildContext context, String text, String query) {
   if (start < text.length) {
     spans.add(TextSpan(text: text.substring(start), style: normalStyle));
   }
-  return RichText(
-    text: TextSpan(children: spans),
+  return Text.rich(
+    TextSpan(children: spans),
     maxLines: 3,
     overflow: TextOverflow.ellipsis,
   );
