@@ -576,7 +576,8 @@ class _WorkspaceState extends State<Workspace> {
       'Partituras',
       'Proyección',
       'Cultos',
-      'Acerca de',
+      'Descargas',
+        'Acerca de',
     ];
     const icons = [
       Icons.home_outlined,
@@ -586,7 +587,8 @@ class _WorkspaceState extends State<Workspace> {
       Icons.library_music_outlined,
       Icons.cast,
       Icons.playlist_play,
-      Icons.info_outline,
+      Icons.download,
+        Icons.info_outline,
     ];
     return LayoutBuilder(
       builder: (context, box) {
@@ -686,7 +688,7 @@ class _WorkspaceState extends State<Workspace> {
                   const Padding(
                     padding: EdgeInsets.all(24),
                     child: Text(
-                      '● Biblioteca local\nDisponible sin internet',
+                      '? Biblioteca local\nDisponible sin internet',
                       style: TextStyle(
                         color: Color(0xffa9c7b7),
                         height: 1.8,
@@ -838,7 +840,8 @@ class _WorkspaceState extends State<Workspace> {
                               4 => scores(),
                               5 => projector(),
                               6 => servicePlan(),
-                              _ => about(),
+                              7 => downloads(),
+                                  _ => about(),
                             },
                           ),
                           GlobalBottomPlayer(
@@ -1050,7 +1053,7 @@ class _WorkspaceState extends State<Workspace> {
           child: TextField(
             controller: search,
             decoration: const InputDecoration(
-              hintText: 'Número, título o palabras…',
+              hintText: 'Número, título o palabras',
               prefixIcon: Icon(Icons.search),
             ),
             onChanged: (v) => setState(() => query = v),
@@ -1135,7 +1138,7 @@ class _WorkspaceState extends State<Workspace> {
                         backgroundColor: accentPanel,
                         child: Text(
                           e.id.startsWith('hrecording')
-                              ? '♪'
+                              ? '?'
                               : e.id.substring(1),
                           style: const TextStyle(fontSize: 12),
                         ),
@@ -1933,7 +1936,7 @@ class _WorkspaceState extends State<Workspace> {
                                   children: [
                                     if (ip != null) ...[
                                       Text(
-                                        '🟢 Dispositivo conectado: $ip',
+                                        '?? Dispositivo conectado: $ip',
                                         style: const TextStyle(
                                           color: Colors.green,
                                           fontWeight: FontWeight.bold,
@@ -2560,7 +2563,7 @@ class _WorkspaceState extends State<Workspace> {
     if (fileBusy) return;
     setState(() {
       fileBusy = true;
-      fileProgress = 'Selecciona un archivo…';
+      fileProgress = 'Selecciona un archivo';
     });
     try {
       final file = await cult_picker.pickCultFile(CultFiles.maxBytes);
@@ -2573,7 +2576,7 @@ class _WorkspaceState extends State<Workspace> {
       var bytes = file.$2;
       if (name.toLowerCase().endsWith('.cgidpack')) {
         if (mounted) {
-          setState(() => fileProgress = 'Descomprimiendo paquete .cgidpack…');
+          setState(() => fileProgress = 'Descomprimiendo paquete .cgidpack');
         }
         final pack = await CultFiles.importCgidPack(bytes);
         final importedName = pack['name'] as String;
@@ -2592,7 +2595,7 @@ class _WorkspaceState extends State<Workspace> {
       }
       if (!name.toLowerCase().endsWith('.pdf')) {
         if (mounted) {
-          setState(() => fileProgress = 'Convirtiendo PowerPoint localmente…');
+          setState(() => fileProgress = 'Convirtiendo PowerPoint localmente');
         }
         bytes = await CultFiles.convert(
           bytes,
@@ -2632,7 +2635,7 @@ class _WorkspaceState extends State<Workspace> {
     );
     setState(() {
       fileBusy = true;
-      fileProgress = 'Preparando $format…';
+      fileProgress = 'Preparando $format';
     });
     try {
       if (format == 'cgidpack') {
@@ -3060,7 +3063,7 @@ class _WorkspaceState extends State<Workspace> {
                       ],
                       child: const Padding(
                         padding: EdgeInsets.all(12),
-                        child: Text('Abrir guardado ▾'),
+                        child: Text('Abrir guardado ?'),
                       ),
                     ),
                   TextButton(
@@ -3448,14 +3451,14 @@ class _WorkspaceState extends State<Workspace> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
-            Align(
+            /* Align(
               alignment: Alignment.centerLeft,
               child: FilledButton.icon(
                 icon: const Icon(Icons.settings),
                 label: const Text('Personalizar Iglesia'),
                 onPressed: _showChurchSettings,
               ),
-            ),
+            ), */
             SizedBox(height: 10),
             Text(
               'CGID reúne la biblioteca congregacional, Biblia, himnario, puntos de fe, partituras, audio y herramientas de proyección en un entorno local. Está diseñado para preparar el orden del culto y apoyar al presidente, al predicador, a músicos y al equipo de proyección.',
@@ -3477,13 +3480,13 @@ class _WorkspaceState extends State<Workspace> {
             ),
             SizedBox(height: 10),
             Text(
-              '• Proyección independiente y monitor de escenario.\n'
-              '• Control remoto por red local y código QR.\n'
-              '• Planes y plantillas de culto creados por cada usuario.\n'
-              '• Notas privadas para presidencia y predicación.\n'
-              '• Audio, lectura TTS, partituras y sincronización de letras.\n'
-              '• Temporizador, cintillo, pantalla negra y fondos de video.\n'
-              '• Importación y exportación de órdenes de culto.',
+              ' Proyección independiente y monitor de escenario.\n'
+              ' Control remoto por red local y código QR.\n'
+              ' Planes y plantillas de culto creados por cada usuario.\n'
+              ' Notas privadas para presidencia y predicación.\n'
+              ' Audio, lectura TTS, partituras y sincronización de letras.\n'
+              ' Temporizador, cintillo, pantalla negra y fondos de video.\n'
+              ' Importación y exportación de órdenes de culto.',
               style: TextStyle(height: 1.7),
             ),
           ],
