@@ -189,6 +189,7 @@ class Workspace extends StatefulWidget {
 
 class _WorkspaceState extends State<Workspace> {
   int tab = 0,
+        bibleSearchPage = 0,
       slideIndex = 0,
       book = 0,
       chapter = 0,
@@ -1437,9 +1438,8 @@ class _WorkspaceState extends State<Workspace> {
         for (var ci = 0; ci < cs.length; ci++) {
           for (final v in cs[ci]['verses']) {
             if (normalized(v['text']).contains(q)) {
-              matches.add(lib.passage(bi, ci, v['number'], v['number']));
-              if (matches.length == 100) break outer;
-            }
+                matches.add(lib.passage(bi, ci, v['number'], v['number']));
+              }
           }
         }
       }
@@ -1454,21 +1454,26 @@ class _WorkspaceState extends State<Workspace> {
         ),
         const SizedBox(height: 20),
         TextField(
-          controller: search,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.search),
-            hintText: 'Buscar en la Biblia (mínimo 3 caracteres)',
+            controller: search,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'Buscar en la Biblia (mínimo 3 caracteres)',
+            ),
+            onChanged: (v) => setState(() {
+              query = v;
+              bibleSearchPage = 0;
+            }),
           ),
-          onChanged: (v) => setState(() => query = v),
-        ),
         const SizedBox(height: 18),
         if (query.isNotEmpty) ...[
-          Text(
-            query.length < 3
-                ? 'Escribe al menos 3 caracteres.'
-                : '${matches.length}${matches.length == 100 ? ' primeros' : ''} resultados',
-          ),
-          for (final e in matches)
+            Text(
+              query.length < 3
+                  ? 'Escribe al menos 3 caracteres.'
+                  : ' resultados encontrados',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            for (final e in matches.skip(bibleSearchPage * 50).take(50))
             ListTile(
               title: Text(e.title),
               subtitle: highlightSearchText(context, e.sections.first.text, query),
@@ -1493,7 +1498,29 @@ class _WorkspaceState extends State<Workspace> {
                 });
               },
             ),
-        ] else ...[
+            if (matches.length > 50)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: bibleSearchPage > 0
+                          ? () => setState(() => bibleSearchPage--)
+                          : null,
+                    ),
+                    Text('Página ${bibleSearchPage + 1} de ${(matches.length / 50).ceil()}'),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_forward),
+                      onPressed: (bibleSearchPage + 1) * 50 < matches.length
+                          ? () => setState(() => bibleSearchPage++)
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
+          ] else ...[
           GlassSurface(
             radius: 20,
             padding: const EdgeInsets.all(16),
@@ -4001,23 +4028,20 @@ Widget highlightSearchText(BuildContext context, String text, String query) {
   final spans = <TextSpan>[];
   int start = 0;
   int idx = normText.indexOf(q);
-  final TextStyle normalStyle = DefaultTextStyle.of(context).style.copyWith(
-    color: Theme.of(context).colorScheme.onSurfaceVariant,
-  );
-  final TextStyle highlightStyle = normalStyle.copyWith(
+  final TextStyle highlightStyle = TextStyle(
     fontWeight: FontWeight.bold,
     color: Theme.of(context).colorScheme.primary,
   );
   while (idx != -1) {
     if (idx > start) {
-      spans.add(TextSpan(text: text.substring(start, idx), style: normalStyle));
+      spans.add(TextSpan(text: text.substring(start, idx)));
     }
     spans.add(TextSpan(text: text.substring(idx, idx + q.length), style: highlightStyle));
     start = idx + q.length;
     idx = normText.indexOf(q, start);
   }
   if (start < text.length) {
-    spans.add(TextSpan(text: text.substring(start), style: normalStyle));
+    spans.add(TextSpan(text: text.substring(start)));
   }
   return Text.rich(
     TextSpan(children: spans),
