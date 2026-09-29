@@ -1,6 +1,8 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -3196,6 +3198,97 @@ class _WorkspaceState extends State<Workspace> {
       ],
     ),
   );
+  Widget downloads() {
+    return FutureBuilder(
+      future: http.get(Uri.parse('https://api.github.com/repos/ecavazosdeanda-coder/CGID/releases/latest')),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error al cargar descargas: ${snapshot.error}'));
+        }
+        
+        String version = 'Desconocida';
+        List<dynamic> assets = [];
+        try {
+          if (snapshot.hasData && snapshot.data!.statusCode == 200) {
+            final data = jsonDecode(snapshot.data!.body);
+            version = data['tag_name'] ?? version;
+            assets = data['assets'] ?? [];
+          }
+        } catch (_) {}
+
+        Widget buildDownloadButton(String title, IconData icon, String url) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Material(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () {
+                  if (url.isNotEmpty) launchUrl(Uri.parse(url));
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Row(
+                    children: [
+                      Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            Text(url.isNotEmpty ? 'Descargar la versiÃ³n $version' : 'No disponible en este momento', 
+                                 style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                          ],
+                        ),
+                      ),
+                      if (url.isNotEmpty)
+                        const Icon(Icons.download, size: 32),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        String getAssetUrl(String extension) {
+          for (var asset in assets) {
+            if (asset['name'].toString().toLowerCase().endsWith(extension)) {
+              return asset['browser_download_url'];
+            }
+          }
+          return '';
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(32),
+          children: [
+            const Text(
+              'Descargar AplicaciÃ³n',
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'ObtÃ©n la versiÃ³n instalable para tu dispositivo. Estas versiones incluyen todas las caracterÃ­sticas avanzadas como proyecciÃ³n a pantalla completa, control remoto y uso sin internet.',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 32),
+            buildDownloadButton('Windows (.exe)', Icons.window, getAssetUrl('.exe')),
+            buildDownloadButton('Android (.apk)', Icons.android, getAssetUrl('.apk')),
+            buildDownloadButton('macOS (.zip)', Icons.apple, getAssetUrl('.zip')),
+          ],
+        );
+      },
+    );
+  }
+
+
   Widget about() => ListView(
     padding: const EdgeInsets.all(32),
     children: [
@@ -3765,3 +3858,4 @@ class _EntryReaderModalState extends State<EntryReaderModal> {
     );
   }
 }
+
