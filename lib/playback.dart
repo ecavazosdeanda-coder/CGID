@@ -262,7 +262,7 @@ class PlaybackController extends ChangeNotifier {
           if (token == _generation) {
             // Streaming directo desde Internet Archive (Fallback principal)
             final fileName = track.replaceFirst('audio/', ''); // h1.mp3
-            final archiveUrl = 'https://archive.org/download/himnos-cgid/$fileName';
+            final archiveUrl = 'https://archive.org/download/cantos-cgid/$fileName';
             
             error = kIsWeb ? 'Cargando audio...' : 'Conectando al servidor en línea...';
             changed();
