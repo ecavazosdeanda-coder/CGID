@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'appearance.dart';
 
 import 'dart:convert';
 
@@ -112,6 +113,18 @@ class SlideView extends StatelessWidget {
                           style: TextStyle(
                             color: color.withValues(alpha: .75),
                             fontSize: box.maxHeight * .033,
+                          ),
+                        ),
+                      if (slide.text == 'Esperando contenido' || slide.text == 'Bienvenidos')
+                        Padding(
+                          padding: EdgeInsets.only(top: box.maxHeight * 0.05),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.asset(
+                              globalChurchLogoAsset,
+                              height: box.maxHeight * 0.25,
+                              errorBuilder: (c, e, s) => const SizedBox(),
+                            ),
                           ),
                         ),
                       Expanded(

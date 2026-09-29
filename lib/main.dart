@@ -360,6 +360,8 @@ class _WorkspaceState extends State<Workspace> {
   @override
   void initState() {
     super.initState();
+    globalChurchName = widget.prefs.getString('churchName') ?? 'Conferencia General de la Iglesia de Dios';
+    globalChurchLogoAsset = widget.prefs.getString('churchLogoAsset') ?? 'assets/branding/icon_silver_blue.png';
     favorites = (widget.prefs.getStringList('favorites') ?? []).toSet();
     history = widget.prefs.getStringList('history') ?? [];
     try {
@@ -1465,11 +1467,7 @@ class _WorkspaceState extends State<Workspace> {
           for (final e in matches)
             ListTile(
               title: Text(e.title),
-              subtitle: Text(
-                e.sections.first.text,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
+              subtitle: highlightSearchText(context, e.sections.first.text, query),
               trailing: IconButton(
                 icon: const Icon(Icons.cast),
                 onPressed: () => prepare(e),
@@ -3242,7 +3240,7 @@ class _WorkspaceState extends State<Workspace> {
                           children: [
                             Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                             const SizedBox(height: 4),
-                            Text(url.isNotEmpty ? 'Descargar la versiÃ³n $version' : 'No disponible en este momento', 
+                            Text(url.isNotEmpty ? 'Descargar la versión $version' : 'No disponible en este momento', 
                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                           ],
                         ),
@@ -3270,12 +3268,12 @@ class _WorkspaceState extends State<Workspace> {
           padding: const EdgeInsets.all(32),
           children: [
             const Text(
-              'Descargar AplicaciÃ³n',
+              'Descargar Aplicación',
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             const Text(
-              'ObtÃ©n la versiÃ³n instalable para tu dispositivo. Estas versiones incluyen todas las caracterÃ­sticas avanzadas como proyecciÃ³n a pantalla completa, control remoto y uso sin internet.',
+              'Obtén la versión instalable para tu dispositivo. Estas versiones incluyen todas las características avanzadas como proyección a pantalla completa, control remoto y uso sin internet.',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 32),
@@ -3289,6 +3287,95 @@ class _WorkspaceState extends State<Workspace> {
   }
 
 
+
+  void _showChurchSettings() {
+    final nameController = TextEditingController(text: globalChurchName);
+    String selectedLogo = globalChurchLogoAsset;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Personalizar Iglesia'),
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Nombre de la iglesia local o misión:'),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      hintText: 'Ej. Iglesia de Dios - Misión Central',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Logotipo a mostrar:'),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: selectedLogo,
+                    isExpanded: true,
+                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'assets/branding/icon_silver_blue.png',
+                        child: Text('Icono Plata/Azul (Predeterminado)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'assets/branding/icon_gold_blue.png',
+                        child: Text('Icono Dorado/Azul'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'assets/branding/logo.png',
+                        child: Text('Logotipo Completo'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'assets/branding/logodorado.png',
+                        child: Text('Logotipo Completo (Dorado)'),
+                      ),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setState(() => selectedLogo = v);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Estos datos aparecerán en la pantalla de proyección cuando no haya contenido activo.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  globalChurchName = nameController.text.trim();
+                  if (globalChurchName.isEmpty) globalChurchName = 'Conferencia General de la Iglesia de Dios';
+                  globalChurchLogoAsset = selectedLogo;
+                  
+                  widget.prefs.setString('churchName', globalChurchName);
+                  widget.prefs.setString('churchLogoAsset', globalChurchLogoAsset);
+                  
+                  this.setState(() {});
+                  syncOutput();
+                  Navigator.pop(context);
+                },
+                child: const Text('Guardar'),
+              ),
+            ],
+          );
+        }
+      ),
+    );
+  }
   Widget about() => ListView(
     padding: const EdgeInsets.all(32),
     children: [
@@ -3316,15 +3403,24 @@ class _WorkspaceState extends State<Workspace> {
         ),
       ),
       const SizedBox(height: 24),
-      const GlassSurface(
+      GlassSurface(
         radius: 20,
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Acerca del sistema',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.settings),
+                label: const Text('Personalizar Iglesia'),
+                onPressed: _showChurchSettings,
+              ),
             ),
             SizedBox(height: 10),
             Text(
@@ -3335,9 +3431,9 @@ class _WorkspaceState extends State<Workspace> {
         ),
       ),
       const SizedBox(height: 16),
-      const GlassSurface(
+      GlassSurface(
         radius: 20,
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3360,9 +3456,9 @@ class _WorkspaceState extends State<Workspace> {
         ),
       ),
       const SizedBox(height: 16),
-      const GlassSurface(
+      GlassSurface(
         radius: 20,
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -3587,7 +3683,7 @@ class ProjectionOutputView extends StatelessWidget {
     final slideState = state['slide'];
     final slide = slideState is Map
         ? SlideData.fromJson(Map<String, dynamic>.from(slideState))
-        : const SlideData('CGID', '', 'Esperando contenido');
+        : SlideData(globalChurchName, '', 'Esperando contenido');
 
     return CountdownOverlay(
       endsAt: state['countdownEndsAt'] as int?,
@@ -3857,5 +3953,36 @@ class _EntryReaderModalState extends State<EntryReaderModal> {
       ),
     );
   }
+}
+
+Widget highlightSearchText(BuildContext context, String text, String query) {
+  if (query.trim().isEmpty) return Text(text, maxLines: 3, overflow: TextOverflow.ellipsis);
+  final q = normalized(query.trim());
+  final normText = normalized(text);
+  final spans = <TextSpan>[];
+  int start = 0;
+  int idx = normText.indexOf(q);
+  final TextStyle normalStyle = DefaultTextStyle.of(context).style.copyWith(
+    color: Theme.of(context).colorScheme.onSurfaceVariant,
+  );
+  final TextStyle highlightStyle = normalStyle.copyWith(
+    fontWeight: FontWeight.bold,
+  );
+  while (idx != -1) {
+    if (idx > start) {
+      spans.add(TextSpan(text: text.substring(start, idx), style: normalStyle));
+    }
+    spans.add(TextSpan(text: text.substring(idx, idx + q.length), style: highlightStyle));
+    start = idx + q.length;
+    idx = normText.indexOf(q, start);
+  }
+  if (start < text.length) {
+    spans.add(TextSpan(text: text.substring(start), style: normalStyle));
+  }
+  return RichText(
+    text: TextSpan(children: spans),
+    maxLines: 3,
+    overflow: TextOverflow.ellipsis,
+  );
 }
 

@@ -7,9 +7,9 @@ final appThemeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
 bool isSabbathBranding([DateTime? date]) =>
     (date ?? DateTime.now()).weekday == DateTime.saturday;
 
-String churchLogoAsset([DateTime? date]) => isSabbathBranding(date)
-    ? 'assets/branding/icon_gold_blue.png'
-    : 'assets/branding/icon_silver_blue.png';
+String globalChurchLogoAsset = 'assets/branding/icon_silver_blue.png';
+String globalChurchName = 'Conferencia General de la Iglesia de Dios';
+String churchLogoAsset([DateTime? date]) => globalChurchLogoAsset;
 
 ThemeData cgidTheme(Brightness brightness) {
   final dark = brightness == Brightness.dark;
