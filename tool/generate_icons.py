@@ -16,6 +16,11 @@ for density, size in [('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxh
         save_icon(image, root / f'android/app/src/main/res/mipmap-{density}/{name}.png', size)
 for name, image in [('app_icon', blue),('gold_icon',gold)]:
     image.resize((256,256)).save(root / f'windows/runner/resources/{name}.ico', sizes=[(s,s) for s in [16,32,48,64,128,256]])
+save_icon(blue, root/'web/favicon.png', 64)
+save_icon(gold, root/'web/favicon-gold.png', 64)
+for size in [192,512]:
+    save_icon(blue,root/f'web/icons/Icon-{size}.png',size)
+    save_icon(blue,root/f'web/icons/Icon-maskable-{size}.png',size)
 for platform in ['macos','ios']:
     folder = root / platform / 'Runner/Assets.xcassets/AppIcon.appiconset'
     data = json.loads((folder/'Contents.json').read_text())
