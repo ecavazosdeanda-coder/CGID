@@ -48,7 +48,7 @@ CgidAudioHandler? globalAudioHandler;
 Map<String, List<int>> digitalScorePages = {};
 
 Future<void> syncPlatformBranding() async {
-  if (kIsWeb || !Platform.isAndroid) return;
+  if (kIsWeb) return;
   try {
     await const MethodChannel('org.cgid.cgid/branding')
         .invokeMethod<void>('setSabbathIcon', {'sabbath': isSabbathBranding()});
@@ -141,10 +141,9 @@ Future<void> main(List<String> args) async {
         ? ThemeMode.dark
         : ThemeMode.light;
     final effectsName = prefs.getString('visualEffects');
-    appVisualEffectsMode.value = VisualEffectsMode.values.firstWhere(
-      (value) => value.name == effectsName,
-      orElse: () => VisualEffectsMode.full,
-    );
+    appVisualEffectsMode.value = effectsName == 'solid'
+        ? VisualEffectsMode.solid
+        : VisualEffectsMode.full;
   }
   runApp(CgidApp(mode: mode));
 }
@@ -235,6 +234,7 @@ class _WorkspaceState extends State<Workspace> {
       hymnScoresOnly = false;
   int? countdownEndsAt;
   Timer? _countdownTimer;
+  Timer? _brandingTimer;
   String hymnCategoryFilter = 'Todas';
   String hymnComposerFilter = 'Todos';
   String? marqueeText;
@@ -353,40 +353,20 @@ class _WorkspaceState extends State<Workspace> {
       widget.prefs.setBool('darkMode', !dark);
     },
   );
-  Widget get effectsButton => PopupMenuButton<VisualEffectsMode>(
-    tooltip: 'Efectos visuales',
-    icon: const Icon(Icons.auto_awesome_outlined),
-    initialValue: appVisualEffectsMode.value,
-    onSelected: (value) {
+  Widget get effectsButton => IconButton(
+    tooltip: appVisualEffectsMode.value == VisualEffectsMode.full
+        ? 'Ambiente completo · desactivar'
+        : 'Superficie sólida · activar ambiente',
+    isSelected: appVisualEffectsMode.value == VisualEffectsMode.full,
+    icon: const Icon(Icons.toggle_off_outlined),
+    selectedIcon: const Icon(Icons.toggle_on),
+    onPressed: () {
+      final value = appVisualEffectsMode.value == VisualEffectsMode.full
+          ? VisualEffectsMode.solid
+          : VisualEffectsMode.full;
       appVisualEffectsMode.value = value;
       widget.prefs.setString('visualEffects', value.name);
     },
-    itemBuilder: (context) => const [
-      PopupMenuItem(
-        value: VisualEffectsMode.full,
-        child: ListTile(
-          leading: Icon(Icons.blur_on),
-          title: Text('Ambiente completo'),
-          subtitle: Text('Gradientes y cristal'),
-        ),
-      ),
-      PopupMenuItem(
-        value: VisualEffectsMode.reduced,
-        child: ListTile(
-          leading: Icon(Icons.blur_off),
-          title: Text('Efectos reducidos'),
-          subtitle: Text('Sin desenfoque'),
-        ),
-      ),
-      PopupMenuItem(
-        value: VisualEffectsMode.solid,
-        child: ListTile(
-          leading: Icon(Icons.contrast),
-          title: Text('Superficies sólidas'),
-          subtitle: Text('Máxima claridad y rendimiento'),
-        ),
-      ),
-    ],
   );
   @override
   void initState() {
@@ -427,6 +407,9 @@ class _WorkspaceState extends State<Workspace> {
     slideTheme = widget.prefs.getInt('slideTheme') ?? 0;
     selected = lib.hymns.first;
     playback.loadTracks();
+    _brandingTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      unawaited(syncPlatformBranding());
+    });
     playback.titleLookup = (id) {
       final found = lib.hymns.where((h) => h.id == id).firstOrNull;
       if (found != null) {
@@ -448,6 +431,7 @@ class _WorkspaceState extends State<Workspace> {
   @override
   void dispose() {
     playback.dispose();
+    _brandingTimer?.cancel();
     unawaited(remoteServer.stop());
     _countdownTimer?.cancel();
     search.dispose();
@@ -704,45 +688,47 @@ class _WorkspaceState extends State<Workspace> {
                     child: ListView(
                       children: [
                         for (var i = 0; i < labels.length; i++)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 3,
-                            ),
-                            child: ListTile(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                          if (kIsWeb || i != 7)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 3,
                               ),
-                              selected: tab == i,
-                              selectedTileColor: const Color(0xff2c4d60),
-                              textColor: const Color(0xffc0d0da),
-                              iconColor: const Color(0xffc0d0da),
-                              selectedColor: Colors.white,
-                              leading: Icon(icons[i], size: 21),
-                              title: Text(
-                                labels[i],
-                                style: const TextStyle(fontSize: 14),
+                              child: ListTile(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                selected: tab == i,
+                                selectedTileColor: const Color(0xff2c4d60),
+                                textColor: const Color(0xffc0d0da),
+                                iconColor: const Color(0xffc0d0da),
+                                selectedColor: Colors.white,
+                                leading: Icon(icons[i], size: 21),
+                                title: Text(
+                                  labels[i],
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                                onTap: () {
+                                  changeTab(i);
+                                  if (!wide) Navigator.pop(context);
+                                },
                               ),
-                              onTap: () {
-                                changeTab(i);
-                                if (!wide) Navigator.pop(context);
-                              },
                             ),
-                          ),
                       ],
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text(
-                      '? Biblioteca local\nDisponible sin internet',
-                      style: TextStyle(
-                        color: Color(0xffa9c7b7),
-                        height: 1.8,
-                        fontSize: 12,
+                  if (!kIsWeb)
+                    const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'Biblioteca local\nDisponible sin internet',
+                        style: TextStyle(
+                          color: Color(0xffa9c7b7),
+                          height: 1.8,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -765,7 +751,7 @@ class _WorkspaceState extends State<Workspace> {
             const SingleActivator(LogicalKeyboardKey.digit7, alt: true): () =>
                 changeTab(6),
             const SingleActivator(LogicalKeyboardKey.digit8, alt: true): () =>
-                changeTab(7),
+                changeTab(kIsWeb ? 7 : 8),
           },
           child: Focus(
             autofocus: true,
@@ -802,18 +788,19 @@ class _WorkspaceState extends State<Workspace> {
                                 ),
                               ),
                             ),
-                          IconButton(
-                            icon: const Icon(Icons.cloud_download_outlined),
-                            tooltip: 'Gestor de Audios',
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AudioManagerScreen(
-                                  totalCatalogAudios: lib.hymns.length,
+                          if (!kIsWeb)
+                            IconButton(
+                              icon: const Icon(Icons.cloud_download_outlined),
+                              tooltip: 'Gestor de Audios',
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AudioManagerScreen(
+                                    totalCatalogAudios: lib.hymns.length,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
                           effectsButton,
                           themeButton,
                         ],
@@ -849,20 +836,22 @@ class _WorkspaceState extends State<Workspace> {
                                     ),
                                   ),
                                   const Spacer(),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.cloud_download_outlined,
-                                    ),
-                                    tooltip: 'Gestor de Audios',
-                                    onPressed: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => AudioManagerScreen(
-                                          totalCatalogAudios: lib.hymns.length,
+                                  if (!kIsWeb)
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.cloud_download_outlined,
+                                      ),
+                                      tooltip: 'Gestor de Audios',
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AudioManagerScreen(
+                                            totalCatalogAudios:
+                                                lib.hymns.length,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
                                   const SizedBox(width: 8),
                                   const ChurchLogo(height: 42),
                                   const SizedBox(width: 8),
@@ -887,7 +876,7 @@ class _WorkspaceState extends State<Workspace> {
                               4 => scores(),
                               5 => projector(),
                               6 => servicePlan(),
-                              7 => downloads(),
+                              7 => kIsWeb ? downloads() : about(),
                               _ => about(),
                             },
                           ),
@@ -1100,7 +1089,7 @@ class _WorkspaceState extends State<Workspace> {
           child: TextField(
             controller: search,
             decoration: const InputDecoration(
-              hintText: 'Número, título o palabras',
+              hintText: 'Número, título o palabras…',
               prefixIcon: Icon(Icons.search),
             ),
             onChanged: (v) => setState(() => query = v),
@@ -1491,7 +1480,6 @@ class _WorkspaceState extends State<Workspace> {
     final matches = <Entry>[];
     if (query.trim().length >= 3) {
       final q = normalized(query);
-      outer:
       for (var bi = 0; bi < books.length; bi++) {
         final cs = books[bi]['chapters'] as List;
         for (var ci = 0; ci < cs.length; ci++) {
@@ -1526,9 +1514,9 @@ class _WorkspaceState extends State<Workspace> {
         const SizedBox(height: 18),
         if (query.isNotEmpty) ...[
           Text(
-            query.length < 3
+            query.trim().length < 3
                 ? 'Escribe al menos 3 caracteres.'
-                : ' resultados encontrados',
+                : '${matches.length} resultados encontrados',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
@@ -1573,8 +1561,24 @@ class _WorkspaceState extends State<Workspace> {
                         ? () => setState(() => bibleSearchPage--)
                         : null,
                   ),
-                  Text(
-                    'Página ${bibleSearchPage + 1} de ${(matches.length / 50).ceil()}',
+                  DropdownButton<int>(
+                    value: bibleSearchPage,
+                    items: [
+                      for (
+                        var page = 0;
+                        page < (matches.length / 50).ceil();
+                        page++
+                      )
+                        DropdownMenuItem(
+                          value: page,
+                          child: Text(
+                            'Página ${page + 1} de ${(matches.length / 50).ceil()}',
+                          ),
+                        ),
+                    ],
+                    onChanged: (page) {
+                      if (page != null) setState(() => bibleSearchPage = page);
+                    },
                   ),
                   IconButton(
                     icon: const Icon(Icons.arrow_forward),
@@ -2655,7 +2659,7 @@ class _WorkspaceState extends State<Workspace> {
     if (fileBusy) return;
     setState(() {
       fileBusy = true;
-      fileProgress = 'Selecciona un archivo';
+      fileProgress = 'Selecciona un archivo…';
     });
     try {
       final file = await cult_picker.pickCultFile(CultFiles.maxBytes);
@@ -2668,7 +2672,7 @@ class _WorkspaceState extends State<Workspace> {
       var bytes = file.$2;
       if (name.toLowerCase().endsWith('.cgidpack')) {
         if (mounted) {
-          setState(() => fileProgress = 'Descomprimiendo paquete .cgidpack');
+          setState(() => fileProgress = 'Descomprimiendo paquete .cgidpack…');
         }
         final pack = await CultFiles.importCgidPack(bytes);
         final importedName = pack['name'] as String;
@@ -2687,7 +2691,7 @@ class _WorkspaceState extends State<Workspace> {
       }
       if (!name.toLowerCase().endsWith('.pdf')) {
         if (mounted) {
-          setState(() => fileProgress = 'Convirtiendo PowerPoint localmente');
+          setState(() => fileProgress = 'Convirtiendo PowerPoint localmente…');
         }
         bytes = await CultFiles.convert(
           bytes,
@@ -2727,7 +2731,7 @@ class _WorkspaceState extends State<Workspace> {
     );
     setState(() {
       fileBusy = true;
-      fileProgress = 'Preparando $format';
+      fileProgress = 'Preparando $format…';
     });
     try {
       if (format == 'cgidpack') {
@@ -3393,7 +3397,7 @@ class _WorkspaceState extends State<Workspace> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Obtén la versión instalable para tu dispositivo. Estas versiones incluyen todas las características avanzadas como proyección a pantalla completa, control remoto y uso sin internet.',
+              'Obtén la versión instalable para tu dispositivo. La biblioteca se incluye en la aplicación; los audios requieren conexión o descarga previa. Las funciones disponibles dependen de la plataforma.',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 32),
@@ -3408,9 +3412,9 @@ class _WorkspaceState extends State<Workspace> {
               getAssetUrl('.apk'),
             ),
             buildDownloadButton(
-              'macOS (.zip)',
+              'macOS (.dmg)',
               Icons.apple,
-              getAssetUrl('.zip'),
+              getAssetUrl('.dmg'),
             ),
           ],
         );
@@ -3594,12 +3598,12 @@ class _WorkspaceState extends State<Workspace> {
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
-            const Text('Versión 0.9.1 · Compilación 14'),
+            const Text('Versión 1.0 · Compilación 15'),
             const SizedBox(height: 4),
             Text(
               isSabbathBranding()
                   ? 'Identidad del sábado · emblema dorado'
-                  : 'Identidad habitual · emblema plateado',
+                  : 'Identidad habitual · emblema azul',
               style: TextStyle(color: secondaryText),
             ),
           ],
@@ -3627,7 +3631,7 @@ class _WorkspaceState extends State<Workspace> {
             ), */
             SizedBox(height: 10),
             Text(
-              'CGID reúne la biblioteca congregacional, Biblia, himnario, puntos de fe, partituras, audio y herramientas de proyección en un entorno local. Está diseñado para preparar el orden del culto y apoyar al presidente, al predicador, a músicos y al equipo de proyección.',
+              'CGID reúne la biblioteca congregacional, Biblia, himnario, puntos de fe, partituras, audio y herramientas de proyección en una aplicación multiplataforma. Está diseñado para preparar el orden del culto y apoyar al presidente, al predicador, a músicos y al equipo de proyección.',
               style: TextStyle(height: 1.6),
             ),
           ],
@@ -3646,13 +3650,13 @@ class _WorkspaceState extends State<Workspace> {
             ),
             SizedBox(height: 10),
             Text(
-              ' Proyección independiente y monitor de escenario.\n'
-              ' Control remoto por red local y código QR.\n'
-              ' Planes y plantillas de culto creados por cada usuario.\n'
-              ' Notas privadas para presidencia y predicación.\n'
-              ' Audio, lectura TTS, partituras y sincronización de letras.\n'
-              ' Temporizador, cintillo, pantalla negra y fondos de video.\n'
-              ' Importación y exportación de órdenes de culto.',
+              '• Proyección independiente y monitor de escenario.\n'
+              '• Control remoto por red local y código QR.\n'
+              '• Planes y plantillas de culto creados por cada usuario.\n'
+              '• Notas privadas para presidencia y predicación.\n'
+              '• Audio, lectura TTS, partituras y sincronización de letras.\n'
+              '• Temporizador, cintillo, pantalla negra y fondos de video.\n'
+              '• Importación y exportación de órdenes de culto.',
               style: TextStyle(height: 1.7),
             ),
           ],
@@ -3693,17 +3697,26 @@ class _WorkspaceState extends State<Workspace> {
         'Las letras y los puntos de fe proceden de los documentos aportados. Las partituras digitales se obtienen mediante reconocimiento MusicXML y se publican después de revisión musical.',
       ),
       const SizedBox(height: 20),
-      for (final w in lib.warnings)
+      for (final w in lib.warnings.where(
+        (w) => !w.toString().contains('Punto 32'),
+      ))
         ListTile(leading: const Icon(Icons.info_outline), title: Text('$w')),
       const SizedBox(height: 20),
       TextButton(
         onPressed: () => showLicensePage(
           context: context,
           applicationName: 'CGID · Biblioteca y proyección',
-          applicationVersion: '0.9.1 (14)',
+          applicationVersion: '1.0 (15)',
           applicationIcon: const ChurchLogo(height: 72),
         ),
         child: const Text('Licencias de componentes'),
+      ),
+      const SizedBox(height: 12),
+      Text(
+        'Sistema desarrollado por Eustolio Cavazos de Anda',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodySmall
+            ?.copyWith(color: secondaryText),
       ),
     ],
   );

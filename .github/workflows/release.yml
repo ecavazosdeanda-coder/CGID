@@ -1,0 +1,67 @@
+name: Instaladores v1.0
+on:
+  workflow_dispatch:
+  push:
+    tags: [v1.0]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test
+      - run: flutter build windows --release
+      - name: Crear instalador EXE
+        shell: pwsh
+        run: |
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' tool/installer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Windows-v1.0
+          path: release/*.exe
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build macos --release
+      - name: Crear DMG
+        run: |
+          mkdir -p release/dmg
+          cp -R build/macos/Build/Products/Release/*.app release/dmg/
+          ln -s /Applications release/dmg/Applications
+          hdiutil create -volname CGID -srcfolder release/dmg -ov -format UDZO release/CGID_v1.0_macos.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macOS-v1.0
+          path: release/*.dmg
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build ios --release --no-codesign
+      - name: Conservar compilación para firma Apple
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app CGID_iOS_sin_firmar.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iOS-requiere-firma-Apple
+          path: CGID_iOS_sin_firmar.zip

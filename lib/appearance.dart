@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'glass.dart';
@@ -11,7 +13,9 @@ bool isSabbathBranding([DateTime? date]) =>
 String globalChurchLogoAsset = 'assets/branding/icon_silver_blue.png';
 String globalChurchSabbathLogoAsset = 'assets/branding/icon_gold_blue.png';
 String globalChurchName = 'Conferencia General de la Iglesia de Dios';
-String churchLogoAsset([DateTime? date]) => isSabbathBranding(date) ? globalChurchSabbathLogoAsset : globalChurchLogoAsset;
+String churchLogoAsset([DateTime? date]) => isSabbathBranding(date)
+    ? globalChurchSabbathLogoAsset
+    : globalChurchLogoAsset;
 
 ThemeData cgidTheme(Brightness brightness) {
   final dark = brightness == Brightness.dark;
@@ -72,30 +76,53 @@ ThemeData cgidTheme(Brightness brightness) {
   );
 }
 
-class ChurchLogo extends StatelessWidget {
+class ChurchLogo extends StatefulWidget {
   final double height;
   const ChurchLogo({super.key, this.height = 46});
+  @override
+  State<ChurchLogo> createState() => _ChurchLogoState();
+}
+
+class _ChurchLogoState extends State<ChurchLogo> {
+  Timer? _timer;
+  double get height => widget.height;
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final asset = churchLogoAsset();
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: asset.startsWith('base64:')
-        ? Image.memory(
-            base64Decode(asset.substring(7)),
-            height: height,
-            width: height,
-            fit: BoxFit.contain,
-            semanticLabel: 'Logotipo personalizado',
-            errorBuilder: (c, e, s) => SizedBox(height: height, width: height),
-          )
-        : Image.asset(
-            asset,
-            height: height,
-            width: height,
-            fit: BoxFit.contain,
-            semanticLabel: 'Logotipo de la Conferencia General de la Iglesia de Dios',
-          ),
+          ? Image.memory(
+              base64Decode(asset.substring(7)),
+              height: height,
+              width: height,
+              fit: BoxFit.contain,
+              semanticLabel: 'Logotipo personalizado',
+              errorBuilder: (c, e, s) =>
+                  SizedBox(height: height, width: height),
+            )
+          : Image.asset(
+              asset,
+              height: height,
+              width: height,
+              fit: BoxFit.contain,
+              semanticLabel:
+                  'Logotipo de la Conferencia General de la Iglesia de Dios',
+            ),
     );
   }
 }

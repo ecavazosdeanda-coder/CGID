@@ -22,6 +22,7 @@ jobs:
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.47.2'
           channel: stable
           cache: true
 
@@ -29,7 +30,7 @@ jobs:
         run: flutter pub get
 
       - name: Ejecutar pruebas
-        run: flutter test test/tts_utils_test.dart
+        run: flutter test
 
       - name: Compilar web para GitHub Pages
         run: flutter build web --release --base-href /CGID/
@@ -43,4 +44,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: build/web
           publish_branch: gh-pages
-          force_orphan: true
+          force_orphan: false
