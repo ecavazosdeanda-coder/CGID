@@ -3416,6 +3416,15 @@ class _WorkspaceState extends State<Workspace> {
               Icons.apple,
               getAssetUrl('.dmg'),
             ),
+            buildDownloadButton(
+              'iPhone / iOS (.zip · sin firmar)',
+              Icons.phone_iphone,
+              getAssetUrl('_ios_sin_firmar.zip'),
+            ),
+            const Text(
+              'iPhone / iOS: esta descarga es una compilación sin firmar. No se puede instalar directamente en un iPhone; requiere firma Apple antes de su instalación.',
+              style: TextStyle(fontSize: 14),
+            ),
           ],
         );
       },
