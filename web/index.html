@@ -37,7 +37,9 @@
     // Local device date, matching the application's Sabbath branding.
     function updateBrandingIcon() {
       const icon = document.querySelector('link[rel="icon"]');
-      if (icon) icon.href = new Date().getDay() === 6 ? 'favicon-gold.png' : 'favicon.png';
+      const params = new URLSearchParams(location.search);
+      const output = params.get('projection') === '1' || params.get('stage') === '1';
+      if (icon) icon.href = !output && new Date().getDay() === 6 ? 'favicon-gold.png' : 'favicon.png';
     }
     updateBrandingIcon();
     setInterval(updateBrandingIcon, 60000);
