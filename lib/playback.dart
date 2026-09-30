@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:audioplayers/audioplayers.dart';
+
 import 'tts_utils.dart';
 
 import 'audio_manager.dart';
@@ -97,6 +98,11 @@ class PlaybackController extends ChangeNotifier {
     speed = newSpeed;
     if (activeId != null && activeId!.startsWith('h')) {
       await _player?.setPlaybackRate(speed);
+    } else if (activeId != null) {
+      // En web la tasa del Web Speech API usa 1.0 como velocidad normal.
+      // Actualizarla aquí permite que el selector afecte también la lectura
+      // TTS (y no solamente las pistas de audio).
+      await _tts?.setSpeechRate(ttsSpeechRate(speed, isWeb: kIsWeb));
     }
     changed();
   }
@@ -227,7 +233,9 @@ class PlaybackController extends ChangeNotifier {
         try {
           final engines = await tts.getEngines;
           final preferredEngine = engines?.firstWhere(
-            (e) => (e as String).toLowerCase().contains('google') && (e as String).toLowerCase().contains('tts'),
+            (e) =>
+                (e as String).toLowerCase().contains('google') &&
+                (e as String).toLowerCase().contains('tts'),
             orElse: () => null,
           );
           if (preferredEngine != null) {
@@ -245,12 +253,19 @@ class PlaybackController extends ChangeNotifier {
         }
       }
 
-      await tts.setSpeechRate(.5 * speed);
+      await tts.setSpeechRate(ttsSpeechRate(speed, isWeb: kIsWeb));
       await tts.setVolume(1.0);
       await tts.setPitch(1.0);
       await tts.awaitSpeakCompletion(true);
-      for (final chunk in speechChunks(processedText)) {
+      for (final chunk in speechChunks(
+        processedText,
+        limit: kIsWeb ? 160 : 420,
+      )) {
         if (_disposed || token != _generation || !playing) break;
+        // El navegador crea una nueva locución para cada fragmento. Aplicar
+        // la tasa de nuevo hace efectivos los cambios realizados durante una
+        // lectura larga a partir del siguiente fragmento.
+        await tts.setSpeechRate(ttsSpeechRate(speed, isWeb: kIsWeb));
         final result = await tts
             .speak(chunk, focus: true)
             .timeout(const Duration(seconds: 90));
@@ -334,11 +349,14 @@ class PlaybackController extends ChangeNotifier {
           if (token == _generation) {
             // Streaming directo desde Internet Archive (Fallback principal)
             final fileName = track.replaceFirst('audio/', ''); // h1.mp3
-            final archiveUrl = 'https://archive.org/download/cantos-cgid/$fileName';
-            
-            error = kIsWeb ? 'Cargando audio...' : 'Conectando al servidor en línea...';
+            final archiveUrl =
+                'https://archive.org/download/cantos-cgid/$fileName';
+
+            error = kIsWeb
+                ? 'Cargando audio...'
+                : 'Conectando al servidor en línea...';
             changed();
-            
+
             try {
               await _player!.play(UrlSource(archiveUrl));
               await _player!.setPlaybackRate(speed);

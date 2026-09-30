@@ -54,4 +54,14 @@ void main() {
         'Mateo capítulo 24 versículos 1 al 41; capítulo 25 versículos 1 al 13';
     expect(preprocessBiblicalCitations(input), expected);
   });
+
+  test('web TTS uses the selected speed without halving it', () {
+    expect(ttsSpeechRate(1.0, isWeb: true), 1.0);
+    expect(ttsSpeechRate(1.5, isWeb: true), 1.5);
+  });
+
+  test('native TTS keeps the platform-normalized speech rate', () {
+    expect(ttsSpeechRate(1.0, isWeb: false), 0.5);
+    expect(ttsSpeechRate(1.5, isWeb: false), 0.75);
+  });
 }

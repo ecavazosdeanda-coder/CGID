@@ -7,6 +7,14 @@
 /// - "3 Juan 1:2" -> "Tercera de Juan capítulo 1 versículo 2"
 /// - "Hechos 2:29,34" -> "Hechos capítulo 2 versículos 29 y 34"
 
+/// Convierte la velocidad seleccionada por el usuario al rango esperado por
+/// cada motor. Web Speech usa 1.0 como velocidad normal; los motores nativos
+/// usados por flutter_tts emplean 0.5 como velocidad normal.
+double ttsSpeechRate(double selectedSpeed, {required bool isWeb}) {
+  final rate = isWeb ? selectedSpeed : 0.5 * selectedSpeed;
+  return rate.clamp(0.1, isWeb ? 10.0 : 1.0).toDouble();
+}
+
 /// Normaliza el nombre del libro para la pronunciación hablada natural.
 /// Si comienza con "1 ", "2 " o "3 " (ej. "1 Pedro", "2 Corintios", "3 Juan", "1 de Pedro"),
 /// se convierte a "Primera de Pedro", "Segunda de Corintios", "Tercera de Juan".
