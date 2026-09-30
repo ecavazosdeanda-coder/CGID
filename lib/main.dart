@@ -364,7 +364,7 @@ class _WorkspaceState extends State<Workspace> {
       final value = appVisualEffectsMode.value == VisualEffectsMode.full
           ? VisualEffectsMode.solid
           : VisualEffectsMode.full;
-      appVisualEffectsMode.value = value;
+      setState(() => appVisualEffectsMode.value = value);
       widget.prefs.setString('visualEffects', value.name);
     },
   );

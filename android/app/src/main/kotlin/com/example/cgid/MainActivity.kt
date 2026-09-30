@@ -1,4 +1,4 @@
-package com.example.cgid
+package org.cgid.cgid
 
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
