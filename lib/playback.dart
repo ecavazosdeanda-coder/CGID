@@ -6,11 +6,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'tts_utils.dart';
 
 import 'audio_manager.dart';
 import 'audio_manager_screen.dart';
 import 'content.dart';
 import 'glass.dart';
+import 'audio_handler.dart';
 
 // One controller per workspace: a hymn and a reading never overlap.
 class PlaybackController extends ChangeNotifier {
@@ -27,6 +29,49 @@ class PlaybackController extends ChangeNotifier {
   bool playing = false;
   double speed = 1;
   final Map<String, String> tracks = {};
+
+  CgidAudioHandler? audioHandler;
+  ({String title, String subtitle})? Function(String id)? titleLookup;
+
+  void attachAudioHandler(CgidAudioHandler handler) {
+    audioHandler = handler;
+    handler.onPlayCallback = () async {
+      if (activeId != null) {
+        await resumeHymn();
+      } else if (completedHymnId != null) {
+        await playHymn(completedHymnId!);
+      } else if (sortedHymnIds.isNotEmpty) {
+        await playHymn(sortedHymnIds.first);
+      }
+    };
+    handler.onPauseCallback = pauseHymn;
+    handler.onStopCallback = stop;
+    handler.onNextCallback = () => nextHymn();
+    handler.onPreviousCallback = () => previousHymn();
+    handler.onSeekCallback = seekHymn;
+    handler.onSetSpeedCallback = setSpeed;
+  }
+
+  void _syncMediaItem(String id, [Duration? totalDur]) {
+    if (audioHandler == null) return;
+    final meta = titleLookup?.call(id);
+    final title = meta?.title ?? 'Himno ${id.replaceAll(RegExp(r'\D'), '')}';
+    final subtitle = meta?.subtitle;
+    audioHandler!.updateItem(
+      id: id,
+      title: title,
+      subtitle: subtitle,
+      hymnDuration: totalDur ?? (duration > Duration.zero ? duration : null),
+    );
+  }
+
+  void _syncPlaybackState() {
+    audioHandler?.updateState(
+      isPlaying: playing,
+      currentPosition: position,
+      totalDuration: duration,
+    );
+  }
 
   bool continuousPlayback = true;
   Timer? _sleepTimer;
@@ -102,6 +147,7 @@ class PlaybackController extends ChangeNotifier {
     await _player?.pause();
     playing = false;
     changed();
+    _syncPlaybackState();
   }
 
   Future<void> resumeHymn() async {
@@ -109,6 +155,7 @@ class PlaybackController extends ChangeNotifier {
     await _player?.resume();
     playing = true;
     changed();
+    _syncPlaybackState();
   }
 
   Future<void> seekHymn(Duration value) async {
@@ -116,6 +163,7 @@ class PlaybackController extends ChangeNotifier {
     await _player?.seek(value);
     position = value;
     changed();
+    _syncPlaybackState();
   }
 
   Future<void> loadTracks() async {
@@ -144,6 +192,7 @@ class PlaybackController extends ChangeNotifier {
     position = Duration.zero;
     duration = Duration.zero;
     changed();
+    audioHandler?.resetState();
     try {
       await _tts?.stop();
     } catch (_) {}
@@ -157,6 +206,8 @@ class PlaybackController extends ChangeNotifier {
     final token = _generation;
     await stopping;
     if (_disposed || token != _generation || text.trim().isEmpty) return;
+    // Pre‑procesar texto para que las citas bíblicas se lean correctamente.
+    final processedText = preprocessBiblicalCitations(text);
     activeId = id;
     playing = true;
     error = null;
@@ -172,6 +223,17 @@ class PlaybackController extends ChangeNotifier {
         }
       });
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        // First try to ensure the Google TTS engine (which has complete Spanish models) is selected
+        try {
+          final engines = await tts.getEngines;
+          final preferredEngine = engines?.firstWhere(
+            (e) => (e as String).toLowerCase().contains('google') && (e as String).toLowerCase().contains('tts'),
+            orElse: () => null,
+          );
+          if (preferredEngine != null) {
+            await tts.setEngine(preferredEngine as String);
+          }
+        } catch (_) {}
         await configureAndroidSpeech(tts).timeout(const Duration(seconds: 15));
       } else {
         if (await tts.isLanguageAvailable('es-MX') == true) {
@@ -187,7 +249,7 @@ class PlaybackController extends ChangeNotifier {
       await tts.setVolume(1.0);
       await tts.setPitch(1.0);
       await tts.awaitSpeakCompletion(true);
-      for (final chunk in speechChunks(text)) {
+      for (final chunk in speechChunks(processedText)) {
         if (_disposed || token != _generation || !playing) break;
         final result = await tts
             .speak(chunk, focus: true)
@@ -225,16 +287,23 @@ class PlaybackController extends ChangeNotifier {
     error = null;
     onHymnChanged?.call(id);
     changed();
+    _syncMediaItem(id);
+    _syncPlaybackState();
     try {
       if (_player == null) {
         _player = AudioPlayer();
         _positionUpdates = _player!.onPositionChanged.listen((value) {
           position = value;
           changed();
+          _syncPlaybackState();
         });
         _durationUpdates = _player!.onDurationChanged.listen((value) {
           duration = value;
           changed();
+          if (activeId != null) {
+            _syncMediaItem(activeId!, duration);
+          }
+          _syncPlaybackState();
         });
         _completed = _player!.onPlayerComplete.listen((_) {
           completedHymnId = activeId;
@@ -247,6 +316,7 @@ class PlaybackController extends ChangeNotifier {
             playing = false;
             activeId = null;
             changed();
+            audioHandler?.resetState();
           }
         });
       }
@@ -254,10 +324,12 @@ class PlaybackController extends ChangeNotifier {
       if (localFile != null) {
         await _player!.play(DeviceFileSource(localFile.path));
         await _player!.setPlaybackRate(speed);
+        _syncPlaybackState();
       } else {
         try {
           await _player!.play(AssetSource(track));
           await _player!.setPlaybackRate(speed);
+          _syncPlaybackState();
         } catch (_) {
           if (token == _generation) {
             // Streaming directo desde Internet Archive (Fallback principal)
@@ -272,6 +344,7 @@ class PlaybackController extends ChangeNotifier {
               await _player!.setPlaybackRate(speed);
               error = null;
               changed();
+              _syncPlaybackState();
               return;
             } catch (e) {
               if (token == _generation) {
@@ -279,6 +352,7 @@ class PlaybackController extends ChangeNotifier {
                 activeId = null;
                 error = 'Audio no disponible o sin conexión a internet.';
                 changed();
+                audioHandler?.resetState();
               }
             }
           }
@@ -291,6 +365,7 @@ class PlaybackController extends ChangeNotifier {
         activeId = null;
         error = 'No se pudo abrir el audio de este himno.';
         changed();
+        audioHandler?.resetState();
       }
     }
   }

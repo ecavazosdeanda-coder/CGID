@@ -1,6 +1,7 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
@@ -38,6 +39,11 @@ import 'service_templates.dart';
 
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:audio_service/audio_service.dart';
+
+import 'audio_handler.dart';
+
+CgidAudioHandler? globalAudioHandler;
 
 Map<String, List<int>> digitalScorePages = {};
 
@@ -88,6 +94,30 @@ const serviceSectionIcons = <String, IconData>{
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // audio_service exposes the operating system media session on mobile/macOS
+  // and the browser Media Session API on web.  Keeping web enabled is what
+  // allows Bluetooth/headset and browser media keys to control playback.
+  if (kIsWeb || Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+    try {
+      globalAudioHandler = await AudioService.init(
+        builder: () => CgidAudioHandler(),
+        config: const AudioServiceConfig(
+          androidNotificationChannelId: 'org.cgid.channel.audio',
+          androidNotificationChannelName: 'Reproducción de Himnos CGID',
+          androidNotificationChannelDescription:
+              'Controles de reproducción de himnos y lecturas',
+          androidNotificationOngoing: true,
+          androidStopForegroundOnPause: true,
+          // drawable/ic_notification: ícono monocromático (solo alfa)
+          // requerido por Android 5.0+ para notificaciones multimedia.
+          // NO usar mipmap/ic_launcher (tiene colores → aparece como bloque gris).
+          androidNotificationIcon: 'drawable/ic_notification',
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error inicializando AudioService: $e');
+    }
+  }
   await syncPlatformBranding();
   try {
     final catalog = jsonDecode(
@@ -189,7 +219,7 @@ class Workspace extends StatefulWidget {
 
 class _WorkspaceState extends State<Workspace> {
   int tab = 0,
-        bibleSearchPage = 0,
+      bibleSearchPage = 0,
       slideIndex = 0,
       book = 0,
       chapter = 0,
@@ -361,9 +391,15 @@ class _WorkspaceState extends State<Workspace> {
   @override
   void initState() {
     super.initState();
-    globalChurchName = widget.prefs.getString('churchName') ?? 'Conferencia General de la Iglesia de Dios';
-    globalChurchLogoAsset = widget.prefs.getString('churchLogoAsset') ?? 'assets/branding/icon_silver_blue.png';
-    globalChurchSabbathLogoAsset = widget.prefs.getString('churchSabbathLogoAsset') ?? 'assets/branding/icon_gold_blue.png';
+    globalChurchName =
+        widget.prefs.getString('churchName') ??
+        'Conferencia General de la Iglesia de Dios';
+    globalChurchLogoAsset =
+        widget.prefs.getString('churchLogoAsset') ??
+        'assets/branding/icon_silver_blue.png';
+    globalChurchSabbathLogoAsset =
+        widget.prefs.getString('churchSabbathLogoAsset') ??
+        'assets/branding/icon_gold_blue.png';
     favorites = (widget.prefs.getStringList('favorites') ?? []).toSet();
     history = widget.prefs.getStringList('history') ?? [];
     try {
@@ -391,6 +427,16 @@ class _WorkspaceState extends State<Workspace> {
     slideTheme = widget.prefs.getInt('slideTheme') ?? 0;
     selected = lib.hymns.first;
     playback.loadTracks();
+    playback.titleLookup = (id) {
+      final found = lib.hymns.where((h) => h.id == id).firstOrNull;
+      if (found != null) {
+        return (title: found.title, subtitle: found.subtitle);
+      }
+      return null;
+    };
+    if (globalAudioHandler != null) {
+      playback.attachAudioHandler(globalAudioHandler!);
+    }
     playback.onHymnChanged = (newId) {
       final found = lib.hymns.where((h) => h.id == newId).firstOrNull;
       if (found != null && mounted) {
@@ -578,7 +624,7 @@ class _WorkspaceState extends State<Workspace> {
       'Proyección',
       'Cultos',
       'Descargas',
-        'Acerca de',
+      'Acerca de',
     ];
     const icons = [
       Icons.home_outlined,
@@ -589,7 +635,7 @@ class _WorkspaceState extends State<Workspace> {
       Icons.cast,
       Icons.playlist_play,
       Icons.download,
-        Icons.info_outline,
+      Icons.info_outline,
     ];
     return LayoutBuilder(
       builder: (context, box) {
@@ -842,7 +888,7 @@ class _WorkspaceState extends State<Workspace> {
                               5 => projector(),
                               6 => servicePlan(),
                               7 => downloads(),
-                                  _ => about(),
+                              _ => about(),
                             },
                           ),
                           GlobalBottomPlayer(
@@ -1294,14 +1340,19 @@ class _WorkspaceState extends State<Workspace> {
             ))
               ActionChip(
                 label: Text(ref.title),
-                onPressed: () => showPassageDialog(context, ref, popModal: modal),
+                onPressed: () =>
+                    showPassageDialog(context, ref, popModal: modal),
               ),
           ],
         ),
       ],
     ],
   );
-  void showPassageDialog(BuildContext sourceContext, Entry entry, {bool popModal = false}) {
+  void showPassageDialog(
+    BuildContext sourceContext,
+    Entry entry, {
+    bool popModal = false,
+  }) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1332,7 +1383,11 @@ class _WorkspaceState extends State<Workspace> {
             onPressed: () {
               Navigator.pop(dialogContext);
               if (popModal) Navigator.pop(sourceContext);
-              final parts = entry.id.substring(1).split(':').map(int.parse).toList();
+              final parts = entry.id
+                  .substring(1)
+                  .split(':')
+                  .map(int.parse)
+                  .toList();
               setState(() {
                 tab = 2;
                 book = parts[0];
@@ -1403,7 +1458,11 @@ class _WorkspaceState extends State<Workspace> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         onTap: () {
-                          showPassageDialog(sheetContext, target, popModal: true);
+                          showPassageDialog(
+                            sheetContext,
+                            target,
+                            popModal: true,
+                          );
                         },
                       ),
                     );
@@ -1438,8 +1497,8 @@ class _WorkspaceState extends State<Workspace> {
         for (var ci = 0; ci < cs.length; ci++) {
           for (final v in cs[ci]['verses']) {
             if (normalized(v['text']).contains(q)) {
-                matches.add(lib.passage(bi, ci, v['number'], v['number']));
-              }
+              matches.add(lib.passage(bi, ci, v['number'], v['number']));
+            }
           }
         }
       }
@@ -1454,29 +1513,33 @@ class _WorkspaceState extends State<Workspace> {
         ),
         const SizedBox(height: 20),
         TextField(
-            controller: search,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              hintText: 'Buscar en la Biblia (mínimo 3 caracteres)',
-            ),
-            onChanged: (v) => setState(() {
-              query = v;
-              bibleSearchPage = 0;
-            }),
+          controller: search,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.search),
+            hintText: 'Buscar en la Biblia (mínimo 3 caracteres)',
           ),
+          onChanged: (v) => setState(() {
+            query = v;
+            bibleSearchPage = 0;
+          }),
+        ),
         const SizedBox(height: 18),
         if (query.isNotEmpty) ...[
-            Text(
-              query.length < 3
-                  ? 'Escribe al menos 3 caracteres.'
-                  : ' resultados encontrados',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            for (final e in matches.skip(bibleSearchPage * 50).take(50))
+          Text(
+            query.length < 3
+                ? 'Escribe al menos 3 caracteres.'
+                : ' resultados encontrados',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          for (final e in matches.skip(bibleSearchPage * 50).take(50))
             ListTile(
               title: Text(e.title),
-              subtitle: highlightSearchText(context, e.sections.first.text, query),
+              subtitle: highlightSearchText(
+                context,
+                e.sections.first.text,
+                query,
+              ),
               trailing: IconButton(
                 icon: const Icon(Icons.cast),
                 onPressed: () => prepare(e),
@@ -1498,29 +1561,31 @@ class _WorkspaceState extends State<Workspace> {
                 });
               },
             ),
-            if (matches.length > 50)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: bibleSearchPage > 0
-                          ? () => setState(() => bibleSearchPage--)
-                          : null,
-                    ),
-                    Text('Página ${bibleSearchPage + 1} de ${(matches.length / 50).ceil()}'),
-                    IconButton(
-                      icon: const Icon(Icons.arrow_forward),
-                      onPressed: (bibleSearchPage + 1) * 50 < matches.length
-                          ? () => setState(() => bibleSearchPage++)
-                          : null,
-                    ),
-                  ],
-                ),
+          if (matches.length > 50)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: bibleSearchPage > 0
+                        ? () => setState(() => bibleSearchPage--)
+                        : null,
+                  ),
+                  Text(
+                    'Página ${bibleSearchPage + 1} de ${(matches.length / 50).ceil()}',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_forward),
+                    onPressed: (bibleSearchPage + 1) * 50 < matches.length
+                        ? () => setState(() => bibleSearchPage++)
+                        : null,
+                  ),
+                ],
               ),
-          ] else ...[
+            ),
+        ] else ...[
           GlassSurface(
             radius: 20,
             padding: const EdgeInsets.all(16),
@@ -3229,15 +3294,21 @@ class _WorkspaceState extends State<Workspace> {
   );
   Widget downloads() {
     return FutureBuilder(
-      future: http.get(Uri.parse('https://api.github.com/repos/ecavazosdeanda-coder/CGID/releases/latest')),
+      future: http.get(
+        Uri.parse(
+          'https://api.github.com/repos/ecavazosdeanda-coder/CGID/releases/latest',
+        ),
+      ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error al cargar descargas: ${snapshot.error}'));
+          return Center(
+            child: Text('Error al cargar descargas: ${snapshot.error}'),
+          );
         }
-        
+
         String version = 'Desconocida';
         List<dynamic> assets = [];
         try {
@@ -3252,7 +3323,8 @@ class _WorkspaceState extends State<Workspace> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Material(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(16),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
@@ -3263,21 +3335,38 @@ class _WorkspaceState extends State<Workspace> {
                   padding: const EdgeInsets.all(24),
                   child: Row(
                     children: [
-                      Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary),
+                      Icon(
+                        icon,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                       const SizedBox(width: 24),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             const SizedBox(height: 4),
-                            Text(url.isNotEmpty ? 'Descargar la versión $version' : 'No disponible en este momento', 
-                                 style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                            Text(
+                              url.isNotEmpty
+                                  ? 'Descargar la versión $version'
+                                  : 'No disponible en este momento',
+                              style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      if (url.isNotEmpty)
-                        const Icon(Icons.download, size: 32),
+                      if (url.isNotEmpty) const Icon(Icons.download, size: 32),
                     ],
                   ),
                 ),
@@ -3308,23 +3397,38 @@ class _WorkspaceState extends State<Workspace> {
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 32),
-            buildDownloadButton('Windows (.exe)', Icons.window, getAssetUrl('.exe')),
-            buildDownloadButton('Android (.apk)', Icons.android, getAssetUrl('.apk')),
-            buildDownloadButton('macOS (.zip)', Icons.apple, getAssetUrl('.zip')),
+            buildDownloadButton(
+              'Windows (.exe)',
+              Icons.window,
+              getAssetUrl('.exe'),
+            ),
+            buildDownloadButton(
+              'Android (.apk)',
+              Icons.android,
+              getAssetUrl('.apk'),
+            ),
+            buildDownloadButton(
+              'macOS (.zip)',
+              Icons.apple,
+              getAssetUrl('.zip'),
+            ),
           ],
         );
       },
     );
   }
 
-
-
   void _showChurchSettings() {
     final nameController = TextEditingController(text: globalChurchName);
     String selectedLogo = globalChurchLogoAsset;
     String selectedSabbathLogo = globalChurchSabbathLogoAsset;
 
-    Widget buildDropdown(String label, String value, void Function(String) onChanged, void Function(void Function()) setState) {
+    Widget buildDropdown(
+      String label,
+      String value,
+      void Function(String) onChanged,
+      void Function(void Function()) setState,
+    ) {
       final isCustom = value.startsWith('base64:');
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3336,11 +3440,27 @@ class _WorkspaceState extends State<Workspace> {
             isExpanded: true,
             decoration: const InputDecoration(border: OutlineInputBorder()),
             items: [
-              const DropdownMenuItem(value: 'assets/branding/icon_silver_blue.png', child: Text('Icono Plata/Azul (Predeterminado)')),
-              const DropdownMenuItem(value: 'assets/branding/icon_gold_blue.png', child: Text('Icono Dorado/Azul')),
-              const DropdownMenuItem(value: 'assets/branding/logo.png', child: Text('Logotipo Completo')),
-              const DropdownMenuItem(value: 'assets/branding/logodorado.png', child: Text('Logotipo Completo (Dorado)')),
-              if (isCustom) const DropdownMenuItem(value: 'custom', child: Text('Logotipo personalizado (Subido)')),
+              const DropdownMenuItem(
+                value: 'assets/branding/icon_silver_blue.png',
+                child: Text('Icono Plata/Azul (Predeterminado)'),
+              ),
+              const DropdownMenuItem(
+                value: 'assets/branding/icon_gold_blue.png',
+                child: Text('Icono Dorado/Azul'),
+              ),
+              const DropdownMenuItem(
+                value: 'assets/branding/logo.png',
+                child: Text('Logotipo Completo'),
+              ),
+              const DropdownMenuItem(
+                value: 'assets/branding/logodorado.png',
+                child: Text('Logotipo Completo (Dorado)'),
+              ),
+              if (isCustom)
+                const DropdownMenuItem(
+                  value: 'custom',
+                  child: Text('Logotipo personalizado (Subido)'),
+                ),
             ],
             onChanged: (v) {
               if (v != null && v != 'custom') onChanged(v);
@@ -3400,9 +3520,19 @@ class _WorkspaceState extends State<Workspace> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    buildDropdown('Logotipo habitual (domingo a viernes):', selectedLogo, (v) => selectedLogo = v, setState),
+                    buildDropdown(
+                      'Logotipo habitual (domingo a viernes):',
+                      selectedLogo,
+                      (v) => selectedLogo = v,
+                      setState,
+                    ),
                     const SizedBox(height: 24),
-                    buildDropdown('Logotipo de sábado (incluye viernes de tarde):', selectedSabbathLogo, (v) => selectedSabbathLogo = v, setState),
+                    buildDropdown(
+                      'Logotipo de sábado (incluye viernes de tarde):',
+                      selectedSabbathLogo,
+                      (v) => selectedSabbathLogo = v,
+                      setState,
+                    ),
                     const SizedBox(height: 16),
                     const Text(
                       'El nombre y logotipo aparecerán automáticamente en la pantalla de proyección inactiva de acuerdo al día.',
@@ -3420,14 +3550,22 @@ class _WorkspaceState extends State<Workspace> {
               FilledButton(
                 onPressed: () {
                   globalChurchName = nameController.text.trim();
-                  if (globalChurchName.isEmpty) globalChurchName = 'Conferencia General de la Iglesia de Dios';
+                  if (globalChurchName.isEmpty)
+                    globalChurchName =
+                        'Conferencia General de la Iglesia de Dios';
                   globalChurchLogoAsset = selectedLogo;
                   globalChurchSabbathLogoAsset = selectedSabbathLogo;
-                  
+
                   widget.prefs.setString('churchName', globalChurchName);
-                  widget.prefs.setString('churchLogoAsset', globalChurchLogoAsset);
-                  widget.prefs.setString('churchSabbathLogoAsset', globalChurchSabbathLogoAsset);
-                  
+                  widget.prefs.setString(
+                    'churchLogoAsset',
+                    globalChurchLogoAsset,
+                  );
+                  widget.prefs.setString(
+                    'churchSabbathLogoAsset',
+                    globalChurchSabbathLogoAsset,
+                  );
+
                   this.setState(() {});
                   syncOutput();
                   Navigator.pop(context);
@@ -3436,10 +3574,11 @@ class _WorkspaceState extends State<Workspace> {
               ),
             ],
           );
-        }
+        },
       ),
     );
   }
+
   Widget about() => ListView(
     padding: const EdgeInsets.all(32),
     children: [
@@ -4019,10 +4158,9 @@ class _EntryReaderModalState extends State<EntryReaderModal> {
   }
 }
 
-
-
 Widget highlightSearchText(BuildContext context, String text, String query) {
-  if (query.trim().isEmpty) return Text(text, maxLines: 3, overflow: TextOverflow.ellipsis);
+  if (query.trim().isEmpty)
+    return Text(text, maxLines: 3, overflow: TextOverflow.ellipsis);
   final q = normalized(query.trim());
   final normText = normalized(text);
   final spans = <TextSpan>[];
@@ -4036,7 +4174,12 @@ Widget highlightSearchText(BuildContext context, String text, String query) {
     if (idx > start) {
       spans.add(TextSpan(text: text.substring(start, idx)));
     }
-    spans.add(TextSpan(text: text.substring(idx, idx + q.length), style: highlightStyle));
+    spans.add(
+      TextSpan(
+        text: text.substring(idx, idx + q.length),
+        style: highlightStyle,
+      ),
+    );
     start = idx + q.length;
     idx = normText.indexOf(q, start);
   }
