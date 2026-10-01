@@ -1,0 +1,50 @@
+﻿name: Compilar MacOS
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build_macos:
+    name: Build MacOS App
+    runs-on: macos-latest
+
+    steps:
+      - name: Clonar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Obtener dependencias
+        run: flutter pub get
+
+      - name: Compilar MacOS
+        run: flutter build macos --release
+
+      - name: Crear DMG (Instalador)
+        run: |
+          npm install -g create-dmg
+          create-dmg \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --icon "CGID.app" 200 190 \
+            --hide-extension "CGID.app" \
+            --app-drop-link 600 185 \
+            "CGID_MacOS.dmg" \
+            "build/macos/Build/Products/Release/CGID.app" || true
+          
+          # Si create-dmg falla por firmas, al menos hacemos un zip
+          if [ ! -f "CGID_MacOS.dmg" ]; then
+            cd build/macos/Build/Products/Release/
+            zip -r ../../../../../CGID_MacOS.zip *.app
+          fi
+
+      - name: Guardar instalador DMG o ZIP (Artefacto)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Instalador-MacOS
+          path: CGID_MacOS.*
