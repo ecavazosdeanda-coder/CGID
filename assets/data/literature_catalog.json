@@ -1,0 +1,49 @@
+{
+  "documents": [
+    {
+      "id": "fe-oficial-1",
+      "title": "32 Puntos de Fe (Oficial)",
+      "description": "Texto fundacional con los 32 Puntos de Fe de la Conferencia General de la Iglesia de Dios.",
+      "category": "puntosDeFe",
+      "assetPath": "assets/pdfs/fe.pdf",
+      "author": "Conferencia General",
+      "year": "2024"
+    },
+    {
+      "id": "biblia-rvr-1909",
+      "title": "Santa Biblia (RVR 1909)",
+      "description": "Traducción Reina-Valera 1909, versión de texto íntegro.",
+      "category": "otro",
+      "assetPath": "assets/pdfs/biblia.pdf",
+      "author": "Casiodoro de Reina",
+      "year": "1909"
+    },
+    {
+      "id": "himnario-1",
+      "title": "Himnario Oficial",
+      "description": "Recopilación de himnos de la Iglesia de Dios.",
+      "category": "otro",
+      "assetPath": "assets/pdfs/himnario.pdf",
+      "author": "Ministerio de Música",
+      "year": "2024"
+    },
+    {
+      "id": "partituras-1",
+      "title": "Partituras de Coro",
+      "description": "Partituras en pentagrama para el grupo de alabanza.",
+      "category": "otro",
+      "assetPath": "assets/pdfs/partituras_app.pdf",
+      "author": "Ministerio de Música",
+      "year": "2024"
+    },
+    {
+      "id": "revista-oct26",
+      "title": "La Verdad - Edición Octubre 2026",
+      "description": "Revista oficial mensual. Estudios bíblicos y noticias internacionales.",
+      "category": "revistasOficiales",
+      "url": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+      "author": "Depto. de Publicaciones",
+      "year": "2026"
+    }
+  ]
+}

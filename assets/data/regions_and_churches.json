@@ -1,0 +1,60 @@
+{
+  "regions": [
+    {
+      "id": "region-15",
+      "name": "Región 15",
+      "states": [
+        "Nuevo León",
+        "Tamaulipas"
+      ],
+      "presbyterName": "Pbro. Encargado de Región"
+    }
+  ],
+  "churches": [
+    {
+      "id": "mx-nl-mty-bethel",
+      "regionId": "region-15",
+      "name": "Iglesia de Dios en Monterrey (Templo Bethel)",
+      "state": "Nuevo León",
+      "city": "Monterrey",
+      "address": "Dirección Conocida, Monterrey, N.L.",
+      "latitude": 25.686614,
+      "longitude": -100.316112,
+      "googleMapsUrl": "https://maps.google.com/",
+      "pastorName": "Pbro. Local",
+      "defaultMeetUrl": "https://meet.google.com/abc-defg-hij",
+      "weeklyServices": [
+        {
+          "weekday": 5,
+          "start": "19:30",
+          "end": "21:00",
+          "title": "Recepción de Sábado",
+          "type": "recepcionSabado"
+        },
+        {
+          "weekday": 6,
+          "start": "09:30",
+          "end": "10:45",
+          "title": "Escuela Sabática",
+          "type": "escuelaSabatica"
+        },
+        {
+          "weekday": 6,
+          "start": "11:00",
+          "end": "13:00",
+          "title": "Culto Matutino",
+          "type": "cultoMatutino"
+        },
+        {
+          "weekday": 6,
+          "start": "18:00",
+          "end": "19:30",
+          "title": "Culto Vespertino",
+          "type": "cultoVespertino"
+        }
+      ],
+      "currentNotices": [],
+      "isUnifiedServiceActive": false
+    }
+  ]
+}

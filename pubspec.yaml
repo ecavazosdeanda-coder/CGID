@@ -42,7 +42,7 @@ dependencies:
   audioplayers: ^6.8.1
   audio_service: ^0.18.18
   file_picker: ^13.1.0
-  pdf: ^3.13.0
+  pdf: ^3.13.1
   archive: ^4.0.9
   http: ^1.6.0
   hive_ce_flutter: ^2.3.4
@@ -56,6 +56,8 @@ dependencies:
   media_kit_libs_windows_video: ^1.0.11
   wakelock_plus: ^1.8.0
   url_launcher: ^6.3.2
+  flutter_riverpod: ^3.4.3
+  printing: ^5.15.1
 
 dev_dependencies:
   flutter_test:
@@ -94,6 +96,7 @@ flutter:
     - assets/audio/catalog_v2.json
     - assets/audio/timings_v2.json
     - assets/audio/
+    - assets/data/
   fonts:
     - family: CGID
       fonts:
