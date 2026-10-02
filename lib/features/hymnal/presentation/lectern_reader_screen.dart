@@ -160,13 +160,11 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
   Widget _buildRichText(String text, Color textCol, Color chordCol) {
     final processed = _transposeText(text);
 
-    // Si tiene acordes entre corchetes ej: [G], destacamos visualmente los acordes
-    final regex = RegExp(r'\[([^\]]+)\]');
-    final matches = regex.allMatches(processed);
-
-    if (matches.isEmpty) {
+    // Si los acordes no están activados o no hay acordes en el texto, renderizado simple
+    if (!showChords || !processed.contains('[')) {
+      final cleanText = processed.replaceAll(RegExp(r'\[[^\]]+\]'), '');
       return Text(
-        processed,
+        cleanText,
         style: TextStyle(
           color: textCol,
           fontSize: fontSize,
@@ -176,66 +174,87 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
       );
     }
 
-    final spans = <InlineSpan>[];
-    int lastEnd = 0;
+    final lines = processed.split('\n');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < lines.length; i++) ...[
+          _buildLyricLineWithChords(lines[i], textCol, chordCol),
+          if (i < lines.length - 1) const SizedBox(height: 14),
+        ],
+      ],
+    );
+  }
 
-    for (final match in matches) {
-      if (match.start > lastEnd) {
-        spans.add(
-          TextSpan(
-            text: processed.substring(lastEnd, match.start),
-            style: TextStyle(
-              color: textCol,
-              fontSize: fontSize,
-              height: 1.5,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        );
-      }
+  Widget _buildLyricLineWithChords(String line, Color textCol, Color chordCol) {
+    if (line.trim().isEmpty) return const SizedBox(height: 10);
 
-      final chord = match.group(1)!;
-      spans.add(
-        WidgetSpan(
-          alignment: PlaceholderAlignment.middle,
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-            decoration: BoxDecoration(
-              color: chordCol.withAlpha(35),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: chordCol.withAlpha(120), width: 1),
-            ),
-            child: Text(
-              chord,
-              style: TextStyle(
-                color: chordCol,
-                fontSize: (fontSize * 0.78).clamp(11.0, 32.0),
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ),
-        ),
-      );
-      lastEnd = match.end;
-    }
+    // Tokenizamos la línea palabra por palabra preservando acordes asociados
+    final tokens = line.trim().split(RegExp(r'\s+'));
+    return Wrap(
+      spacing: 6.0,
+      runSpacing: 10.0,
+      crossAxisAlignment: WrapCrossAlignment.end,
+      children: [
+        for (final token in tokens)
+          _buildWordWithChord(token, textCol, chordCol),
+      ],
+    );
+  }
 
-    if (lastEnd < processed.length) {
-      spans.add(
-        TextSpan(
-          text: processed.substring(lastEnd),
+  Widget _buildWordWithChord(String token, Color textCol, Color chordCol) {
+    final chordRegex = RegExp(r'\[([^\]]+)\]');
+    final chordMatches = chordRegex.allMatches(token);
+
+    if (chordMatches.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 22.0),
+        child: Text(
+          token,
           style: TextStyle(
             color: textCol,
             fontSize: fontSize,
-            height: 1.5,
             fontWeight: FontWeight.w500,
           ),
         ),
       );
     }
 
-    return Text.rich(TextSpan(children: spans));
+    final chordText = chordMatches.map((m) => m.group(1)!).join(' ');
+    final cleanWord = token.replaceAll(chordRegex, '');
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: BoxDecoration(
+            color: chordCol.withAlpha(28),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: chordCol.withAlpha(100), width: 0.8),
+          ),
+          child: Text(
+            chordText,
+            style: TextStyle(
+              color: chordCol,
+              fontSize: (fontSize * 0.72).clamp(11.0, 24.0),
+              fontWeight: FontWeight.w800,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ),
+        Text(
+          cleanWord.isEmpty ? ' ' : cleanWord,
+          style: TextStyle(
+            color: textCol,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
