@@ -17,15 +17,27 @@ class HymnChordEditorDialog extends StatefulWidget {
     BuildContext context, {
     required Entry hymn,
     required List<Section> initialSections,
-  }) =>
-      showDialog<List<Section>?>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => HymnChordEditorDialog(
-          hymn: hymn,
-          initialSections: initialSections,
+  }) {
+    if (!HymnCustomizationService.isMasterAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(
+            'Acceso restringido: Solo el Administrador Maestro (ecavazosdeanda@gmail.com) puede modificar los acordes.',
+          ),
         ),
       );
+      return Future.value(null);
+    }
+    return showDialog<List<Section>?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => HymnChordEditorDialog(
+        hymn: hymn,
+        initialSections: initialSections,
+      ),
+    );
+  }
 
   @override
   State<HymnChordEditorDialog> createState() => _HymnChordEditorDialogState();
@@ -141,13 +153,33 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
   }
 
   Future<void> _save() async {
+    if (!HymnCustomizationService.isMasterAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(
+            'Acceso restringido: Solo el Administrador Maestro (ecavazosdeanda@gmail.com) puede guardar cambios.',
+          ),
+        ),
+      );
+      return;
+    }
     final sections = parseTextToSections(_controller.text);
-    await hymnCustomizationService.saveCustomChords(widget.hymn.id, sections);
+    final ok = await hymnCustomizationService.saveCustomChords(widget.hymn.id, sections);
     if (!mounted) return;
-    Navigator.of(context).pop(sections);
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.teal,
+          content: Text('¡Acordes actualizados y sincronizados con éxito!'),
+        ),
+      );
+      Navigator.of(context).pop(sections);
+    }
   }
 
   Future<void> _resetToOriginal() async {
+    if (!HymnCustomizationService.isMasterAdmin) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

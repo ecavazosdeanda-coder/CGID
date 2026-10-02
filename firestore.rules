@@ -27,6 +27,13 @@ service cloud.firestore {
     //   - plans: map (required) - Map of plan names (e.g. 'Culto del sábado')
     //            to list of liturgy/service entries. Bound: maximum 100 plans per church.
     //   - updatedAt: timestamp or string (optional) - Server timestamp when last synchronized.
+    // Collection: hymn_customizations/{hymnId}
+    // Document ID: hymnId (string, 1-100 chars, e.g. hymn identifier)
+    // Fields:
+    //   - hymnId: string (optional, matching document ID, 1-100 chars)
+    //   - sections: list (optional, custom chord chart sections and lyrics)
+    //   - updatedAt: timestamp or string (optional)
+    //   - updatedBy: string (optional, master admin email)
     //
     // ===============================================================
 
@@ -398,6 +405,15 @@ service cloud.firestore {
 
       // Writes: Only Master Administrators can add, edit, or remove literature
       allow create, update, delete: if isAdmin() && isValidId(docId);
+    }
+
+    // Hymn customizations (verified chords and scores by master admin)
+    match /hymn_customizations/{hymnId} {
+      // Reads: Open for all church members, musicians, and lectern displays
+      allow read: if true;
+
+      // Writes: Restricted strictly to the bootstrap Master Administrator (ecavazosdeanda@gmail.com)
+      allow write: if isBootstrapAdmin() && isValidId(hymnId);
     }
 
     // Remote Control Sessions (Host screen and paired mobile remotes)

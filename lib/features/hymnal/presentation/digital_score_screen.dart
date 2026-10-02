@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -29,6 +32,7 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
   bool showOriginal = false;
   bool hasCustomScore = false;
   final FocusNode _focusNode = FocusNode();
+  StreamSubscription<User?>? _authSubscription;
 
   Future<void> toggleFullScreen() async {
     final next = !fullScreen;
@@ -41,6 +45,13 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
   @override
   void initState() {
     super.initState();
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        _authSubscription = FirebaseAuth.instance.authStateChanges().listen((_) {
+          if (mounted) setState(() {});
+        });
+      }
+    } catch (_) {}
     _checkCustomScore();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
@@ -56,6 +67,7 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _focusNode.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
@@ -113,6 +125,20 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
   }
 
   Future<void> _uploadCustomScore() async {
+    if (!HymnCustomizationService.isMasterAdmin) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(
+              'Acceso restringido: Solo el Administrador Maestro (ecavazosdeanda@gmail.com) puede subir partituras.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
     try {
       final file = await FilePicker.pickFile(
         type: FileType.custom,
@@ -155,6 +181,20 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
   }
 
   Future<void> _restoreOfficialScore() async {
+    if (!HymnCustomizationService.isMasterAdmin) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(
+              'Acceso restringido: Solo el Administrador Maestro (ecavazosdeanda@gmail.com) puede restablecer partituras.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -218,24 +258,26 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
-                      const PopupMenuItem(
-                        value: 'upload',
-                        child: ListTile(
-                          leading: Icon(Icons.upload_file),
-                          title: Text('Subir partitura corregida'),
-                          subtitle: Text('.mxl o .musicxml corregido'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                      if (hasCustomScore)
+                      if (HymnCustomizationService.isMasterAdmin) ...[
                         const PopupMenuItem(
-                          value: 'restore',
+                          value: 'upload',
                           child: ListTile(
-                            leading: Icon(Icons.restore, color: Colors.red),
-                            title: Text('Restablecer oficial', style: TextStyle(color: Colors.red)),
+                            leading: Icon(Icons.upload_file),
+                            title: Text('Subir partitura corregida'),
+                            subtitle: Text('.mxl o .musicxml corregido'),
                             contentPadding: EdgeInsets.zero,
                           ),
                         ),
+                        if (hasCustomScore)
+                          const PopupMenuItem(
+                            value: 'restore',
+                            child: ListTile(
+                              leading: Icon(Icons.restore, color: Colors.red),
+                              title: Text('Restablecer oficial', style: TextStyle(color: Colors.red)),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                      ],
                     ],
                   ),
                   IconButton(
@@ -325,7 +367,7 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                           ),
                         ),
                       ),
-                      if (!showOriginal)
+                      if (!showOriginal && HymnCustomizationService.isMasterAdmin)
                         TextButton.icon(
                           style: TextButton.styleFrom(
                             foregroundColor: hasCustomScore ? Colors.white : null,

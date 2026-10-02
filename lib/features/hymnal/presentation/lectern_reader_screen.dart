@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -37,6 +39,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
   ChordChart? chordChart;
   List<Section>? customSections;
   bool chordLoading = false;
+  StreamSubscription<User?>? _authSubscription;
 
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
@@ -46,6 +49,13 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
     super.initState();
     currentIndex = widget.initialRepertoireIndex;
     currentEntry = widget.entry;
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        _authSubscription = FirebaseAuth.instance.authStateChanges().listen((_) {
+          if (mounted) setState(() {});
+        });
+      }
+    } catch (_) {}
     unawaited(_loadChordChart());
     unawaited(WakelockPlus.enable().catchError((_) {}));
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -94,6 +104,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _scrollController.dispose();
     _focusNode.dispose();
     unawaited(WakelockPlus.disable().catchError((_) {}));
@@ -435,26 +446,27 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                 ),
               ),
 
-              // Editar Acordes Manualmente
-              IconButton(
-                tooltip: hasCustomChords
-                    ? 'Editar acordes personalizados'
-                    : 'Editar o corregir acordes manualmente',
-                icon: Icon(
-                  hasCustomChords ? Icons.edit_note : Icons.edit,
-                  color: hasCustomChords ? Colors.amberAccent : null,
+              // Editar Acordes Manualmente (Exclusivo Administrador Maestro)
+              if (HymnCustomizationService.isMasterAdmin)
+                IconButton(
+                  tooltip: hasCustomChords
+                      ? 'Editar acordes personalizados (Admin)'
+                      : 'Editar o corregir acordes (Admin)',
+                  icon: Icon(
+                    hasCustomChords ? Icons.edit_note : Icons.edit,
+                    color: hasCustomChords ? Colors.amberAccent : null,
+                  ),
+                  onPressed: () async {
+                    final result = await HymnChordEditorDialog.show(
+                      context,
+                      hymn: currentEntry,
+                      initialSections: displayedSections,
+                    );
+                    if (result != null) {
+                      await _loadChordChart(keepShowChords: true);
+                    }
+                  },
                 ),
-                onPressed: () async {
-                  final result = await HymnChordEditorDialog.show(
-                    context,
-                    hymn: currentEntry,
-                    initialSections: displayedSections,
-                  );
-                  if (result != null) {
-                    await _loadChordChart(keepShowChords: true);
-                  }
-                },
-              ),
             ],
 
             // Font Sizing
@@ -549,32 +561,34 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                       const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
-                          'Acordes corregidos manualmente por el ministerio de alabanza.',
+                          'Acordes verificados y editados por la administración pastoral.',
                           style: TextStyle(color: Colors.white, fontSize: 12),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.teal.shade900,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          visualDensity: VisualDensity.compact,
+                      if (HymnCustomizationService.isMasterAdmin) ...[
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.teal.shade900,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          icon: const Icon(Icons.edit, size: 16),
+                          label: const Text('Editar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          onPressed: () async {
+                            final result = await HymnChordEditorDialog.show(
+                              context,
+                              hymn: currentEntry,
+                              initialSections: displayedSections,
+                            );
+                            if (result != null) {
+                              await _loadChordChart(keepShowChords: true);
+                            }
+                          },
                         ),
-                        icon: const Icon(Icons.edit, size: 16),
-                        label: const Text('Editar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                        onPressed: () async {
-                          final result = await HymnChordEditorDialog.show(
-                            context,
-                            hymn: currentEntry,
-                            initialSections: displayedSections,
-                          );
-                          if (result != null) {
-                            await _loadChordChart(keepShowChords: true);
-                          }
-                        },
-                      ),
+                      ],
                     ],
                   ),
                 )
@@ -590,35 +604,37 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Acordes extraídos de la partitura MusicXML${chordChart?.keyLabel.isNotEmpty == true ? ' · Tono: ${chordChart!.keyLabel}' : ''}. Requieren revisión.',
+                          'Acordes extraídos de la partitura MusicXML${chordChart?.keyLabel.isNotEmpty == true ? ' · Tono: ${chordChart!.keyLabel}' : ''}.${HymnCustomizationService.isMasterAdmin ? ' Requieren revisión.' : ''}',
                           style: const TextStyle(color: Colors.white, fontSize: 12),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.amber.shade900,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          visualDensity: VisualDensity.compact,
+                      if (HymnCustomizationService.isMasterAdmin) ...[
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.amber.shade900,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          icon: const Icon(Icons.edit_note, size: 18),
+                          label: const Text(
+                            'Corregir acordes',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                          onPressed: () async {
+                            final result = await HymnChordEditorDialog.show(
+                              context,
+                              hymn: currentEntry,
+                              initialSections: displayedSections,
+                            );
+                            if (result != null) {
+                              await _loadChordChart(keepShowChords: true);
+                            }
+                          },
                         ),
-                        icon: const Icon(Icons.edit_note, size: 18),
-                        label: const Text(
-                          'Corregir acordes',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                        onPressed: () async {
-                          final result = await HymnChordEditorDialog.show(
-                            context,
-                            hymn: currentEntry,
-                            initialSections: displayedSections,
-                          );
-                          if (result != null) {
-                            await _loadChordChart(keepShowChords: true);
-                          }
-                        },
-                      ),
+                      ],
                     ],
                   ),
                 ),

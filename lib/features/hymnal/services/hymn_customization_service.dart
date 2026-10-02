@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'package:archive/archive.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,37 +12,120 @@ import 'score_catalog.dart';
 import 'web_score_storage.dart';
 
 class HymnCustomizationService {
+  static const masterAdminEmail = 'ecavazosdeanda@gmail.com';
   static const _chordsPrefix = 'cgdi_custom_chords_';
   static const _scorePrefix = 'cgdi_custom_score_';
 
-  /// Obtiene los acordes personalizados guardados para este himno si existen.
-  Future<List<Section>?> getCustomChords(String hymnId) async {
+  /// Determina si el usuario actualmente autenticado es el Administrador Maestro (Master Admin)
+  static bool get isMasterAdmin {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('$_chordsPrefix$hymnId');
-      if (raw == null || raw.trim().isEmpty) return null;
-      final decoded = jsonDecode(raw) as List;
-      return [
-        for (final item in decoded)
-          Section.fromJson(Map<String, dynamic>.from(item as Map)),
-      ];
-    } catch (e) {
-      debugPrint('Error leyendo acordes personalizados para $hymnId: $e');
-      return null;
+      if (Firebase.apps.isEmpty) return false;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+      final email = user.email?.trim().toLowerCase();
+      return email == masterAdminEmail;
+    } catch (_) {
+      return false;
     }
   }
 
-  /// Guarda una versión editada de los acordes y texto para un himno.
-  Future<void> saveCustomChords(String hymnId, List<Section> sections) async {
+  /// Obtiene los acordes personalizados guardados para este himno si existen.
+  Future<List<Section>?> getCustomChords(String hymnId) async {
+    List<Section>? local;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('$_chordsPrefix$hymnId');
+      if (raw != null && raw.trim().isNotEmpty) {
+        final decoded = jsonDecode(raw) as List;
+        local = [
+          for (final item in decoded)
+            Section.fromJson(Map<String, dynamic>.from(item as Map)),
+        ];
+      }
+    } catch (e) {
+      debugPrint('Error leyendo acordes personalizados para $hymnId: $e');
+    }
+
+    // Consulta Firestore para obtener la versión publicada por el Administrador Maestro
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        final doc = await FirebaseFirestore.instance
+            .collection('hymn_customizations')
+            .doc(hymnId)
+            .get();
+        if (doc.exists && doc.data() != null) {
+          final data = doc.data()!;
+          if (data['sections'] is List) {
+            final list = data['sections'] as List;
+            final cloudSections = [
+              for (final item in list)
+                Section.fromJson(Map<String, dynamic>.from(item as Map)),
+            ];
+            // Guarda en caché local para acceso sin conexión
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString(
+                '$_chordsPrefix$hymnId',
+                jsonEncode([for (final s in cloudSections) s.toJson()]),
+              );
+            } catch (_) {}
+            return cloudSections;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error consultando acordes en Firestore para $hymnId: $e');
+    }
+
+    return local;
+  }
+
+  /// Guarda una versión editada de los acordes y texto para un himno (solo Administrador Maestro).
+  Future<bool> saveCustomChords(String hymnId, List<Section> sections) async {
+    if (!isMasterAdmin) {
+      debugPrint('Guardado rechazado: solo el Administrador Maestro puede guardar acordes.');
+      return false;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final jsonString = jsonEncode([for (final s in sections) s.toJson()]);
     await prefs.setString('$_chordsPrefix$hymnId', jsonString);
+
+    // Sincroniza a la nube en Firestore para que toda la congregación y músicos lo reciban
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection('hymn_customizations')
+            .doc(hymnId)
+            .set({
+          'hymnId': hymnId,
+          'sections': [for (final s in sections) s.toJson()],
+          'updatedAt': FieldValue.serverTimestamp(),
+          'updatedBy': masterAdminEmail,
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      debugPrint('Error sincronizando acordes a Firestore: $e');
+    }
+    return true;
   }
 
-  /// Restablece los acordes de este himno a los que extrae la partitura oficial.
-  Future<void> clearCustomChords(String hymnId) async {
+  /// Restablece los acordes de este himno a los que extrae la partitura oficial (solo Administrador Maestro).
+  Future<bool> clearCustomChords(String hymnId) async {
+    if (!isMasterAdmin) return false;
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('$_chordsPrefix$hymnId');
+
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection('hymn_customizations')
+            .doc(hymnId)
+            .update({'sections': FieldValue.delete()});
+      }
+    } catch (_) {}
+    return true;
   }
 
   /// Verifica si el himno tiene acordes editados manualmente.
@@ -81,12 +167,17 @@ class HymnCustomizationService {
     }
   }
 
-  /// Guarda una partitura MusicXML corregida (.mxl, .musicxml o .xml) subida por el usuario.
+  /// Guarda una partitura MusicXML corregida (.mxl, .musicxml o .xml) subida por el usuario (solo Administrador Maestro).
   Future<bool> saveCustomScore({
     required String hymnId,
     required Uint8List bytes,
     required String fileName,
   }) async {
+    if (!isMasterAdmin) {
+      debugPrint('Subida de partitura denegada: solo el Administrador Maestro puede subir partituras.');
+      return false;
+    }
+
     String? xmlContent;
     final lowerName = fileName.toLowerCase();
 
@@ -124,8 +215,10 @@ class HymnCustomizationService {
     return true;
   }
 
-  /// Restablece la partitura digital a la versión oficial original.
+  /// Restablece la partitura digital a la versión oficial original (solo Administrador Maestro).
   Future<void> clearCustomScore(String hymnId) async {
+    if (!isMasterAdmin) return;
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('$_scorePrefix$hymnId');
     if (kIsWeb) {
