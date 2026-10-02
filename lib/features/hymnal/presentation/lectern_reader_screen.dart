@@ -51,7 +51,11 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
     currentEntry = widget.entry;
     try {
       if (Firebase.apps.isNotEmpty) {
-        _authSubscription = FirebaseAuth.instance.authStateChanges().listen((_) {
+        unawaited(HymnCustomizationService.refreshAdminStatus().then((_) {
+          if (mounted) setState(() {});
+        }));
+        _authSubscription = FirebaseAuth.instance.authStateChanges().listen((_) async {
+          await HymnCustomizationService.refreshAdminStatus();
           if (mounted) setState(() {});
         });
       }
@@ -547,25 +551,25 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                   ),
                 ),
               if (chordLoading) const LinearProgressIndicator(minHeight: 3),
-              if (showChords && hasCustomChords)
-                Container(
-                  width: double.infinity,
-                  color: Colors.teal.shade800,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle, color: Colors.white, size: 16),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'Acordes verificados y editados por la administración pastoral.',
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+              if (showChords && HymnCustomizationService.isAdmin) ...[
+                if (hasCustomChords)
+                  Container(
+                    width: double.infinity,
+                    color: Colors.teal.shade800,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.admin_panel_settings, color: Colors.white, size: 16),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Modo Administrador · Acordes personalizados activos para este himno.',
+                            style: TextStyle(color: Colors.white, fontSize: 12),
+                          ),
                         ),
-                      ),
-                      if (HymnCustomizationService.isMasterAdmin) ...[
                         const SizedBox(width: 8),
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
@@ -589,26 +593,26 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                           },
                         ),
                       ],
-                    ],
-                  ),
-                )
-              else if (showChords && hasChordChart)
-                Container(
-                  width: double.infinity,
-                  color: Colors.amber.shade900,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Acordes extraídos de la partitura MusicXML${chordChart?.keyLabel.isNotEmpty == true ? ' · Tono: ${chordChart!.keyLabel}' : ''}.${HymnCustomizationService.isMasterAdmin ? ' Requieren revisión.' : ''}',
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  )
+                else if (hasChordChart)
+                  Container(
+                    width: double.infinity,
+                    color: Colors.amber.shade900,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.admin_panel_settings, color: Colors.white, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Modo Administrador · Acordes extraídos de MusicXML${chordChart?.keyLabel.isNotEmpty == true ? ' · Tono: ${chordChart!.keyLabel}' : ''}.',
+                            style: const TextStyle(color: Colors.white, fontSize: 12),
+                          ),
                         ),
-                      ),
-                      if (HymnCustomizationService.isMasterAdmin) ...[
                         const SizedBox(width: 8),
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
@@ -635,9 +639,9 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                           },
                         ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
+              ],
               Expanded(
                 child: ListView(
                   controller: _scrollController,

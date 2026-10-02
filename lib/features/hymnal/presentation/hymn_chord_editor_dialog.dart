@@ -18,12 +18,12 @@ class HymnChordEditorDialog extends StatefulWidget {
     required Entry hymn,
     required List<Section> initialSections,
   }) {
-    if (!HymnCustomizationService.isMasterAdmin) {
+    if (!HymnCustomizationService.isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: Colors.red,
           content: Text(
-            'Acceso restringido: Solo el Administrador Maestro (ecavazosdeanda@gmail.com) puede modificar los acordes.',
+            'Acceso restringido: Solo el administrador puede modificar o corregir los acordes.',
           ),
         ),
       );
@@ -153,12 +153,12 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
   }
 
   Future<void> _save() async {
-    if (!HymnCustomizationService.isMasterAdmin) {
+    if (!HymnCustomizationService.isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: Colors.red,
           content: Text(
-            'Acceso restringido: Solo el Administrador Maestro (ecavazosdeanda@gmail.com) puede guardar cambios.',
+            'Acceso restringido: Solo el administrador puede guardar cambios.',
           ),
         ),
       );
@@ -179,7 +179,7 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
   }
 
   Future<void> _resetToOriginal() async {
-    if (!HymnCustomizationService.isMasterAdmin) return;
+    if (!HymnCustomizationService.isAdmin) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

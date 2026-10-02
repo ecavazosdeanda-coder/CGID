@@ -16,15 +16,48 @@ class HymnCustomizationService {
   static const _chordsPrefix = 'cgdi_custom_chords_';
   static const _scorePrefix = 'cgdi_custom_score_';
 
-  /// Determina si el usuario actualmente autenticado es el Administrador Maestro (Master Admin)
-  static bool get isMasterAdmin {
+  static bool _cachedRoleIsAdmin = false;
+
+  /// Determina si el usuario actualmente autenticado tiene rol de Administrador
+  static bool get isAdmin {
     try {
       if (Firebase.apps.isEmpty) return false;
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return false;
       final email = user.email?.trim().toLowerCase();
-      return email == masterAdminEmail;
+      if (email == masterAdminEmail) return true;
+      return _cachedRoleIsAdmin;
     } catch (_) {
+      return false;
+    }
+  }
+
+  /// Alias de compatibilidad
+  static bool get isMasterAdmin => isAdmin;
+
+  /// Consulta Firestore para actualizar si el usuario actual posee rol de 'admin'
+  static Future<bool> refreshAdminStatus() async {
+    try {
+      if (Firebase.apps.isEmpty) return false;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _cachedRoleIsAdmin = false;
+        return false;
+      }
+      final email = user.email?.trim().toLowerCase();
+      if (email == masterAdminEmail) {
+        _cachedRoleIsAdmin = true;
+        return true;
+      }
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && doc.data()?['role'] == 'admin') {
+        _cachedRoleIsAdmin = true;
+        return true;
+      }
+      _cachedRoleIsAdmin = false;
+      return false;
+    } catch (_) {
+      _cachedRoleIsAdmin = false;
       return false;
     }
   }

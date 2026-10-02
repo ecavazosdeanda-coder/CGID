@@ -47,7 +47,11 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
     super.initState();
     try {
       if (Firebase.apps.isNotEmpty) {
-        _authSubscription = FirebaseAuth.instance.authStateChanges().listen((_) {
+        unawaited(HymnCustomizationService.refreshAdminStatus().then((_) {
+          if (mounted) setState(() {});
+        }));
+        _authSubscription = FirebaseAuth.instance.authStateChanges().listen((_) async {
+          await HymnCustomizationService.refreshAdminStatus();
           if (mounted) setState(() {});
         });
       }
@@ -258,7 +262,7 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
-                      if (HymnCustomizationService.isMasterAdmin) ...[
+                      if (HymnCustomizationService.isAdmin) ...[
                         const PopupMenuItem(
                           value: 'upload',
                           child: ListTile(
@@ -367,7 +371,7 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                           ),
                         ),
                       ),
-                      if (!showOriginal && HymnCustomizationService.isMasterAdmin)
+                      if (!showOriginal && HymnCustomizationService.isAdmin)
                         TextButton.icon(
                           style: TextButton.styleFrom(
                             foregroundColor: hasCustomScore ? Colors.white : null,
