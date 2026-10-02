@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,11 +32,10 @@ import 'features/projection/presentation/stream_overlay_screen.dart';
 import 'features/projection/presentation/obs_dock_screen.dart';
 import 'features/notes/presentation/sermon_notes_screen.dart';
 import 'features/events/presentation/church_events_screen.dart';
+import 'features/hymnal/services/score_catalog.dart';
 import 'remote_client_screen.dart';
 
 CgidAudioHandler? globalAudioHandler;
-
-Map<String, List<int>> digitalScorePages = {};
 
 Future<void> syncPlatformBranding() async {
   if (kIsWeb) return;
@@ -121,13 +118,7 @@ Future<void> main(List<String> args) async {
   }
   await syncPlatformBranding();
   try {
-    final catalog = jsonDecode(
-      await rootBundle.loadString('assets/scores/catalog.json'),
-    );
-    digitalScorePages = {
-      for (final entry in catalog['entries'])
-        entry['id'] as String: List<int>.from(entry['sourcePages']),
-    };
+    await scoreCatalog.load();
   } catch (_) {
     // Keep the verified sample available if the generated catalog is absent.
   }

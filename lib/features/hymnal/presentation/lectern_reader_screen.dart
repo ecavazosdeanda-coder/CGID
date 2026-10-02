@@ -1,9 +1,11 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../content.dart';
+import '../services/score_catalog.dart';
 
 class LecternReaderScreen extends StatefulWidget {
   final Entry entry;
@@ -25,53 +27,46 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
   double fontSize = 22.0;
   bool dark = true;
   int transposeAmount = 0;
-  bool showChords = true;
+  bool showChords = false;
   bool useSolfeo = false;
   bool showPedalHelper = false;
   late int currentIndex;
   late Entry currentEntry;
+  ChordChart? chordChart;
+  bool chordLoading = false;
 
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
-
-  static const _notes = [
-    'C',
-    'C#',
-    'D',
-    'D#',
-    'E',
-    'F',
-    'F#',
-    'G',
-    'G#',
-    'A',
-    'A#',
-    'B',
-  ];
-
-  static const _solfeo = [
-    'Do',
-    'Do#',
-    'Re',
-    'Re#',
-    'Mi',
-    'Fa',
-    'Fa#',
-    'Sol',
-    'Sol#',
-    'La',
-    'La#',
-    'Si',
-  ];
 
   @override
   void initState() {
     super.initState();
     currentIndex = widget.initialRepertoireIndex;
     currentEntry = widget.entry;
+    unawaited(_loadChordChart());
     unawaited(WakelockPlus.enable().catchError((_) {}));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
+    });
+  }
+
+  Future<void> _loadChordChart() async {
+    final hymnId = currentEntry.id;
+    setState(() {
+      chordLoading = true;
+      chordChart = null;
+      showChords = false;
+    });
+    ChordChart? chart;
+    try {
+      chart = await scoreCatalog.chordChartFor(hymnId);
+    } catch (_) {
+      chart = null;
+    }
+    if (!mounted || currentEntry.id != hymnId) return;
+    setState(() {
+      chordChart = chart;
+      chordLoading = false;
     });
   }
 
@@ -91,6 +86,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
         currentEntry = widget.repertoireList![currentIndex];
         transposeAmount = 0;
       });
+      unawaited(_loadChordChart());
       _scrollController.jumpTo(0);
     } else {
       _pageScroll(1);
@@ -104,6 +100,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
         currentEntry = widget.repertoireList![currentIndex];
         transposeAmount = 0;
       });
+      unawaited(_loadChordChart());
       _scrollController.jumpTo(0);
     } else {
       _pageScroll(-1);
@@ -147,44 +144,24 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
     }
   }
 
-  String _transposeNote(String note) {
-    var n = note;
-    if (n == 'Db') n = 'C#';
-    if (n == 'Eb') n = 'D#';
-    if (n == 'Gb') n = 'F#';
-    if (n == 'Ab') n = 'G#';
-    if (n == 'Bb') n = 'A#';
-
-    final idx = _notes.indexOf(n);
-    if (idx == -1) return note;
-
-    var newIndex = (idx + transposeAmount) % 12;
-    if (newIndex < 0) newIndex += 12;
-    return useSolfeo ? _solfeo[newIndex] : _notes[newIndex];
-  }
-
   String _transposeText(String text) {
     // Si los acordes están desactivados, eliminamos los corchetes de acordes [G], [Am], etc.
     if (!showChords) {
       return text.replaceAll(RegExp(r'\[[CDEFGAB][#b]?[^\]]*\]'), '');
     }
 
-    if (transposeAmount == 0 && !useSolfeo) return text;
-
-    return text.replaceAllMapped(RegExp(r'\[([CDEFGAB][#b]?)([^\]]*)\]'), (
-      match,
-    ) {
-      final note = match.group(1)!;
-      final rest = match.group(2)!;
-      return '[${_transposeNote(note)}$rest]';
-    });
+    return ChordTransposer.transposeText(
+      text,
+      transposeAmount,
+      useSolfeo: useSolfeo,
+    );
   }
 
   Widget _buildRichText(String text, Color textCol, Color chordCol) {
     final processed = _transposeText(text);
 
     // Si tiene acordes entre corchetes ej: [G], destacamos visualmente los acordes
-    final regex = RegExp(r'\[([CDEFGAB][#b]?[^\]]*)\]');
+    final regex = RegExp(r'\[([^\]]+)\]');
     final matches = regex.allMatches(processed);
 
     if (matches.isEmpty) {
@@ -271,6 +248,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
 
     final hasRepertoire =
         widget.repertoireList != null && widget.repertoireList!.isNotEmpty;
+    final displayedSections = showChords && chordChart != null
+        ? chordChart!.applyToSections(currentEntry.sections)
+        : currentEntry.sections;
+    final hasChordChart = chordChart != null && chordChart!.isEmpty == false;
 
     return KeyboardListener(
       focusNode: _focusNode,
@@ -288,7 +269,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
             children: [
               Text(
                 currentEntry.title,
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
               if (hasRepertoire)
@@ -323,7 +307,9 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
             IconButton(
               tooltip: 'Transportar Tono (-1 semitono)',
               icon: const Icon(Icons.exposure_minus_1),
-              onPressed: () => setState(() => transposeAmount--),
+              onPressed: showChords
+                  ? () => setState(() => transposeAmount--)
+                  : null,
             ),
             InkWell(
               borderRadius: BorderRadius.circular(8),
@@ -347,7 +333,9 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
             IconButton(
               tooltip: 'Transportar Tono (+1 semitono)',
               icon: const Icon(Icons.exposure_plus_1),
-              onPressed: () => setState(() => transposeAmount++),
+              onPressed: showChords
+                  ? () => setState(() => transposeAmount++)
+                  : null,
             ),
 
             // Toggle Chords
@@ -357,7 +345,24 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                 showChords ? Icons.music_note : Icons.music_off,
                 color: showChords ? chordCol : Colors.grey,
               ),
-              onPressed: () => setState(() => showChords = !showChords),
+              onPressed: chordLoading
+                  ? null
+                  : () {
+                      if (!hasChordChart) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Esta partitura todavía no contiene acordes reconocibles.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+                      setState(() {
+                        showChords = !showChords;
+                        if (!showChords) transposeAmount = 0;
+                      });
+                    },
             ),
 
             // Toggle Notation (C, D, E vs Do, Re, Mi)
@@ -403,7 +408,8 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
             IconButton(
               tooltip: 'Pedales Bluetooth (PageFlip/AirTurn)',
               icon: const Icon(Icons.keyboard_outlined),
-              onPressed: () => setState(() => showPedalHelper = !showPedalHelper),
+              onPressed: () =>
+                  setState(() => showPedalHelper = !showPedalHelper),
             ),
 
             // Light/Dark
@@ -429,10 +435,17 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
               if (showPedalHelper)
                 Container(
                   color: Colors.amber.shade900,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
-                      const Icon(Icons.settings_remote, color: Colors.white, size: 20),
+                      const Icon(
+                        Icons.settings_remote,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       const SizedBox(width: 10),
                       const Expanded(
                         child: Text(
@@ -441,16 +454,39 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white, size: 18),
-                        onPressed: () => setState(() => showPedalHelper = false),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        onPressed: () =>
+                            setState(() => showPedalHelper = false),
                       ),
                     ],
+                  ),
+                ),
+              if (chordLoading) const LinearProgressIndicator(minHeight: 3),
+              if (showChords && hasChordChart)
+                Container(
+                  width: double.infinity,
+                  color: Colors.amber.shade900,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    'Acordes extraídos de la partitura MusicXML${chordChart!.keyLabel.isEmpty ? '' : ' · Tono original: ${chordChart!.keyLabel}'}. Requieren revisión musical.',
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               Expanded(
                 child: ListView(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 24,
+                  ),
                   children: [
                     if (currentEntry.subtitle.isNotEmpty)
                       Padding(
@@ -467,7 +503,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                           textAlign: TextAlign.center,
                         ),
                       ),
-                    for (final section in currentEntry.sections)
+                    for (final section in displayedSections)
                       Container(
                         margin: const EdgeInsets.only(bottom: 20),
                         padding: const EdgeInsets.all(18),
@@ -525,7 +561,8 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                       ),
                     ),
                     TextButton.icon(
-                      onPressed: currentIndex < widget.repertoireList!.length - 1
+                      onPressed:
+                          currentIndex < widget.repertoireList!.length - 1
                           ? _nextHymn
                           : null,
                       icon: const Icon(Icons.arrow_forward),

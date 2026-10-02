@@ -39,7 +39,6 @@ import '../admin/presentation/admin_gate_screen.dart';
 import '../admin/providers/auth_provider.dart';
 import '../../main.dart'
     show
-        digitalScorePages,
         globalAudioHandler,
         serviceTemplateIcons,
         serviceTemplateIconLabels,
@@ -50,6 +49,7 @@ import '../hymnal/presentation/digital_score_screen.dart';
 import '../hymnal/presentation/entry_reader_modal.dart';
 import '../projection/presentation/stream_overlay_dialog.dart';
 import '../hymnal/presentation/lectern_reader_screen.dart';
+import '../hymnal/services/score_catalog.dart';
 import '../literature/presentation/literature_screen.dart';
 import '../ai_assistant/presentation/doctrinal_ai_dialog.dart';
 import '../bulletin/utils/bulletin_pdf_generator.dart';
@@ -576,14 +576,14 @@ class WorkspaceState extends ConsumerState<Workspace> {
   }
 
   Future<void> openDigitalScore(Entry hymn) async {
-    final scores = digitalScorePages[hymn.id];
-    if (scores == null || scores.isEmpty) {
+    final score = scoreCatalog[hymn.id];
+    if (score == null || score.files.isEmpty) {
       message('La partitura digital de ${hymn.title} está en preparación.');
       return;
     }
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => DigitalScoreScreen(hymn: hymn, scorePages: scores),
+        builder: (_) => DigitalScoreScreen(hymn: hymn, score: score),
       ),
     );
   }
@@ -1094,7 +1094,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
           module('Oficial', 'Literatura', Icons.library_books, 7),
           if (isLoggedIn)
             module(
-              '${digitalScorePages.length}',
+              '${scoreCatalog.entries.length}',
               'Partituras digitales',
               Icons.library_music,
               4,
@@ -1245,16 +1245,16 @@ class WorkspaceState extends ConsumerState<Workspace> {
           ),
           if (e.id.startsWith('h'))
             TextButton.icon(
-              onPressed: digitalScorePages.containsKey(e.id)
+              onPressed: scoreCatalog.contains(e.id)
                   ? () => openDigitalScore(e)
                   : null,
               icon: Icon(
-                digitalScorePages.containsKey(e.id)
+                scoreCatalog.contains(e.id)
                     ? Icons.music_note
                     : Icons.schedule,
               ),
               label: Text(
-                digitalScorePages.containsKey(e.id)
+                scoreCatalog.contains(e.id)
                     ? 'Ver partitura digital'
                     : 'Partitura digital en preparación',
               ),
@@ -1364,7 +1364,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
 
   Widget scores() {
     final available = lib.hymns
-        .where((e) => digitalScorePages.containsKey(e.id))
+        .where((e) => scoreCatalog.contains(e.id))
         .where(
           (e) =>
               query.isEmpty || normalized(e.title).contains(normalized(query)),
@@ -1420,12 +1420,24 @@ class WorkspaceState extends ConsumerState<Workspace> {
               leading: const CircleAvatar(child: Icon(Icons.music_note)),
               title: Text(e.title),
               subtitle: Text(
-                '${digitalScorePages[e.id]!.length} ${digitalScorePages[e.id]!.length == 1 ? 'parte' : 'partes'} · MusicXML · Requiere revisión',
+                '${scoreCatalog[e.id]!.files.length} ${scoreCatalog[e.id]!.files.length == 1 ? 'parte' : 'partes'} · MusicXML · Requiere revisión',
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => openDigitalScore(e),
             ),
           ),
+        const SizedBox(height: 28),
+        const Divider(),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.picture_as_pdf_outlined),
+          label: const Text('Ver libro de partituras originales'),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const OriginalScoreBookScreen(),
+            ),
+          ),
+        ),
       ],
     );
   }

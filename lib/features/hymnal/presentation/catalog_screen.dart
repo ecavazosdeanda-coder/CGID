@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../content.dart';
 import '../../../playback.dart';
 import '../../../glass.dart';
-import '../../../main.dart' show digitalScorePages;
+import '../services/score_catalog.dart';
 
 class CatalogScreen extends StatefulWidget {
   final List<Entry> all;
@@ -103,7 +103,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   hymnComposer(e) == hymnComposerFilter) &&
               (!isHymnal ||
                   !hymnScoresOnly ||
-                  digitalScorePages.containsKey(e.id)) &&
+                  scoreCatalog.contains(e.id)) &&
               (query.isEmpty || e.searchable.contains(normalized(query))),
         )
         .toList();
