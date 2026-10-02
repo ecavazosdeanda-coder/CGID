@@ -2608,6 +2608,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
         plan,
         churchName:
             widget.prefs.getString('tenant_church_name') ?? globalChurchName,
+        metadata: ref.read(planProvider.notifier).metadataFor(activePlan),
       );
       await Printing.sharePdf(
         bytes: pdfBytes,

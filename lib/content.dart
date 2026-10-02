@@ -20,12 +20,100 @@ class Section {
       Section(j['label'], j['text']);
 }
 
+/// Una responsabilidad concreta dentro de un culto. No representa el nivel de
+/// acceso permanente de la cuenta: la misma persona puede presidir un culto y
+/// predicar en otro.
+class ServiceAssignment {
+  final String role;
+  final String displayName;
+  final bool showInBulletin;
+
+  const ServiceAssignment({
+    required this.role,
+    required this.displayName,
+    this.showInBulletin = true,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'role': role,
+    'displayName': displayName,
+    'showInBulletin': showInBulletin,
+  };
+
+  factory ServiceAssignment.fromJson(Map<String, dynamic> json) =>
+      ServiceAssignment(
+        role: json['role'] as String? ?? 'otro',
+        displayName: json['displayName'] as String? ?? '',
+        showInBulletin: json['showInBulletin'] as bool? ?? true,
+      );
+
+  String get roleLabel {
+    switch (role) {
+      case 'presidente':
+        return 'Presidente';
+      case 'predicador':
+        return 'Predicador';
+      case 'lector':
+        return 'Lector';
+      case 'oracion':
+        return 'Oración';
+      case 'musica':
+        return 'Música';
+      case 'multimedia':
+        return 'Multimedia';
+      default:
+        return 'Responsable';
+    }
+  }
+}
+
+class ServicePlanMetadata {
+  final String serviceDate;
+  final List<ServiceAssignment> assignments;
+
+  const ServicePlanMetadata({
+    this.serviceDate = '',
+    this.assignments = const [],
+  });
+
+  String personFor(String role) => assignments
+      .where((assignment) => assignment.role == role)
+      .map((assignment) => assignment.displayName.trim())
+      .firstWhere((name) => name.isNotEmpty, orElse: () => '');
+
+  String get dateLabel {
+    if (serviceDate.isEmpty) return '';
+    final date = DateTime.tryParse(serviceDate);
+    if (date == null) return serviceDate;
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Map<String, dynamic> toJson() => {
+    'serviceDate': serviceDate,
+    'assignments': assignments
+        .map((assignment) => assignment.toJson())
+        .toList(),
+  };
+
+  factory ServicePlanMetadata.fromJson(Map<String, dynamic> json) =>
+      ServicePlanMetadata(
+        serviceDate: json['serviceDate'] as String? ?? '',
+        assignments: [
+          for (final assignment in json['assignments'] as List? ?? const [])
+            ServiceAssignment.fromJson(
+              Map<String, dynamic>.from(assignment as Map),
+            ),
+        ],
+      );
+}
+
 class Entry {
   final String id, title, subtitle, pdf;
   final int page;
   final List<Section> sections;
   final List<String> mediaIds;
   final String notes;
+  final List<ServiceAssignment> assignments;
   const Entry({
     required this.id,
     required this.title,
@@ -35,6 +123,7 @@ class Entry {
     this.page = 1,
     this.mediaIds = const [],
     this.notes = '',
+    this.assignments = const [],
   });
 
   Entry copyWith({
@@ -46,6 +135,7 @@ class Entry {
     List<Section>? sections,
     List<String>? mediaIds,
     String? notes,
+    List<ServiceAssignment>? assignments,
   }) => Entry(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -55,6 +145,7 @@ class Entry {
     sections: sections ?? this.sections,
     mediaIds: mediaIds ?? this.mediaIds,
     notes: notes ?? this.notes,
+    assignments: assignments ?? this.assignments,
   );
 
   String get searchable =>
@@ -76,6 +167,9 @@ class Entry {
     'sections': sections.map((s) => s.toJson()).toList(),
     'mediaIds': mediaIds,
     'notes': notes,
+    'assignments': assignments
+        .map((assignment) => assignment.toJson())
+        .toList(),
   };
   factory Entry.fromJson(Map<String, dynamic> j) => Entry(
     id: j['id'],
@@ -85,6 +179,12 @@ class Entry {
     page: j['page'] ?? 1,
     mediaIds: List<String>.from(j['mediaIds'] ?? []),
     notes: j['notes'] ?? '',
+    assignments: [
+      for (final assignment in j['assignments'] as List? ?? const [])
+        ServiceAssignment.fromJson(
+          Map<String, dynamic>.from(assignment as Map),
+        ),
+    ],
     sections: (j['sections'] as List)
         .map((s) => Section.fromJson(Map<String, dynamic>.from(s)))
         .toList(),

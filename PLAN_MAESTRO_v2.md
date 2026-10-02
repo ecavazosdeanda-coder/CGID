@@ -183,7 +183,10 @@ Para garantizar una transición sin pérdida de datos locales:
   * Configuración del enlace de Google Meet y horarios de cultos del templo.
   * Publicación de avisos locales semanales.
   * Planificador semanal de cultos con guardado en la nube.
+  * Cuenta de **Colaborador Litúrgico** para hermanos autorizados que ayudan a preparar y sincronizar órdenes sin recibir facultades pastorales.
+  * Las funciones de **Presidente** y **Predicador** se asignan por culto, no como cargos permanentes de la cuenta; una misma persona puede desempeñar funciones diferentes en reuniones distintas.
 * **Sincronización en la Nube de Cultos (Cloud Sync):** El pastor diseña el culto desde su hogar y el proyeccionista en el templo lo carga instantáneamente en la pantalla principal.
+  * El orden público y las notas privadas ministeriales se guardan en documentos separados. Las notas requieren una cuenta asignada a la iglesia.
 * **Modo Atril Digital para Músicos:**
   * Cifrado y acordes sobre las letras de los himnos.
   * Transposición de tonos en tiempo real semitono a semitono (+/-).

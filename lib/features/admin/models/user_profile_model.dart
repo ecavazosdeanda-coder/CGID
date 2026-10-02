@@ -1,7 +1,7 @@
 class UserProfile {
   final String uid;
   final String email;
-  final String role; // 'admin', 'pastor', 'proyeccionista', 'musico'
+  final String role; // admin, pastor, colaborador, proyeccionista, musico
   final String? churchId; // ID único de la iglesia asignada
   final String? churchName; // Nombre visible de la iglesia asignada
 
@@ -15,6 +15,7 @@ class UserProfile {
 
   bool get isAdmin => role == 'admin';
   bool get isPastor => role == 'pastor';
+  bool get isCollaborator => role == 'colaborador';
   bool get isProyeccionista => role == 'proyeccionista';
   bool get isMusico => role == 'musico';
 
@@ -22,8 +23,8 @@ class UserProfile {
   bool get canManageUsers => isAdmin;
   bool get canManageTeam => isAdmin || isPastor;
   bool get canSwitchChurch => isAdmin;
-  bool get canEditPlans => isAdmin || isPastor;
-  bool get canSyncPlansToCloud => isAdmin || isPastor;
+  bool get canEditPlans => isAdmin || isPastor || isCollaborator;
+  bool get canSyncPlansToCloud => isAdmin || isPastor || isCollaborator;
   bool get canDownloadPlansFromCloud => true;
   bool get canEditNotices => isAdmin || isPastor;
   bool get canResetDatabase => isAdmin;
@@ -33,7 +34,11 @@ class UserProfile {
 
   bool canAssignRole(String targetRole) {
     if (isAdmin) return true;
-    if (isPastor) return targetRole == 'proyeccionista' || targetRole == 'musico';
+    if (isPastor) {
+      return targetRole == 'colaborador' ||
+          targetRole == 'proyeccionista' ||
+          targetRole == 'musico';
+    }
     return false;
   }
 
@@ -43,6 +48,8 @@ class UserProfile {
         return 'Administrador General (Conferencia)';
       case 'pastor':
         return 'Pastor Local';
+      case 'colaborador':
+        return 'Colaborador Litúrgico';
       case 'proyeccionista':
         return 'Multimedia / Proyección';
       case 'musico':
@@ -56,7 +63,7 @@ class UserProfile {
     return UserProfile(
       uid: uid,
       email: data['email'] as String? ?? '',
-      role: data['role'] as String? ?? 'pastor',
+      role: data['role'] as String? ?? 'sin_rol',
       churchId: data['churchId'] as String?,
       churchName: data['churchName'] as String?,
     );
@@ -70,11 +77,7 @@ class UserProfile {
     'updatedAt': DateTime.now().toIso8601String(),
   };
 
-  UserProfile copyWith({
-    String? role,
-    String? churchId,
-    String? churchName,
-  }) {
+  UserProfile copyWith({String? role, String? churchId, String? churchName}) {
     return UserProfile(
       uid: uid,
       email: email,

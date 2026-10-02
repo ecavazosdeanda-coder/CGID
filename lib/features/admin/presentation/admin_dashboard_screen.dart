@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +10,9 @@ import '../../tenant/providers/tenant_provider.dart';
 import '../models/user_profile_model.dart';
 import '../providers/user_profile_provider.dart';
 import 'pastor_assignment_dialog.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../projection/providers/projection_provider.dart';
 import '../../projection/presentation/stream_overlay_dialog.dart';
 
@@ -39,7 +42,8 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  ConsumerState<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
@@ -194,6 +198,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     if (profile == null) return Colors.grey;
     if (profile.isAdmin) return Colors.indigo;
     if (profile.isPastor) return Colors.teal;
+    if (profile.isCollaborator) return Colors.blueGrey;
     if (profile.isProyeccionista) return Colors.deepPurple;
     if (profile.isMusico) return Colors.amber.shade800;
     return Colors.blueGrey;
@@ -203,6 +208,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     if (profile == null) return Icons.person;
     if (profile.isAdmin) return Icons.admin_panel_settings;
     if (profile.isPastor) return Icons.person_pin;
+    if (profile.isCollaborator) return Icons.assignment_ind;
     if (profile.isProyeccionista) return Icons.connected_tv;
     if (profile.isMusico) return Icons.music_note;
     return Icons.badge;
@@ -266,17 +272,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             decoration: BoxDecoration(
               color: roleColor.withAlpha(20),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: roleColor.withAlpha(70),
-              ),
+              border: Border.all(color: roleColor.withAlpha(70)),
             ),
             child: Row(
               children: [
-                Icon(
-                  roleIcon,
-                  color: roleColor,
-                  size: 28,
-                ),
+                Icon(roleIcon, color: roleColor, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -286,7 +286,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         children: [
                           Text(
                             profile.roleDisplayName,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Chip(
@@ -308,8 +311,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         profile.isAdmin
                             ? 'Permisos de Conferencia General para supervisar, diseñar, asignar miembros y sincronizar cualquier iglesia.'
                             : (profile.churchId != null
-                                ? 'Asignado a: ${profile.churchName}'
-                                : '⚠️ Sin iglesia asignada. Solicita a la Conferencia General que te asigne tu congregación.'),
+                                  ? 'Asignado a: ${profile.churchName}'
+                                  : '⚠️ Sin iglesia asignada. Solicita a la Conferencia General que te asigne tu congregación.'),
                         style: TextStyle(
                           fontSize: 13,
                           color: (!profile.isAdmin && profile.churchId == null)
@@ -329,8 +332,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       );
                     },
                     icon: const Icon(Icons.people_alt, size: 18),
-                    label: Text(profile.isAdmin ? 'Gestionar Equipo' : 'Equipo de la Iglesia'),
-                    style: FilledButton.styleFrom(backgroundColor: Colors.indigo),
+                    label: Text(
+                      profile.isAdmin
+                          ? 'Gestionar Equipo'
+                          : 'Equipo de la Iglesia',
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                    ),
                   ),
               ],
             ),
@@ -359,7 +368,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           color: Colors.deepPurple.withAlpha(30),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.connected_tv, color: Colors.deepPurple, size: 28),
+                        child: const Icon(
+                          Icons.connected_tv,
+                          color: Colors.deepPurple,
+                          size: 28,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -368,13 +381,21 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           children: [
                             const Text(
                               'Cabina de Proyección del Templo',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             Text(
-                              (profile != null && !profile.isAdmin && profile.churchId != null)
+                              (profile != null &&
+                                      !profile.isAdmin &&
+                                      profile.churchId != null)
                                   ? 'Santuario: ${profile.churchName ?? "Iglesia Asignada"}'
                                   : 'Santuario: $_currentChurch',
-                              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                              ),
                             ),
                           ],
                         ),
@@ -387,107 +408,144 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     style: TextStyle(fontSize: 14, color: Colors.black87),
                   ),
                   const SizedBox(height: 16),
-                  StatefulBuilder(builder: (context, setLocalState) {
-                    final tenant = ref.watch(tenantProvider).value;
-                    final targetChurchId = (profile != null && !profile.isAdmin && profile.churchId != null)
-                        ? profile.churchId
-                        : tenant?.id;
-                    final canDownload = targetChurchId != null && targetChurchId.isNotEmpty;
+                  StatefulBuilder(
+                    builder: (context, setLocalState) {
+                      final tenant = ref.watch(tenantProvider).value;
+                      final targetChurchId =
+                          (profile != null &&
+                              !profile.isAdmin &&
+                              profile.churchId != null)
+                          ? profile.churchId
+                          : tenant?.id;
+                      final canDownload =
+                          targetChurchId != null && targetChurchId.isNotEmpty;
 
-                    return Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        FilledButton.icon(
-                          icon: _isDownloading
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.cloud_download),
-                          label: const Text('Descargar Culto de Hoy'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          FilledButton.icon(
+                            icon: _isDownloading
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.cloud_download),
+                            label: const Text('Descargar Culto de Hoy'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.deepPurple,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 12,
+                              ),
+                            ),
+                            onPressed: _isDownloading || !canDownload
+                                ? null
+                                : () async {
+                                    setLocalState(() => _isDownloading = true);
+                                    try {
+                                      await ref
+                                          .read(planProvider.notifier)
+                                          .fetchFromCloud(targetChurchId);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                              const SnackBar(
+                                                backgroundColor: Colors.green,
+                                                content: Text(
+                                                  '¡Plan litúrgico descargado exitosamente para la cabina!',
+                                                ),
+                                              ),
+                                            );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            backgroundColor: Colors.redAccent,
+                                            content: Text(
+                                              'Error al descargar: $e',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      if (context.mounted) {
+                                        setLocalState(
+                                          () => _isDownloading = false,
+                                        );
+                                      }
+                                    }
+                                  },
                           ),
-                          onPressed: _isDownloading || !canDownload
-                              ? null
-                              : () async {
-                                  setLocalState(() => _isDownloading = true);
-                                  try {
-                                    await ref.read(planProvider.notifier).fetchFromCloud(targetChurchId);
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          backgroundColor: Colors.green,
-                                          content: Text('¡Plan litúrgico descargado exitosamente para la cabina!'),
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          backgroundColor: Colors.redAccent,
-                                          content: Text('Error al descargar: $e'),
-                                        ),
-                                      );
-                                    }
-                                  } finally {
-                                    if (context.mounted) {
-                                      setLocalState(() => _isDownloading = false);
-                                    }
-                                  }
-                                },
-                        ),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.airplay, color: Colors.deepPurple),
-                          label: const Text('Abrir Pantalla de Proyección'),
-                          onPressed: () {
-                            ref.read(tabProvider.notifier).setTab(5);
-                          },
-                        ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.developer_board),
-                          label: const Text('Monitor de Escenario / Atril'),
-                          onPressed: () {
-                            ref.read(tabProvider.notifier).setTab(4);
-                          },
-                        ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.sensors, color: Color(0xFF6366F1)),
-                          label: const Text('Salida OBS / Transmisión'),
-                          onPressed: () {
-                            final notifier = ref.read(projectionProvider.notifier);
-                            StreamOverlayDialog.show(context, notifier.outputState);
-                          },
-                        ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.format_list_bulleted),
-                          label: const Text('Ver Cultos Guardados'),
-                          onPressed: () {
-                            ref.read(tabProvider.notifier).setTab(6);
-                          },
-                        ),
-                        if (profile?.canEditPlans == true)
-                          OutlinedButton.icon(
-                            icon: const Icon(Icons.edit_calendar, color: Colors.deepPurple),
-                            label: const Text('Editar Plan Litúrgico'),
+                          ElevatedButton.icon(
+                            icon: const Icon(
+                              Icons.airplay,
+                              color: Colors.deepPurple,
+                            ),
+                            label: const Text('Abrir Pantalla de Proyección'),
                             onPressed: () {
-                              Navigator.push(
+                              ref.read(tabProvider.notifier).setTab(5);
+                            },
+                          ),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.developer_board),
+                            label: const Text('Monitor de Escenario / Atril'),
+                            onPressed: () {
+                              ref.read(tabProvider.notifier).setTab(4);
+                            },
+                          ),
+                          OutlinedButton.icon(
+                            icon: const Icon(
+                              Icons.sensors,
+                              color: Color(0xFF6366F1),
+                            ),
+                            label: const Text('Salida OBS / Transmisión'),
+                            onPressed: () {
+                              final notifier = ref.read(
+                                projectionProvider.notifier,
+                              );
+                              StreamOverlayDialog.show(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (_) => ServiceBuilderScreen(
-                                    onPresent: widget.onPresent,
-                                  ),
-                                ),
+                                notifier.outputState,
                               );
                             },
                           ),
-                      ],
-                    );
-                  }),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.format_list_bulleted),
+                            label: const Text('Ver Cultos Guardados'),
+                            onPressed: () {
+                              ref.read(tabProvider.notifier).setTab(6);
+                            },
+                          ),
+                          if (profile?.canEditPlans == true)
+                            OutlinedButton.icon(
+                              icon: const Icon(
+                                Icons.edit_calendar,
+                                color: Colors.deepPurple,
+                              ),
+                              label: const Text('Editar Plan Litúrgico'),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ServiceBuilderScreen(
+                                      onPresent: widget.onPresent,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -516,7 +574,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           color: Colors.amber.shade100,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.queue_music, color: Colors.amber.shade900, size: 28),
+                        child: Icon(
+                          Icons.queue_music,
+                          color: Colors.amber.shade900,
+                          size: 28,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -525,13 +587,21 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           children: [
                             const Text(
                               'Repertorio y Atril Musical',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             Text(
-                              (profile != null && !profile.isAdmin && profile.churchId != null)
+                              (profile != null &&
+                                      !profile.isAdmin &&
+                                      profile.churchId != null)
                                   ? 'Congregación: ${profile.churchName ?? "Iglesia Asignada"}'
                                   : 'Congregación: $_currentChurch',
-                              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                              ),
                             ),
                           ],
                         ),
@@ -544,130 +614,166 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     style: TextStyle(fontSize: 14, color: Colors.black87),
                   ),
                   const SizedBox(height: 16),
-                  StatefulBuilder(builder: (context, setLocalState) {
-                    final tenant = ref.watch(tenantProvider).value;
-                    final targetChurchId = (profile != null && !profile.isAdmin && profile.churchId != null)
-                        ? profile.churchId
-                        : tenant?.id;
-                    final canDownload = targetChurchId != null && targetChurchId.isNotEmpty;
+                  StatefulBuilder(
+                    builder: (context, setLocalState) {
+                      final tenant = ref.watch(tenantProvider).value;
+                      final targetChurchId =
+                          (profile != null &&
+                              !profile.isAdmin &&
+                              profile.churchId != null)
+                          ? profile.churchId
+                          : tenant?.id;
+                      final canDownload =
+                          targetChurchId != null && targetChurchId.isNotEmpty;
 
-                    return Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        FilledButton.icon(
-                          icon: _isDownloading
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.cloud_download),
-                          label: const Text('Descargar Repertorio de Culto'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.amber.shade800,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                          ),
-                          onPressed: _isDownloading || !canDownload
-                              ? null
-                              : () async {
-                                  setLocalState(() => _isDownloading = true);
-                                  try {
-                                    await ref.read(planProvider.notifier).fetchFromCloud(targetChurchId);
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          backgroundColor: Colors.green,
-                                          content: Text('¡Repertorio y cantos descargados exitosamente!'),
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          backgroundColor: Colors.redAccent,
-                                          content: Text('Error al descargar: $e'),
-                                        ),
-                                      );
-                                    }
-                                  } finally {
-                                    if (context.mounted) {
-                                      setLocalState(() => _isDownloading = false);
-                                    }
-                                  }
-                                },
-                        ),
-                        FilledButton.icon(
-                          icon: const Icon(Icons.music_note, color: Colors.white),
-                          label: const Text('Abrir Atril en Vivo (Culto)'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.teal.shade800,
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: () {
-                            final currentPlan = ref.read(planProvider).plan;
-                            final hymnsInPlan = currentPlan.where((e) => e.id.startsWith('h')).toList();
-                            if (hymnsInPlan.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('No hay cantos en el programa actual. Descarga o agrega cantos primero.'),
-                                ),
-                              );
-                              return;
-                            }
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => LecternReaderScreen(
-                                  entry: hymnsInPlan.first,
-                                  repertoireList: hymnsInPlan,
-                                  initialRepertoireIndex: 0,
-                                ),
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          FilledButton.icon(
+                            icon: _isDownloading
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.cloud_download),
+                            label: const Text('Descargar Repertorio de Culto'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.amber.shade800,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                                vertical: 12,
                               ),
-                            );
-                          },
-                        ),
-                        ElevatedButton.icon(
-                          icon: Icon(Icons.library_music, color: Colors.amber.shade900),
-                          label: const Text('Partituras Digitales'),
-                          onPressed: () {
-                            ref.read(tabProvider.notifier).setTab(4);
-                          },
-                        ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.menu_book),
-                          label: const Text('Himnario con Acordes'),
-                          onPressed: () {
-                            ref.read(tabProvider.notifier).setTab(1);
-                          },
-                        ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.list_alt),
-                          label: const Text('Ver Orden del Culto'),
-                          onPressed: () {
-                            ref.read(tabProvider.notifier).setTab(6);
-                          },
-                        ),
-                        if (profile?.canEditPlans == true)
-                          OutlinedButton.icon(
-                            icon: Icon(Icons.playlist_add, color: Colors.amber.shade900),
-                            label: const Text('Ajustar Selección de Cantos'),
+                            ),
+                            onPressed: _isDownloading || !canDownload
+                                ? null
+                                : () async {
+                                    setLocalState(() => _isDownloading = true);
+                                    try {
+                                      await ref
+                                          .read(planProvider.notifier)
+                                          .fetchFromCloud(targetChurchId);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                              const SnackBar(
+                                                backgroundColor: Colors.green,
+                                                content: Text(
+                                                  '¡Repertorio y cantos descargados exitosamente!',
+                                                ),
+                                              ),
+                                            );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            backgroundColor: Colors.redAccent,
+                                            content: Text(
+                                              'Error al descargar: $e',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      if (context.mounted) {
+                                        setLocalState(
+                                          () => _isDownloading = false,
+                                        );
+                                      }
+                                    }
+                                  },
+                          ),
+                          FilledButton.icon(
+                            icon: const Icon(
+                              Icons.music_note,
+                              color: Colors.white,
+                            ),
+                            label: const Text('Abrir Atril en Vivo (Culto)'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.teal.shade800,
+                              foregroundColor: Colors.white,
+                            ),
                             onPressed: () {
+                              final currentPlan = ref.read(planProvider).plan;
+                              final hymnsInPlan = currentPlan
+                                  .where((e) => e.id.startsWith('h'))
+                                  .toList();
+                              if (hymnsInPlan.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'No hay cantos en el programa actual. Descarga o agrega cantos primero.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => ServiceBuilderScreen(
-                                    onPresent: widget.onPresent,
+                                  builder: (_) => LecternReaderScreen(
+                                    entry: hymnsInPlan.first,
+                                    repertoireList: hymnsInPlan,
+                                    initialRepertoireIndex: 0,
                                   ),
                                 ),
                               );
                             },
                           ),
-                      ],
-                    );
-                  }),
+                          ElevatedButton.icon(
+                            icon: Icon(
+                              Icons.library_music,
+                              color: Colors.amber.shade900,
+                            ),
+                            label: const Text('Partituras Digitales'),
+                            onPressed: () {
+                              ref.read(tabProvider.notifier).setTab(4);
+                            },
+                          ),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.menu_book),
+                            label: const Text('Himnario con Acordes'),
+                            onPressed: () {
+                              ref.read(tabProvider.notifier).setTab(1);
+                            },
+                          ),
+                          OutlinedButton.icon(
+                            icon: const Icon(Icons.list_alt),
+                            label: const Text('Ver Orden del Culto'),
+                            onPressed: () {
+                              ref.read(tabProvider.notifier).setTab(6);
+                            },
+                          ),
+                          if (profile?.canEditPlans == true)
+                            OutlinedButton.icon(
+                              icon: Icon(
+                                Icons.playlist_add,
+                                color: Colors.amber.shade900,
+                              ),
+                              label: const Text('Ajustar Selección de Cantos'),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ServiceBuilderScreen(
+                                      onPresent: widget.onPresent,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -713,8 +819,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     children: [
                       FilledButton.icon(
                         icon: const Icon(Icons.person_add),
-                        label: Text(profile.isAdmin ? 'Registrar Miembro' : 'Crear Cuenta (Proyeccionista / Músico)'),
-                        style: FilledButton.styleFrom(backgroundColor: Colors.indigo),
+                        label: Text(
+                          profile.isAdmin
+                              ? 'Registrar Miembro'
+                              : 'Crear Cuenta (Proyeccionista / Músico)',
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.indigo,
+                        ),
                         onPressed: () {
                           showDialog(
                             context: context,
@@ -724,7 +836,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       ),
                       OutlinedButton.icon(
                         icon: const Icon(Icons.manage_accounts),
-                        label: Text(profile.isAdmin ? 'Administrar Roles' : 'Ver Equipo y Claves'),
+                        label: Text(
+                          profile.isAdmin
+                              ? 'Administrar Roles'
+                              : 'Ver Equipo y Claves',
+                        ),
                         onPressed: () {
                           showDialog(
                             context: context,
@@ -830,7 +946,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       ),
                       SizedBox(width: 8),
                       Chip(
-                        label: Text('Administrador Master', style: TextStyle(fontSize: 11)),
+                        label: Text(
+                          'Administrador Master',
+                          style: TextStyle(fontSize: 11),
+                        ),
                         backgroundColor: Color(0xFFF3E5F5),
                         visualDensity: VisualDensity.compact,
                       ),
@@ -849,7 +968,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       FilledButton.icon(
                         icon: const Icon(Icons.post_add),
                         label: const Text('Subir Nueva Literatura'),
-                        style: FilledButton.styleFrom(backgroundColor: Colors.purple.shade700),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.purple.shade700,
+                        ),
                         onPressed: () {
                           DocumentEditorDialog.show(context);
                         },
@@ -898,90 +1019,133 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     style: TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                   const SizedBox(height: 16),
-                  StatefulBuilder(builder: (context, setLocalState) {
-                    final tenant = ref.watch(tenantProvider).value;
-                    final targetChurchId = profile?.isPastor == true ? profile?.churchId : tenant?.id;
-                    final canSync = targetChurchId != null && targetChurchId.isNotEmpty;
+                  StatefulBuilder(
+                    builder: (context, setLocalState) {
+                      final tenant = ref.watch(tenantProvider).value;
+                      final targetChurchId = profile?.isAdmin == true
+                          ? tenant?.id
+                          : profile?.churchId;
+                      final canSync =
+                          targetChurchId != null && targetChurchId.isNotEmpty;
 
-                    return Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        ElevatedButton.icon(
-                          icon: _isUploading
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.cloud_upload),
-                          label: const Text('Subir a la nube'),
-                          onPressed: _isUploading || _isDownloading || !canSync
-                              ? null
-                              : () async {
-                                  setLocalState(() => _isUploading = true);
-                                  try {
-                                    await ref.read(planProvider.notifier).syncToCloud(targetChurchId);
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          backgroundColor: Colors.green,
-                                          content: Text('Plan sincronizado exitosamente en la nube.'),
-                                        ),
-                                      );
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          ElevatedButton.icon(
+                            icon: _isUploading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.cloud_upload),
+                            label: const Text('Subir a la nube'),
+                            onPressed:
+                                _isUploading || _isDownloading || !canSync
+                                ? null
+                                : () async {
+                                    setLocalState(() => _isUploading = true);
+                                    try {
+                                      await ref
+                                          .read(planProvider.notifier)
+                                          .syncToCloud(targetChurchId);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                              const SnackBar(
+                                                backgroundColor: Colors.green,
+                                                content: Text(
+                                                  'Plan sincronizado exitosamente en la nube.',
+                                                ),
+                                              ),
+                                            );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            backgroundColor: Colors.redAccent,
+                                            content: Text('Error al subir: $e'),
+                                            duration: const Duration(
+                                              seconds: 6,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      if (context.mounted) {
+                                        setLocalState(
+                                          () => _isUploading = false,
+                                        );
+                                      }
                                     }
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          backgroundColor: Colors.redAccent,
-                                          content: Text('Error al subir: $e'),
-                                          duration: const Duration(seconds: 6),
-                                        ),
-                                      );
+                                  },
+                          ),
+                          ElevatedButton.icon(
+                            icon: _isDownloading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.cloud_download),
+                            label: const Text('Descargar de la nube'),
+                            onPressed:
+                                _isUploading || _isDownloading || !canSync
+                                ? null
+                                : () async {
+                                    setLocalState(() => _isDownloading = true);
+                                    try {
+                                      await ref
+                                          .read(planProvider.notifier)
+                                          .fetchFromCloud(targetChurchId);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                              const SnackBar(
+                                                backgroundColor: Colors.green,
+                                                content: Text(
+                                                  'Plan descargado exitosamente de la nube.',
+                                                ),
+                                              ),
+                                            );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            backgroundColor: Colors.redAccent,
+                                            content: Text(
+                                              'Error al descargar: $e',
+                                            ),
+                                            duration: const Duration(
+                                              seconds: 6,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      if (context.mounted) {
+                                        setLocalState(
+                                          () => _isDownloading = false,
+                                        );
+                                      }
                                     }
-                                  } finally {
-                                    if (context.mounted) {
-                                      setLocalState(() => _isUploading = false);
-                                    }
-                                  }
-                                },
-                        ),
-                        ElevatedButton.icon(
-                          icon: _isDownloading
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.cloud_download),
-                          label: const Text('Descargar de la nube'),
-                          onPressed: _isUploading || _isDownloading || !canSync
-                              ? null
-                              : () async {
-                                  setLocalState(() => _isDownloading = true);
-                                  try {
-                                    await ref.read(planProvider.notifier).fetchFromCloud(targetChurchId);
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          backgroundColor: Colors.green,
-                                          content: Text('Plan descargado exitosamente de la nube.'),
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          backgroundColor: Colors.redAccent,
-                                          content: Text('Error al descargar: $e'),
-                                          duration: const Duration(seconds: 6),
-                                        ),
-                                      );
-                                    }
-                                  } finally {
-                                    if (context.mounted) {
-                                      setLocalState(() => _isDownloading = false);
-                                    }
-                                  }
-                                },
-                        ),
-                      ],
-                    );
-                  }),
+                                  },
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -1000,12 +1164,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 Row(
                   children: [
                     Icon(
-                      profile?.isAdmin == true ? Icons.church : Icons.lock_outline,
-                      color: profile?.isAdmin == true ? Colors.blueAccent : Colors.teal,
+                      profile?.isAdmin == true
+                          ? Icons.church
+                          : Icons.lock_outline,
+                      color: profile?.isAdmin == true
+                          ? Colors.blueAccent
+                          : Colors.teal,
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      profile?.isAdmin == true ? 'Congregación Local' : 'Congregación Asignada',
+                      profile?.isAdmin == true
+                          ? 'Congregación Local'
+                          : 'Congregación Asignada',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1014,7 +1184,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     if (profile != null && !profile.isAdmin) ...[
                       const SizedBox(width: 8),
                       const Chip(
-                        label: Text('Asignación Ministerial Fija', style: TextStyle(fontSize: 11)),
+                        label: Text(
+                          'Asignación Ministerial Fija',
+                          style: TextStyle(fontSize: 11),
+                        ),
                         backgroundColor: Color(0xFFE0F2F1),
                         visualDensity: VisualDensity.compact,
                       ),
@@ -1025,8 +1198,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 Text(
                   profile != null && !profile.isAdmin
                       ? (profile.churchId != null
-                          ? 'Esta cuenta ministerial solo tiene permisos asignados sobre: ${profile.churchName}'
-                          : '⚠️ Sin iglesia asignada por la Conferencia General. Contacta al Administrador.')
+                            ? 'Esta cuenta ministerial solo tiene permisos asignados sobre: ${profile.churchName}'
+                            : '⚠️ Sin iglesia asignada por la Conferencia General. Contacta al Administrador.')
                       : 'Configuración actual: $_currentChurch',
                   style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
@@ -1042,13 +1215,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       );
                       if (church != null && church is ChurchModel) {
                         final prefs = await SharedPreferences.getInstance();
-                        await prefs.setString('tenant_church_name', church.name);
+                        await prefs.setString(
+                          'tenant_church_name',
+                          church.name,
+                        );
                         await prefs.setString('selected_church_id', church.id);
                       }
                       _loadStats();
                     },
                   ),
-                ] else if (profile != null && !profile.isAdmin && profile.churchId == null) ...[
+                ] else if (profile != null &&
+                    !profile.isAdmin &&
+                    profile.churchId == null) ...[
                   const Text(
                     'Pide a un Administrador General que asigne tu iglesia para poder sincronizar cultos.',
                     style: TextStyle(color: Colors.redAccent, fontSize: 13),
@@ -1066,14 +1244,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 OutlinedButton.icon(
                   icon: const Icon(Icons.radio, color: Colors.teal),
                   label: const Text('Configurar / Probar Transmisión de Audio'),
-                  style: OutlinedButton.styleFrom(foregroundColor: Colors.teal.shade800),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.teal.shade800,
+                  ),
                   onPressed: () {
                     final tenant = ref.read(tenantProvider).value;
                     if (tenant != null) {
                       AudioStreamPlayerModal.show(context, tenant);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Selecciona una iglesia primero.')),
+                        const SnackBar(
+                          content: Text('Selecciona una iglesia primero.'),
+                        ),
                       );
                     }
                   },
@@ -1128,7 +1310,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       ),
                     if (profile?.canResetDatabase == true)
                       OutlinedButton.icon(
-                        icon: const Icon(Icons.delete_forever, color: Colors.red),
+                        icon: const Icon(
+                          Icons.delete_forever,
+                          color: Colors.red,
+                        ),
                         label: const Text(
                           'Borrar Todos los Datos',
                           style: TextStyle(color: Colors.red),

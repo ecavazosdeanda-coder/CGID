@@ -6,7 +6,9 @@ import '../../workspace/providers/library_provider.dart';
 import '../../tenant/providers/tenant_provider.dart';
 import '../../bulletin/utils/bulletin_pdf_generator.dart';
 import 'ai_liturgical_dialog.dart';
+
 import 'package:printing/printing.dart';
+
 import '../../../content.dart';
 
 class ServiceBuilderScreen extends ConsumerStatefulWidget {
@@ -41,6 +43,16 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
     'Sociedad de Jóvenes',
     'Culto de Oración (Martes)',
   ];
+
+  static const Map<String, String> _serviceRoles = {
+    'presidente': 'Presidente',
+    'predicador': 'Predicador',
+    'lector': 'Lector',
+    'oracion': 'Oración',
+    'musica': 'Música',
+    'multimedia': 'Multimedia',
+    'otro': 'Otro responsable',
+  };
 
   // Variables para la selección estructurada de Biblia
   int? _selectedBibleBookIndex = 0;
@@ -125,6 +137,109 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
     if (confirmed == true) ref.read(planProvider.notifier).clearPlan();
   }
 
+  Future<void> _editPlanTeam(String planName) async {
+    final notifier = ref.read(planProvider.notifier);
+    final metadata = notifier.metadataFor(planName);
+    final presidentController = TextEditingController(
+      text: metadata.personFor('presidente'),
+    );
+    final preacherController = TextEditingController(
+      text: metadata.personFor('predicador'),
+    );
+    var selectedDate = DateTime.tryParse(metadata.serviceDate);
+    final updated = await showDialog<ServicePlanMetadata>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Equipo de este culto'),
+          content: SizedBox(
+            width: 520,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.event),
+                  title: Text(
+                    selectedDate == null
+                        ? 'Fecha pendiente'
+                        : '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}',
+                  ),
+                  trailing: TextButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => selectedDate = picked);
+                      }
+                    },
+                    child: const Text('Elegir fecha'),
+                  ),
+                ),
+                TextField(
+                  controller: presidentController,
+                  decoration: const InputDecoration(
+                    labelText: 'Presidente del culto',
+                    prefixIcon: Icon(Icons.record_voice_over),
+                    helperText:
+                        'Puede ser una cuenta registrada o un invitado.',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: preacherController,
+                  decoration: const InputDecoration(
+                    labelText: 'Predicador',
+                    prefixIcon: Icon(Icons.menu_book),
+                    helperText:
+                        'La función pertenece a este culto, no a la cuenta.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final assignments = <ServiceAssignment>[
+                  if (presidentController.text.trim().isNotEmpty)
+                    ServiceAssignment(
+                      role: 'presidente',
+                      displayName: presidentController.text.trim(),
+                    ),
+                  if (preacherController.text.trim().isNotEmpty)
+                    ServiceAssignment(
+                      role: 'predicador',
+                      displayName: preacherController.text.trim(),
+                    ),
+                ];
+                Navigator.pop(
+                  dialogContext,
+                  ServicePlanMetadata(
+                    serviceDate: selectedDate?.toIso8601String() ?? '',
+                    assignments: assignments,
+                  ),
+                );
+              },
+              child: const Text('Guardar equipo'),
+            ),
+          ],
+        ),
+      ),
+    );
+    presidentController.dispose();
+    preacherController.dispose();
+    if (updated != null) notifier.updateMetadata(planName, updated);
+  }
+
   Future<void> _presentEntry(Entry entry) async {
     final present = widget.onPresent;
     if (present == null) return;
@@ -152,6 +267,12 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
     var type = _activityTypes.contains(entry.subtitle)
         ? entry.subtitle
         : (_activityTypes.contains(_selectedType) ? _selectedType : 'Alabanza');
+    final currentAssignment = entry.assignments.firstOrNull;
+    var responsibleRole = currentAssignment?.role ?? 'otro';
+    var showInBulletin = currentAssignment?.showInBulletin ?? true;
+    final responsibleController = TextEditingController(
+      text: currentAssignment?.displayName ?? '',
+    );
     final updated = await showDialog<Entry>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -166,6 +287,41 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
                   controller: titleController,
                   autofocus: true,
                   decoration: const InputDecoration(labelText: 'Título'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: responsibleRole,
+                  decoration: const InputDecoration(
+                    labelText: 'Función del responsable',
+                  ),
+                  items: _serviceRoles.entries
+                      .map(
+                        (role) => DropdownMenuItem(
+                          value: role.key,
+                          child: Text(role.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() => responsibleRole = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: responsibleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del responsable (opcional)',
+                    helperText: 'Admite hermanos sin cuenta e invitados.',
+                  ),
+                ),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: showInBulletin,
+                  title: const Text('Mostrar responsable en el boletín'),
+                  onChanged: (value) =>
+                      setDialogState(() => showInBulletin = value ?? true),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -210,6 +366,15 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
                     title: title,
                     subtitle: type,
                     notes: notesController.text.trim(),
+                    assignments: responsibleController.text.trim().isEmpty
+                        ? const []
+                        : [
+                            ServiceAssignment(
+                              role: responsibleRole,
+                              displayName: responsibleController.text.trim(),
+                              showInBulletin: showInBulletin,
+                            ),
+                          ],
                   ),
                 );
               },
@@ -221,6 +386,7 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
     );
     titleController.dispose();
     notesController.dispose();
+    responsibleController.dispose();
     if (updated != null) {
       ref.read(planProvider.notifier).replaceEntry(index, updated);
     }
@@ -281,6 +447,7 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
     final planState = ref.watch(planProvider);
     final activePlan = planState.activePlan;
     final plan = planState.plan;
+    final metadata = ref.read(planProvider.notifier).metadataFor(activePlan);
     final libraryAsync = ref.watch(libraryProvider);
     final planNames = <String>{
       ..._planTemplates,
@@ -322,6 +489,11 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
             onPressed: _createPlan,
             icon: const Icon(Icons.add_circle_outline),
           ),
+          IconButton(
+            tooltip: 'Fecha, presidente y predicador',
+            onPressed: () => _editPlanTeam(activePlan),
+            icon: const Icon(Icons.groups_outlined),
+          ),
         ],
       ),
       body: Padding(
@@ -329,6 +501,26 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.groups, color: Colors.blueAccent),
+                title: Text(
+                  metadata.serviceDate.isEmpty
+                      ? 'Equipo del culto'
+                      : 'Equipo del culto · ${metadata.dateLabel}',
+                ),
+                subtitle: Text(
+                  'Preside: ${metadata.personFor('presidente').isEmpty ? 'Por asignar' : metadata.personFor('presidente')} · '
+                  'Predica: ${metadata.personFor('predicador').isEmpty ? 'Por asignar' : metadata.personFor('predicador')}',
+                ),
+                trailing: TextButton.icon(
+                  onPressed: () => _editPlanTeam(activePlan),
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Asignar'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Card(
               elevation: 3,
               shape: RoundedRectangleBorder(
@@ -655,7 +847,10 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
                 if (plan.isNotEmpty) ...[
                   FilledButton.tonalIcon(
                     onPressed: () => AiLiturgicalDialog.show(context),
-                    icon: const Icon(Icons.auto_awesome, color: Colors.blueAccent),
+                    icon: const Icon(
+                      Icons.auto_awesome,
+                      color: Colors.blueAccent,
+                    ),
                     label: const Text('Sugerir con IA'),
                   ),
                   const SizedBox(width: 8),
@@ -663,12 +858,16 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
                     onPressed: () async {
                       try {
                         final tenant = ref.read(tenantProvider).value;
-                        final churchName = tenant?.name ?? 'Conferencia General de la Iglesia de Dios';
-                        final pdfBytes = await BulletinPdfGenerator.generateBulletin(
-                          'Orden del Culto',
-                          plan,
-                          churchName: churchName,
-                        );
+                        final churchName =
+                            tenant?.name ??
+                            'Conferencia General de la Iglesia de Dios';
+                        final pdfBytes =
+                            await BulletinPdfGenerator.generateBulletin(
+                              activePlan,
+                              plan,
+                              churchName: churchName,
+                              metadata: metadata,
+                            );
                         await Printing.sharePdf(
                           bytes: pdfBytes,
                           filename: 'boletin_liturgico.pdf',
@@ -676,12 +875,17 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error al generar boletín: $e')),
+                            SnackBar(
+                              content: Text('Error al generar boletín: $e'),
+                            ),
                           );
                         }
                       }
                     },
-                    icon: const Icon(Icons.picture_as_pdf, color: Colors.blueAccent),
+                    icon: const Icon(
+                      Icons.picture_as_pdf,
+                      color: Colors.blueAccent,
+                    ),
                     label: const Text('Boletín PDF'),
                   ),
                   const SizedBox(width: 8),
@@ -752,7 +956,9 @@ class _ServiceBuilderScreenState extends ConsumerState<ServiceBuilderScreen> {
                               ),
                             ),
                             subtitle: Text(
-                              '${entry.subtitle.isEmpty ? 'Sección del culto' : entry.subtitle} · $slideCount ${slideCount == 1 ? 'diapositiva' : 'diapositivas'}${entry.notes.isEmpty ? '' : ' · Con nota privada'}',
+                              '${entry.subtitle.isEmpty ? 'Sección del culto' : entry.subtitle} · $slideCount ${slideCount == 1 ? 'diapositiva' : 'diapositivas'}'
+                              '${entry.assignments.isEmpty ? '' : ' · ${entry.assignments.first.roleLabel}: ${entry.assignments.first.displayName}'}'
+                              '${entry.notes.isEmpty ? '' : ' · Con nota privada'}',
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,

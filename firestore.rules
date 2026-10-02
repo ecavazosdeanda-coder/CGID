@@ -11,7 +11,7 @@ service cloud.firestore {
     // Document ID: Firebase Auth UID (string, 1-100 chars)
     // Fields:
     //   - email: string (required, valid email address, max 200 chars)
-    //   - role: string (required, 'admin' | 'pastor' | 'proyeccionista' | 'musico')
+    //   - role: string (required, 'admin' | 'pastor' | 'colaborador' | 'proyeccionista' | 'musico')
     //   - churchId: string (optional, assigned church ID, 1-100 chars)
     //   - churchName: string (optional, display name of assigned church, 1-200 chars)
     //   - updatedAt: string or timestamp (optional, last profile update timestamp/ISO string)
@@ -82,6 +82,13 @@ service cloud.firestore {
              getUserData().role == 'pastor';
     }
 
+    function isCollaborator() {
+      return isAuthenticated() &&
+             hasUserProfile() &&
+             'role' in getUserData() &&
+             getUserData().role == 'colaborador';
+    }
+
     // Check if the authenticated user is assigned to a specific church
     function isAssignedToChurch(churchId) {
       return hasUserProfile() &&
@@ -91,10 +98,12 @@ service cloud.firestore {
     }
 
     // Multi-tenant authorization for church service plans:
-    // Allowed ONLY for authenticated admin or pastor assigned to that churchId.
+    // Allowed for admin, pastor or liturgical collaborator assigned to church.
     // Proyeccionistas and músicos have read-only permissions in the cloud to prevent accidental overwrites.
     function canWriteChurchPlans(churchId) {
-      return isAuthenticated() && (isAdmin() || (isPastor() && isAssignedToChurch(churchId)));
+      return isAuthenticated() &&
+             (isAdmin() ||
+              ((isPastor() || isCollaborator()) && isAssignedToChurch(churchId)));
     }
 
     // Domain Validator for User Profiles
@@ -102,7 +111,7 @@ service cloud.firestore {
       return data.keys().hasAll(['email', 'role']) &&
              data.keys().hasOnly(['email', 'role', 'churchId', 'churchName', 'updatedAt']) &&
              isValidEmail(data.email) &&
-             data.role in ['admin', 'pastor', 'proyeccionista', 'musico'] &&
+             data.role in ['admin', 'pastor', 'colaborador', 'proyeccionista', 'musico'] &&
              (!('churchId' in data) || data.churchId == null || (data.churchId is string && data.churchId.size() > 0 && data.churchId.size() <= 100)) &&
              (!('churchName' in data) || data.churchName == null || (data.churchName is string && data.churchName.size() > 0 && data.churchName.size() <= 200)) &&
              (!('updatedAt' in data) || data.updatedAt is timestamp || (data.updatedAt is string && data.updatedAt.size() <= 100));
@@ -111,9 +120,18 @@ service cloud.firestore {
     // Domain Validator for Service Plans
     function isValidPlanData(data) {
       return data.keys().hasAll(['plans']) &&
-             data.keys().hasOnly(['plans', 'updatedAt']) &&
+             data.keys().hasOnly(['plans', 'planMetadata', 'updatedAt']) &&
              data.plans is map &&
              data.plans.size() <= 100 &&
+             (!('planMetadata' in data) || (data.planMetadata is map && data.planMetadata.size() <= 100)) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp || (data.updatedAt is string && data.updatedAt.size() <= 100));
+    }
+
+    function isValidPrivatePlanData(data) {
+      return data.keys().hasAll(['notes']) &&
+             data.keys().hasOnly(['notes', 'updatedAt']) &&
+             data.notes is map &&
+             data.notes.size() <= 100 &&
              (!('updatedAt' in data) || data.updatedAt is timestamp || (data.updatedAt is string && data.updatedAt.size() <= 100));
     }
 
@@ -121,7 +139,7 @@ service cloud.firestore {
       return data.keys().hasAll(['email', 'role', 'churchId', 'churchName']) &&
              data.keys().hasOnly(['email', 'role', 'churchId', 'churchName', 'createdAt']) &&
              isValidEmail(data.email) &&
-             data.role in ['admin', 'pastor', 'proyeccionista', 'musico'] &&
+             data.role in ['admin', 'pastor', 'colaborador', 'proyeccionista', 'musico'] &&
              isValidId(data.churchId) &&
              data.churchName is string &&
              data.churchName.size() > 0 &&
@@ -236,7 +254,7 @@ service cloud.firestore {
                          isAdmin() ||
                          (
                            isPastor() &&
-                           request.resource.data.role in ['proyeccionista', 'musico'] &&
+                           request.resource.data.role in ['colaborador', 'proyeccionista', 'musico'] &&
                            'churchId' in request.resource.data &&
                            request.resource.data.churchId != null &&
                            isAssignedToChurch(request.resource.data.churchId)
@@ -267,7 +285,7 @@ service cloud.firestore {
                            resource.data.churchId == getUserData().churchId &&
                            'churchId' in request.resource.data &&
                            request.resource.data.churchId == resource.data.churchId &&
-                           request.resource.data.role in ['proyeccionista', 'musico']
+                           request.resource.data.role in ['colaborador', 'proyeccionista', 'musico']
                          ) ||
                          (
                            request.auth.uid == uid &&
@@ -298,7 +316,7 @@ service cloud.firestore {
                            getUserData().churchId != null &&
                            resource.data.churchId == getUserData().churchId &&
                            'role' in resource.data &&
-                           resource.data.role in ['proyeccionista', 'musico']
+                           resource.data.role in ['colaborador', 'proyeccionista', 'musico']
                          )
                        );
     }
@@ -319,7 +337,7 @@ service cloud.firestore {
                                  isAdmin() ||
                                  (
                                    isPastor() &&
-                                   request.resource.data.role in ['proyeccionista', 'musico'] &&
+                                   request.resource.data.role in ['colaborador', 'proyeccionista', 'musico'] &&
                                    isAssignedToChurch(request.resource.data.churchId)
                                  )
                                );
@@ -327,7 +345,7 @@ service cloud.firestore {
       allow delete: if isAdmin() ||
                        (
                          isPastor() &&
-                         resource.data.role in ['proyeccionista', 'musico'] &&
+                         resource.data.role in ['colaborador', 'proyeccionista', 'musico'] &&
                          isAssignedToChurch(resource.data.churchId)
                        ) ||
                        (
@@ -359,6 +377,17 @@ service cloud.firestore {
         allow delete: if canWriteChurchPlans(churchId) &&
                          isValidId(churchId) &&
                          isValidId(planId);
+      }
+
+      // Notas ministeriales separadas del orden público. Solo las cuentas de
+      // la iglesia pueden leerlas y solo quienes preparan el culto escribirlas.
+      match /private_plans/{planId} {
+        allow read: if isAdmin() ||
+                       (isAuthenticated() && isAssignedToChurch(churchId));
+        allow create, update: if canWriteChurchPlans(churchId) &&
+                                 isValidId(planId) &&
+                                 isValidPrivatePlanData(request.resource.data);
+        allow delete: if canWriteChurchPlans(churchId) && isValidId(planId);
       }
     }
 

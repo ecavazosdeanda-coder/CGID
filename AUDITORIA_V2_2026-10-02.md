@@ -35,8 +35,8 @@ La inspección visual de v2 confirmó que la portada carga correctamente y la co
 | 2 | Literatura/PDF | Implementado parcial | Catálogo local, caché y catálogo Firestore existen. Los enlaces/archivos deben ser publicados y revisados por administración. |
 | 2 | Boletín PDF | Implementado y probado | La prueba verifica membrete y exclusión de notas privadas. |
 | 2 | Favoritos y notas | Implementado | Persistencia local; no hay sincronización entre dispositivos. |
-| 3 | Acceso ministerial | Implementado con refuerzo local pendiente de publicar | Auth por correo, roles y asignación. Se corrigió el alta por invitación y se bloqueó el panel si falta un perfil autorizado. |
-| 3 | Planificador y nube | Implementado parcial | Crear/editar/proyectar y subir/bajar funciona; falta resolución explícita de conflictos entre dos editores simultáneos. |
+| 3 | Acceso ministerial | Implementado con refuerzo local pendiente de publicar | Auth por correo, roles y asignación. Incluye colaborador litúrgico sin facultades pastorales; presidente y predicador son funciones variables por culto. |
+| 3 | Planificador y nube | Implementado parcial | Crear/editar/proyectar, responsables, fecha, presidente/predicador y subir/bajar funciona. Las notas privadas se separaron del orden público; falta resolución explícita de conflictos entre dos editores simultáneos. |
 | 3 | Atril digital | Implementado parcial | Lectura, acordes y transposición existen; el pedal Bluetooth requiere validación física por plataforma. |
 | 3 | Web Push | Parcial | Permiso, notificación local y handlers del service worker existen; falta suscripción push/FCM y servicio programador de avisos. |
 | 4 | Asistente doctrinal/litúrgico | Implementado parcial | Maneja API Key en memoria, reintentos y errores seguros. Sigue siendo prompt guiado, no RAG verificable con citas a los 32 Puntos de Fe y RVR 1909. |
@@ -52,6 +52,8 @@ La inspección visual de v2 confirmó que la portada carga correctamente y la co
 4. El control remoto abandonó códigos predecibles de seis caracteres; usa códigos criptográficos de diez caracteres, caducidad y validación de esquema en Firestore.
 5. Se retiró una API Key de Google Drive incrustada en el código. La clave publicada anteriormente debe rotarse o restringirse en Google Cloud.
 6. La versión declarada se alineó con v2 y se añadió CI específica para `dev-v2`.
+7. Se añadió el rol de acceso `colaborador`, mientras presidente y predicador se modelan como asignaciones variables por culto y por actividad.
+8. Las notas ministeriales dejaron de formar parte del documento público de planes y se sincronizan en `private_plans`, limitado a cuentas de la iglesia.
 
 ## Orden recomendado de trabajo
 

@@ -11,12 +11,14 @@ class PlanState {
   final List<Entry> plan;
   final String activePlan;
   final Map<String, dynamic> savedPlans;
+  final Map<String, dynamic> planMetadata;
   final bool isSyncing;
 
   const PlanState({
     required this.plan,
     required this.activePlan,
     required this.savedPlans,
+    required this.planMetadata,
     this.isSyncing = false,
   });
 
@@ -24,12 +26,14 @@ class PlanState {
     List<Entry>? plan,
     String? activePlan,
     Map<String, dynamic>? savedPlans,
+    Map<String, dynamic>? planMetadata,
     bool? isSyncing,
   }) {
     return PlanState(
       plan: plan ?? this.plan,
       activePlan: activePlan ?? this.activePlan,
       savedPlans: savedPlans ?? this.savedPlans,
+      planMetadata: planMetadata ?? this.planMetadata,
       isSyncing: isSyncing ?? this.isSyncing,
     );
   }
@@ -48,17 +52,20 @@ class PlanNotifier extends Notifier<PlanState> {
       plan: [],
       activePlan: 'Culto del sábado',
       savedPlans: {},
+      planMetadata: {},
     );
   }
 
   void init(SharedPreferences prefs) {
     _prefs = prefs;
     Map<String, dynamic> savedPlans = {};
+    Map<String, dynamic> planMetadata = {};
     String activePlan = 'Culto del sábado';
     List<Entry> plan = [];
 
     try {
       savedPlans = jsonDecode(prefs.getString('plans') ?? '{}');
+      planMetadata = jsonDecode(prefs.getString('planMetadata') ?? '{}');
       activePlan = prefs.getString('activePlan') ?? activePlan;
       plan = [
         for (final e in savedPlans[activePlan] ?? [])
@@ -70,25 +77,36 @@ class PlanNotifier extends Notifier<PlanState> {
       plan: plan,
       activePlan: activePlan,
       savedPlans: savedPlans,
+      planMetadata: planMetadata,
     );
   }
-
-
 
   Future<void> syncToCloud(String churchId) async {
     if (churchId.isEmpty) return;
     state = state.copyWith(isSyncing: true);
     try {
       final db = FirebaseFirestore.instance;
-      await db
+      final batch = db.batch();
+      final publicRef = db
           .collection('churches')
           .doc(churchId)
           .collection('plans')
-          .doc('weekly_plans')
-          .set({
-        'plans': state.savedPlans,
+          .doc('weekly_plans');
+      final privateRef = db
+          .collection('churches')
+          .doc(churchId)
+          .collection('private_plans')
+          .doc('weekly_plans');
+      batch.set(publicRef, {
+        'plans': publicPlansForCloud(state.savedPlans),
+        'planMetadata': state.planMetadata,
         'updatedAt': FieldValue.serverTimestamp(),
-      }).timeout(
+      });
+      batch.set(privateRef, {
+        'notes': privateNotesForCloud(state.savedPlans),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      await batch.commit().timeout(
         const Duration(seconds: 8),
         onTimeout: () => throw Exception(
           'Tiempo de espera agotado. Verifica que Cloud Firestore esté creado y habilitado en la consola de Firebase.',
@@ -124,15 +142,43 @@ class PlanNotifier extends Notifier<PlanState> {
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         final cloudPlans = Map<String, dynamic>.from(data['plans'] ?? {});
-        _prefs?.setString('plans', jsonEncode(cloudPlans));
-        
+        final cloudMetadata = Map<String, dynamic>.from(
+          data['planMetadata'] ?? {},
+        );
+        Map<String, dynamic> privateNotes = {};
+        var preserveLegacyLocalNotes = false;
+        try {
+          final privateDoc = await db
+              .collection('churches')
+              .doc(churchId)
+              .collection('private_plans')
+              .doc('weekly_plans')
+              .get();
+          preserveLegacyLocalNotes = !privateDoc.exists;
+          privateNotes = Map<String, dynamic>.from(
+            privateDoc.data()?['notes'] ?? {},
+          );
+        } catch (_) {
+          // Las pantallas públicas pueden descargar el orden, pero nunca las
+          // notas ministeriales. Ante permisos insuficientes se limpian.
+        }
+        final mergedPlans = _mergePrivateNotes(
+          cloudPlans,
+          privateNotes,
+          state.savedPlans,
+          preserveLegacyLocalNotes: preserveLegacyLocalNotes,
+        );
+        _prefs?.setString('plans', jsonEncode(mergedPlans));
+        _prefs?.setString('planMetadata', jsonEncode(cloudMetadata));
+
         final newPlan = [
-          for (final e in cloudPlans[state.activePlan] ?? [])
+          for (final e in mergedPlans[state.activePlan] ?? [])
             Entry.fromJson(Map<String, dynamic>.from(e)),
         ];
 
         state = state.copyWith(
-          savedPlans: cloudPlans,
+          savedPlans: mergedPlans,
+          planMetadata: cloudMetadata,
           plan: newPlan,
         );
         debugPrint('Cultos descargados de la nube para $churchId');
@@ -169,6 +215,19 @@ class PlanNotifier extends Notifier<PlanState> {
       plan: plan,
       savedPlans: newSavedPlans,
     );
+  }
+
+  ServicePlanMetadata metadataFor(String planName) {
+    final raw = state.planMetadata[planName];
+    if (raw is! Map) return const ServicePlanMetadata();
+    return ServicePlanMetadata.fromJson(Map<String, dynamic>.from(raw));
+  }
+
+  void updateMetadata(String planName, ServicePlanMetadata metadata) {
+    final updated = Map<String, dynamic>.from(state.planMetadata)
+      ..[planName] = metadata.toJson();
+    _prefs?.setString('planMetadata', jsonEncode(updated));
+    state = state.copyWith(planMetadata: updated);
   }
 
   void createPlan(String name) {
@@ -233,8 +292,57 @@ class PlanNotifier extends Notifier<PlanState> {
     }
     state = state.copyWith(savedPlans: newSavedPlans);
   }
+
+  @visibleForTesting
+  Map<String, dynamic> publicPlansForCloud(Map<String, dynamic> plans) => {
+    for (final plan in plans.entries)
+      plan.key: [
+        for (final raw in plan.value as List? ?? const [])
+          Map<String, dynamic>.from(raw as Map)..['notes'] = '',
+      ],
+  };
+
+  @visibleForTesting
+  Map<String, dynamic> privateNotesForCloud(Map<String, dynamic> plans) => {
+    for (final plan in plans.entries)
+      plan.key: [
+        for (final raw in plan.value as List? ?? const [])
+          (raw as Map)['notes'] as String? ?? '',
+      ],
+  };
+
+  Map<String, dynamic> _mergePrivateNotes(
+    Map<String, dynamic> publicPlans,
+    Map<String, dynamic> privateNotes,
+    Map<String, dynamic> localPlans, {
+    bool preserveLegacyLocalNotes = false,
+  }) {
+    return {
+      for (final plan in publicPlans.entries)
+        plan.key: [
+          for (
+            var index = 0;
+            index < (plan.value as List? ?? const []).length;
+            index++
+          )
+            _entryWithPrivateNote(
+              Map<String, dynamic>.from((plan.value as List)[index] as Map),
+              index < (privateNotes[plan.key] as List? ?? const []).length
+                  ? (privateNotes[plan.key] as List)[index] as String? ?? ''
+                  : preserveLegacyLocalNotes &&
+                        index <
+                            (localPlans[plan.key] as List? ?? const []).length
+                  ? ((localPlans[plan.key] as List)[index] as Map)['notes']
+                            as String? ??
+                        ''
+                  : '',
+            ),
+        ],
+    };
+  }
+
+  Map<String, dynamic> _entryWithPrivateNote(
+    Map<String, dynamic> entry,
+    String note,
+  ) => entry..['notes'] = note;
 }
-
-
-
-

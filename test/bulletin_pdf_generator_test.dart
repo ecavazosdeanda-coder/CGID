@@ -16,6 +16,9 @@ void main() {
       subtitle: 'Orden de culto',
       sections: [Section('Tema', 'La esperanza cristiana')],
       notes: privateNote,
+      assignments: [
+        ServiceAssignment(role: 'predicador', displayName: 'Hermano de Prueba'),
+      ],
     );
 
     final bytes = await BulletinPdfGenerator.generateBulletin(
@@ -29,6 +32,7 @@ void main() {
 
     expect(bytes, isNotEmpty);
     expect(publicData['title'], 'Predicación');
+    expect(publicData['responsible'], 'Predicador: Hermano de Prueba');
     expect(publicData.values, isNot(contains(privateNote)));
     expect(rawPdf, isNot(contains(privateNote)));
   });

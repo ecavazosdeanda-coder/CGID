@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,10 +12,12 @@ class PastorAssignmentDialog extends ConsumerStatefulWidget {
   const PastorAssignmentDialog({super.key});
 
   @override
-  ConsumerState<PastorAssignmentDialog> createState() => _PastorAssignmentDialogState();
+  ConsumerState<PastorAssignmentDialog> createState() =>
+      _PastorAssignmentDialogState();
 }
 
-class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog> {
+class _PastorAssignmentDialogState
+    extends ConsumerState<PastorAssignmentDialog> {
   List<ChurchModel> _churches = [];
   bool _loadingChurches = true;
 
@@ -26,7 +29,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
 
   Future<void> _loadChurchesCatalog() async {
     try {
-      final jsonString = await rootBundle.loadString('assets/data/regions_and_churches.json');
+      final jsonString = await rootBundle.loadString(
+        'assets/data/regions_and_churches.json',
+      );
       final data = jsonDecode(jsonString);
       final List<dynamic> churchesJson = data['churches'];
       if (mounted) {
@@ -52,7 +57,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
     ChurchModel? selectedChurch;
     if (isPastor && currentProfile?.churchId != null) {
       try {
-        selectedChurch = _churches.firstWhere((c) => c.id == currentProfile!.churchId);
+        selectedChurch = _churches.firstWhere(
+          (c) => c.id == currentProfile!.churchId,
+        );
       } catch (_) {
         selectedChurch = _churches.isNotEmpty ? _churches.first : null;
       }
@@ -73,7 +80,11 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                 children: [
                   const Icon(Icons.person_add, color: Colors.indigo),
                   const SizedBox(width: 8),
-                  Text(isPastor ? 'Registrar Proyeccionista o Músico' : 'Registrar Miembro Ministerial'),
+                  Text(
+                    isPastor
+                        ? 'Registrar colaborador o equipo'
+                        : 'Registrar Miembro Ministerial',
+                  ),
                 ],
               ),
               content: SizedBox(
@@ -86,7 +97,8 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                         controller: emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(
-                          labelText: 'Correo electrónico institucional / personal',
+                          labelText:
+                              'Correo electrónico institucional / personal',
                           hintText: 'ejemplo@cgdi.org',
                           prefixIcon: Icon(Icons.email),
                           border: OutlineInputBorder(),
@@ -102,17 +114,61 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                         ),
                         items: isPastor
                             ? const [
-                                DropdownMenuItem(value: 'proyeccionista', child: Text('Multimedia / Proyección (Cabina de Templo)')),
-                                DropdownMenuItem(value: 'musico', child: Text('Músico / Alabanza (Atril y Partituras)')),
+                                DropdownMenuItem(
+                                  value: 'colaborador',
+                                  child: Text(
+                                    'Colaborador Litúrgico (prepara órdenes de culto)',
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'proyeccionista',
+                                  child: Text(
+                                    'Multimedia / Proyección (Cabina de Templo)',
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'musico',
+                                  child: Text(
+                                    'Músico / Alabanza (Atril y Partituras)',
+                                  ),
+                                ),
                               ]
                             : const [
-                                DropdownMenuItem(value: 'pastor', child: Text('Pastor Local (Diseño de Cultos y Avisos)')),
-                                DropdownMenuItem(value: 'proyeccionista', child: Text('Multimedia / Proyección (Cabina de Templo)')),
-                                DropdownMenuItem(value: 'musico', child: Text('Músico / Alabanza (Atril y Partituras)')),
-                                DropdownMenuItem(value: 'admin', child: Text('Administrador General (Conferencia)')),
+                                DropdownMenuItem(
+                                  value: 'pastor',
+                                  child: Text(
+                                    'Pastor Local (Diseño de Cultos y Avisos)',
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'colaborador',
+                                  child: Text(
+                                    'Colaborador Litúrgico (presidente o predicador)',
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'proyeccionista',
+                                  child: Text(
+                                    'Multimedia / Proyección (Cabina de Templo)',
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'musico',
+                                  child: Text(
+                                    'Músico / Alabanza (Atril y Partituras)',
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'admin',
+                                  child: Text(
+                                    'Administrador General (Conferencia)',
+                                  ),
+                                ),
                               ],
                         onChanged: (val) {
-                          if (val != null) setDialogState(() => selectedRole = val);
+                          if (val != null) {
+                            setDialogState(() => selectedRole = val);
+                          }
                         },
                       ),
                       const SizedBox(height: 16),
@@ -126,7 +182,10 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                           ),
                           child: Text(
                             currentProfile?.churchName ?? 'Mi Iglesia',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
                           ),
                         )
                       else
@@ -163,8 +222,14 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                           border: const OutlineInputBorder(),
                           prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
-                            icon: Icon(obscurePassword ? Icons.visibility : Icons.visibility_off),
-                            onPressed: () => setDialogState(() => obscurePassword = !obscurePassword),
+                            icon: Icon(
+                              obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () => setDialogState(
+                              () => obscurePassword = !obscurePassword,
+                            ),
                           ),
                         ),
                       ),
@@ -191,7 +256,11 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                     if (email.isEmpty || churchId.isEmpty) return;
                     if (password.isNotEmpty && password.length < 6) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('La contraseña debe tener mínimo 6 caracteres.')),
+                        const SnackBar(
+                          content: Text(
+                            'La contraseña debe tener mínimo 6 caracteres.',
+                          ),
+                        ),
                       );
                       return;
                     }
@@ -199,7 +268,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                     final messenger = ScaffoldMessenger.of(context);
                     Navigator.pop(ctx);
                     try {
-                      await ref.read(userManagementServiceProvider).registerNewPastor(
+                      await ref
+                          .read(userManagementServiceProvider)
+                          .registerNewPastor(
                             email: email,
                             churchId: churchId,
                             churchName: churchName,
@@ -222,7 +293,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                     } catch (e) {
                       if (mounted) {
                         messenger.showSnackBar(
-                          SnackBar(content: Text('Error al registrar usuario: $e')),
+                          SnackBar(
+                            content: Text('Error al registrar usuario: $e'),
+                          ),
                         );
                       }
                     }
@@ -261,23 +334,38 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                     if (!isPastor) ...[
                       const RadioListTile<String>(
                         title: Text('Administrador General'),
-                        subtitle: Text('Permisos completos de supervisión y gestión'),
+                        subtitle: Text(
+                          'Permisos completos de supervisión y gestión',
+                        ),
                         value: 'admin',
                       ),
                       const RadioListTile<String>(
                         title: Text('Pastor Local'),
-                        subtitle: Text('Diseño de cultos, avisos y liturgia de su iglesia'),
+                        subtitle: Text(
+                          'Diseño de cultos, avisos y liturgia de su iglesia',
+                        ),
                         value: 'pastor',
                       ),
                     ],
                     const RadioListTile<String>(
+                      title: Text('Colaborador Litúrgico'),
+                      subtitle: Text(
+                        'Prepara órdenes; su función cambia en cada culto',
+                      ),
+                      value: 'colaborador',
+                    ),
+                    const RadioListTile<String>(
                       title: Text('Multimedia / Proyección'),
-                      subtitle: Text('Recepción de cultos en cabina y proyección en templo'),
+                      subtitle: Text(
+                        'Recepción de cultos en cabina y proyección en templo',
+                      ),
                       value: 'proyeccionista',
                     ),
                     const RadioListTile<String>(
                       title: Text('Músico / Alabanza'),
-                      subtitle: Text('Consulta de cantos programados y atril musical'),
+                      subtitle: Text(
+                        'Consulta de cantos programados y atril musical',
+                      ),
                       value: 'musico',
                     ),
                   ],
@@ -293,19 +381,25 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                     final messenger = ScaffoldMessenger.of(context);
                     Navigator.pop(ctx);
                     try {
-                      await ref.read(userManagementServiceProvider).updateUserRole(user.uid, selectedRole);
+                      await ref
+                          .read(userManagementServiceProvider)
+                          .updateUserRole(user.uid, selectedRole);
                       ref.invalidate(allUsersProvider);
                       if (mounted) {
                         messenger.showSnackBar(
                           SnackBar(
                             backgroundColor: Colors.green,
-                            content: Text('Rol de ${user.email} actualizado exitosamente.'),
+                            content: Text(
+                              'Rol de ${user.email} actualizado exitosamente.',
+                            ),
                           ),
                         );
                       }
                     } catch (e) {
                       if (mounted) {
-                        messenger.showSnackBar(SnackBar(content: Text('Error al cambiar rol: $e')));
+                        messenger.showSnackBar(
+                          SnackBar(content: Text('Error al cambiar rol: $e')),
+                        );
                       }
                     }
                   },
@@ -338,7 +432,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
               final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(ctx);
               try {
-                await ref.read(userManagementServiceProvider).deleteUser(user.uid);
+                await ref
+                    .read(userManagementServiceProvider)
+                    .deleteUser(user.uid);
                 ref.invalidate(allUsersProvider);
                 if (mounted) {
                   messenger.showSnackBar(
@@ -350,7 +446,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                 }
               } catch (e) {
                 if (mounted) {
-                  messenger.showSnackBar(SnackBar(content: Text('Error al eliminar: $e')));
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Error al eliminar: $e')),
+                  );
                 }
               }
             },
@@ -407,7 +505,10 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                     ),
                     if (errorText != null) ...[
                       const SizedBox(height: 8),
-                      Text(errorText!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                      Text(
+                        errorText!,
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                      ),
                     ],
                     const SizedBox(height: 20),
                     const Divider(),
@@ -415,7 +516,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                     Center(
                       child: TextButton.icon(
                         icon: const Icon(Icons.mark_email_read_outlined),
-                        label: const Text('O enviar enlace de restablecimiento a su correo'),
+                        label: const Text(
+                          'O enviar enlace de restablecimiento a su correo',
+                        ),
                         onPressed: isSaving
                             ? null
                             : () async {
@@ -429,14 +532,20 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                                     messenger.showSnackBar(
                                       SnackBar(
                                         backgroundColor: Colors.green,
-                                        content: Text('Enlace de restablecimiento enviado a ${user.email}.'),
+                                        content: Text(
+                                          'Enlace de restablecimiento enviado a ${user.email}.',
+                                        ),
                                       ),
                                     );
                                   }
                                 } catch (e) {
                                   if (mounted) {
                                     messenger.showSnackBar(
-                                      SnackBar(content: Text('Error al enviar enlace: $e')),
+                                      SnackBar(
+                                        content: Text(
+                                          'Error al enviar enlace: $e',
+                                        ),
+                                      ),
                                     );
                                   }
                                 }
@@ -457,7 +566,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                       : () async {
                           final newPass = newPasswordController.text.trim();
                           if (newPass.length < 6) {
-                            setDialogState(() => errorText = 'La contraseña debe tener al menos 6 caracteres.');
+                            setDialogState(
+                              () => errorText = 'La contraseña debe tener al menos 6 caracteres.',
+                            );
                             return;
                           }
                           setDialogState(() {
@@ -468,7 +579,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                           final messenger = ScaffoldMessenger.of(context);
                           final nav = Navigator.of(ctx);
                           try {
-                            await ref.read(userManagementServiceProvider).setPasswordForPastor(
+                            await ref
+                                .read(userManagementServiceProvider)
+                                .setPasswordForPastor(
                                   email: user.email,
                                   newPassword: newPass,
                                 );
@@ -477,7 +590,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                               messenger.showSnackBar(
                                 SnackBar(
                                   backgroundColor: Colors.green,
-                                  content: Text('Contraseña establecida con éxito para ${user.email}.'),
+                                  content: Text(
+                                    'Contraseña establecida con éxito para ${user.email}.',
+                                  ),
                                 ),
                               );
                             }
@@ -492,7 +607,10 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text('Guardar Contraseña'),
                 ),
@@ -522,7 +640,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                       final isSelected = church.id == user.churchId;
                       return ListTile(
                         leading: Icon(
-                          isSelected ? Icons.check_circle : Icons.church_outlined,
+                          isSelected
+                              ? Icons.check_circle
+                              : Icons.church_outlined,
                           color: isSelected ? Colors.green : null,
                         ),
                         title: Text(church.name),
@@ -532,7 +652,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                           final messenger = ScaffoldMessenger.of(context);
                           Navigator.pop(ctx);
                           try {
-                            await ref.read(userManagementServiceProvider).assignChurchToPastor(
+                            await ref
+                                .read(userManagementServiceProvider)
+                                .assignChurchToPastor(
                                   uid: user.uid,
                                   churchId: church.id,
                                   churchName: church.name,
@@ -542,14 +664,18 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                               messenger.showSnackBar(
                                 SnackBar(
                                   backgroundColor: Colors.green,
-                                  content: Text('Iglesia asignada a ${user.email} con éxito.'),
+                                  content: Text(
+                                    'Iglesia asignada a ${user.email} con éxito.',
+                                  ),
                                 ),
                               );
                             }
                           } catch (e) {
                             if (mounted) {
                               messenger.showSnackBar(
-                                SnackBar(content: Text('Error al asignar iglesia: $e')),
+                                SnackBar(
+                                  content: Text('Error al asignar iglesia: $e'),
+                                ),
                               );
                             }
                           }
@@ -575,6 +701,8 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
         return Colors.indigo;
       case 'pastor':
         return Colors.teal;
+      case 'colaborador':
+        return Colors.blueGrey;
       case 'proyeccionista':
         return Colors.blue;
       case 'musico':
@@ -590,6 +718,8 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
         return Icons.shield;
       case 'pastor':
         return Icons.person;
+      case 'colaborador':
+        return Icons.assignment_ind;
       case 'proyeccionista':
         return Icons.tv;
       case 'musico':
@@ -611,7 +741,10 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
         children: [
           Row(
             children: [
-              Icon(isPastor ? Icons.groups : Icons.admin_panel_settings, color: Colors.indigo),
+              Icon(
+                isPastor ? Icons.groups : Icons.admin_panel_settings,
+                color: Colors.indigo,
+              ),
               const SizedBox(width: 8),
               Text(
                 isPastor
@@ -630,7 +763,11 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
               FilledButton.icon(
                 onPressed: _loadingChurches ? null : _showAddNewPastorDialog,
                 icon: const Icon(Icons.person_add, size: 18),
-                label: Text(isPastor ? 'Registrar Proyeccionista / Músico' : 'Agregar Miembro'),
+                label: Text(
+                  isPastor
+                      ? 'Registrar colaborador / equipo'
+                      : 'Agregar Miembro',
+                ),
                 style: FilledButton.styleFrom(backgroundColor: Colors.indigo),
               ),
             ],
@@ -645,7 +782,11 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
             : usersAsync.when(
                 data: (users) {
                   final displayedUsers = isPastor
-                      ? users.where((u) => u.churchId == currentProfile?.churchId).toList()
+                      ? users
+                            .where(
+                              (u) => u.churchId == currentProfile?.churchId,
+                            )
+                            .toList()
                       : users;
 
                   if (displayedUsers.isEmpty) {
@@ -653,20 +794,27 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.people_outline, size: 56, color: Colors.grey),
+                          const Icon(
+                            Icons.people_outline,
+                            size: 56,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             isPastor
-                                ? 'Aún no hay proyeccionistas ni músicos en tu congregación.'
+                                ? 'Aún no hay colaboradores, proyeccionistas ni músicos en tu congregación.'
                                 : 'Aún no hay miembros registrados.',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             isPastor
-                                ? 'Haz clic en "Registrar Proyeccionista / Músico" para crear las cuentas de tu equipo.'
-                                : 'Haz clic en "Agregar Miembro" arriba para registrar un pastor, proyeccionista o músico.',
+                                ? 'Registra a quienes preparan el culto, trabajan en cabina o participan en alabanza.'
+                                : 'Haz clic en "Agregar Miembro" para registrar al equipo ministerial.',
                             style: const TextStyle(color: Colors.grey),
                             textAlign: TextAlign.center,
                           ),
@@ -674,7 +822,11 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                           FilledButton.icon(
                             onPressed: _showAddNewPastorDialog,
                             icon: const Icon(Icons.person_add),
-                            label: Text(isPastor ? 'Registrar Proyeccionista / Músico' : 'Registrar Primer Miembro'),
+                            label: Text(
+                              isPastor
+                                  ? 'Registrar colaborador / equipo'
+                                  : 'Registrar Primer Miembro',
+                            ),
                           ),
                         ],
                       ),
@@ -685,10 +837,15 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                     separatorBuilder: (_, _) => const Divider(),
                     itemBuilder: (context, index) {
                       final user = displayedUsers[index];
-                      final hasChurch = user.churchId != null && user.churchId!.isNotEmpty;
+                      final hasChurch =
+                          user.churchId != null && user.churchId!.isNotEmpty;
                       final roleColor = _getRoleColor(user.role);
                       final roleIcon = _getRoleIcon(user.role);
-                      final canModifyThisUser = !isPastor || (user.role == 'proyeccionista' || user.role == 'musico');
+                      final canModifyThisUser =
+                          !isPastor ||
+                          user.role == 'colaborador' ||
+                          user.role == 'proyeccionista' ||
+                          user.role == 'musico';
 
                       return ListTile(
                         leading: CircleAvatar(
@@ -700,13 +857,18 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                             Expanded(
                               child: Text(
                                 user.email,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             Chip(
                               label: Text(
                                 user.roleDisplayName,
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               backgroundColor: roleColor.withAlpha(35),
                               visualDensity: VisualDensity.compact,
@@ -720,7 +882,9 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                                 ? 'Iglesia Asignada: ${user.churchName} (${user.churchId})'
                                 : '⚠️ Sin iglesia asignada',
                             style: TextStyle(
-                              color: hasChurch ? Colors.black87 : Colors.orange[800],
+                              color: hasChurch
+                                  ? Colors.black87
+                                  : Colors.orange[800],
                               fontSize: 13,
                             ),
                           ),
@@ -760,7 +924,8 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                                   ],
                                 ),
                               ),
-                            if (canModifyThisUser || user.uid == currentProfile?.uid)
+                            if (canModifyThisUser ||
+                                user.uid == currentProfile?.uid)
                               const PopupMenuItem(
                                 value: 'manage_password',
                                 child: Row(
@@ -771,14 +936,22 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                                   ],
                                 ),
                               ),
-                            if (canModifyThisUser && user.uid != currentProfile?.uid)
+                            if (canModifyThisUser &&
+                                user.uid != currentProfile?.uid)
                               const PopupMenuItem(
                                 value: 'delete_user',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.delete, color: Colors.red, size: 18),
+                                    Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                      size: 18,
+                                    ),
                                     SizedBox(width: 8),
-                                    Text('Eliminar Usuario', style: TextStyle(color: Colors.red)),
+                                    Text(
+                                      'Eliminar Usuario',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -802,9 +975,16 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 48,
+                      ),
                       const SizedBox(height: 12),
-                      Text('Error cargando usuarios: $e', textAlign: TextAlign.center),
+                      Text(
+                        'Error cargando usuarios: $e',
+                        textAlign: TextAlign.center,
+                      ),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () => ref.invalidate(allUsersProvider),

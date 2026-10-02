@@ -77,4 +77,97 @@ void main() {
     expect(container.read(planProvider).plan, hasLength(1));
     expect(container.read(planProvider).plan.single.title, 'Himno inicial');
   });
+
+  test(
+    'service functions belong to each plan, not to the user account',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(planProvider.notifier)..init(prefs);
+
+      notifier.createPlan('Culto matutino');
+      notifier.updateMetadata(
+        'Culto matutino',
+        const ServicePlanMetadata(
+          assignments: [
+            ServiceAssignment(role: 'presidente', displayName: 'Hermano Juan'),
+            ServiceAssignment(role: 'predicador', displayName: 'Hermano Pedro'),
+          ],
+        ),
+      );
+      notifier.createPlan('Culto vespertino');
+      notifier.updateMetadata(
+        'Culto vespertino',
+        const ServicePlanMetadata(
+          assignments: [
+            ServiceAssignment(role: 'presidente', displayName: 'Hermano Pedro'),
+            ServiceAssignment(role: 'predicador', displayName: 'Hermano Juan'),
+          ],
+        ),
+      );
+
+      expect(
+        notifier.metadataFor('Culto matutino').personFor('presidente'),
+        'Hermano Juan',
+      );
+      expect(
+        notifier.metadataFor('Culto vespertino').personFor('predicador'),
+        'Hermano Juan',
+      );
+    },
+  );
+
+  test('entry assignments survive local persistence', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final notifier = container.read(planProvider.notifier)..init(prefs);
+
+    notifier.createPlan('Culto asignado');
+    notifier.addEntry(
+      const Entry(
+        id: 'sermon',
+        title: 'Mensaje',
+        subtitle: 'Predicación',
+        sections: [],
+        assignments: [
+          ServiceAssignment(role: 'predicador', displayName: 'Hermana Ana'),
+        ],
+      ),
+    );
+
+    final persisted =
+        jsonDecode(prefs.getString('plans')!) as Map<String, dynamic>;
+    final entry = (persisted['Culto asignado'] as List).single as Map;
+    expect((entry['assignments'] as List).single['role'], 'predicador');
+    expect((entry['assignments'] as List).single['displayName'], 'Hermana Ana');
+  });
+
+  test('cloud public plan excludes private notes', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final notifier = container.read(planProvider.notifier)..init(prefs);
+    final plans = {
+      'Culto': [
+        _entry(
+          'private',
+          'Predicación',
+        ).copyWith(notes: 'Nota exclusiva del equipo ministerial').toJson(),
+      ],
+    };
+
+    final publicPlans = notifier.publicPlansForCloud(plans);
+    final privateNotes = notifier.privateNotesForCloud(plans);
+
+    expect((publicPlans['Culto'] as List).single['notes'], isEmpty);
+    expect(
+      (privateNotes['Culto'] as List).single,
+      'Nota exclusiva del equipo ministerial',
+    );
+  });
 }

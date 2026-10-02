@@ -9,6 +9,7 @@ class BulletinPdfGenerator {
     String title,
     List<Entry> plan, {
     String churchName = 'Conferencia General de la Iglesia de Dios',
+    ServicePlanMetadata metadata = const ServicePlanMetadata(),
     bool compress = true,
   }) async {
     final pdf = pw.Document(compress: compress);
@@ -68,6 +69,34 @@ class BulletinPdfGenerator {
               ),
             ),
             pw.SizedBox(height: 20),
+            if (metadata.serviceDate.isNotEmpty ||
+                metadata.assignments.isNotEmpty) ...[
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.blue50,
+                  borderRadius: pw.BorderRadius.circular(4),
+                ),
+                child: pw.Wrap(
+                  spacing: 18,
+                  runSpacing: 6,
+                  children: [
+                    if (metadata.serviceDate.isNotEmpty)
+                      pw.Text('Fecha: ${_formatDate(metadata.serviceDate)}'),
+                    if (metadata.personFor('presidente').isNotEmpty)
+                      pw.Text(
+                        'Presidente: ${metadata.personFor('presidente')}',
+                      ),
+                    if (metadata.personFor('predicador').isNotEmpty)
+                      pw.Text(
+                        'Predicador: ${metadata.personFor('predicador')}',
+                      ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 16),
+            ],
             ...plan.asMap().entries.map((e) {
               final index = e.key + 1;
               final entry = e.value;
@@ -131,6 +160,18 @@ class BulletinPdfGenerator {
                 style: pw.TextStyle(fontSize: 11, color: PdfColors.grey700),
               ),
             ),
+          if (publicData['responsible']!.isNotEmpty)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(top: 3),
+              child: pw.Text(
+                publicData['responsible']!,
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.blue800,
+                ),
+              ),
+            ),
           if (firstSectionText.isNotEmpty)
             pw.Padding(
               padding: const pw.EdgeInsets.only(top: 8),
@@ -154,7 +195,22 @@ class BulletinPdfGenerator {
     'title': entry.title,
     'subtitle': entry.subtitle,
     'firstSectionText': entry.sections.isEmpty ? '' : entry.sections.first.text,
+    'responsible': entry.assignments
+        .where(
+          (assignment) =>
+              assignment.showInBulletin && assignment.displayName.isNotEmpty,
+        )
+        .map(
+          (assignment) => '${assignment.roleLabel}: ${assignment.displayName}',
+        )
+        .join(' · '),
   };
+
+  static String _formatDate(String value) {
+    final date = DateTime.tryParse(value);
+    if (date == null) return value;
+    return '${date.day}/${date.month}/${date.year}';
+  }
 
   static String _truncateHymn(String content) {
     final blocks = content.split('\n');
