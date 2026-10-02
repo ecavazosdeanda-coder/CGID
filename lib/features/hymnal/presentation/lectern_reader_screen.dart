@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../content.dart';
+import '../services/hymn_customization_service.dart';
 import '../services/score_catalog.dart';
+import 'hymn_chord_editor_dialog.dart';
 
 class LecternReaderScreen extends StatefulWidget {
   final Entry entry;
@@ -33,6 +35,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
   late int currentIndex;
   late Entry currentEntry;
   ChordChart? chordChart;
+  List<Section>? customSections;
   bool chordLoading = false;
 
   final ScrollController _scrollController = ScrollController();
@@ -50,13 +53,31 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
     });
   }
 
-  Future<void> _loadChordChart() async {
+  Future<void> _loadChordChart({bool keepShowChords = false}) async {
     final hymnId = currentEntry.id;
     setState(() {
       chordLoading = true;
-      chordChart = null;
-      showChords = false;
+      if (!keepShowChords) {
+        chordChart = null;
+        customSections = null;
+        showChords = false;
+      }
     });
+
+    // 1. Primero verificar si hay acordes personalizados guardados manualmente
+    final custom = await hymnCustomizationService.getCustomChords(hymnId);
+    if (custom != null && custom.isNotEmpty) {
+      if (!mounted || currentEntry.id != hymnId) return;
+      setState(() {
+        customSections = custom;
+        chordChart = null;
+        chordLoading = false;
+        showChords = true;
+      });
+      return;
+    }
+
+    // 2. Si no hay acordes manuales, cargarlos de la partitura MusicXML
     ChordChart? chart;
     try {
       chart = await scoreCatalog.chordChartFor(hymnId);
@@ -65,6 +86,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
     }
     if (!mounted || currentEntry.id != hymnId) return;
     setState(() {
+      customSections = null;
       chordChart = chart;
       chordLoading = false;
     });
@@ -267,10 +289,16 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
 
     final hasRepertoire =
         widget.repertoireList != null && widget.repertoireList!.isNotEmpty;
-    final displayedSections = showChords && chordChart != null
-        ? chordChart!.applyToSections(currentEntry.sections)
+    final hasCustomChords =
+        customSections != null && customSections!.isNotEmpty;
+    final displayedSections = showChords
+        ? (customSections ??
+            (chordChart != null
+                ? chordChart!.applyToSections(currentEntry.sections)
+                : currentEntry.sections))
         : currentEntry.sections;
-    final hasChordChart = chordChart != null && chordChart!.isEmpty == false;
+    final hasChordChart =
+        hasCustomChords || (chordChart != null && chordChart!.isEmpty == false);
 
     return KeyboardListener(
       focusNode: _focusNode,
@@ -385,7 +413,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
             ),
 
             // Toggle Notation (C, D, E vs Do, Re, Mi)
-            if (showChords)
+            if (showChords) ...[
               Tooltip(
                 message: useSolfeo
                     ? 'Cambiar a cifrado americano (C, D, E)'
@@ -406,6 +434,28 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                   ),
                 ),
               ),
+
+              // Editar Acordes Manualmente
+              IconButton(
+                tooltip: hasCustomChords
+                    ? 'Editar acordes personalizados'
+                    : 'Editar o corregir acordes manualmente',
+                icon: Icon(
+                  hasCustomChords ? Icons.edit_note : Icons.tune,
+                  color: hasCustomChords ? Colors.amberAccent : null,
+                ),
+                onPressed: () async {
+                  final result = await HymnChordEditorDialog.show(
+                    context,
+                    hymn: currentEntry,
+                    initialSections: displayedSections,
+                  );
+                  if (result != null) {
+                    await _loadChordChart(keepShowChords: true);
+                  }
+                },
+              ),
+            ],
 
             // Font Sizing
             IconButton(
@@ -485,7 +535,49 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                   ),
                 ),
               if (chordLoading) const LinearProgressIndicator(minHeight: 3),
-              if (showChords && hasChordChart)
+              if (showChords && hasCustomChords)
+                Container(
+                  width: double.infinity,
+                  color: Colors.teal.shade800,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.white, size: 16),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Acordes corregidos manualmente por el ministerio de alabanza.',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                      const SizedBox(width: 12),
+                      InkWell(
+                        onTap: () async {
+                          final result = await HymnChordEditorDialog.show(
+                            context,
+                            hymn: currentEntry,
+                            initialSections: displayedSections,
+                          );
+                          if (result != null) {
+                            await _loadChordChart(keepShowChords: true);
+                          }
+                        },
+                        child: const Text(
+                          'Editar',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (showChords && hasChordChart)
                 Container(
                   width: double.infinity,
                   color: Colors.amber.shade900,
@@ -493,10 +585,41 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  child: Text(
-                    'Acordes extraídos de la partitura MusicXML${chordChart!.keyLabel.isEmpty ? '' : ' · Tono original: ${chordChart!.keyLabel}'}. Requieren revisión musical.',
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                    textAlign: TextAlign.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Acordes extraídos de la partitura MusicXML${chordChart?.keyLabel.isNotEmpty == true ? ' · Tono: ${chordChart!.keyLabel}' : ''}. Requieren revisión.',
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () async {
+                          final result = await HymnChordEditorDialog.show(
+                            context,
+                            hymn: currentEntry,
+                            initialSections: displayedSections,
+                          );
+                          if (result != null) {
+                            await _loadChordChart(keepShowChords: true);
+                          }
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            'Corregir acordes',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               Expanded(

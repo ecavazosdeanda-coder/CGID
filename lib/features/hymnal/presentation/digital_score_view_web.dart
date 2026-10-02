@@ -5,11 +5,19 @@ import 'package:web/web.dart' as web;
 
 var _viewCounter = 0;
 
-Widget buildDigitalScoreView(String source, {required bool dark}) {
+Widget buildDigitalScoreView(
+  String source, {
+  required bool dark,
+  String? customKey,
+}) {
   final viewType = 'cgid-score-${_viewCounter++}';
   final viewerUri = Uri(
     path: 'score_viewer.html',
-    queryParameters: {'score': source, if (dark) 'dark': '1'},
+    queryParameters: {
+      'score': source,
+      if (dark) 'dark': '1',
+      if (customKey != null && customKey.isNotEmpty) 'custom_key': customKey,
+    },
   );
   ui_web.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
     final frame = web.HTMLIFrameElement()

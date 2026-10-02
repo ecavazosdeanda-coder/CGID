@@ -74,6 +74,7 @@
   <script>
     const params = new URLSearchParams(location.search);
     const source = params.get('score');
+    const customKey = params.get('custom_key');
     const dark = params.get('dark') === '1';
     if (dark) document.body.classList.add('dark');
 
@@ -103,7 +104,20 @@
     }
 
     async function start() {
-      if (!source) throw new Error('No se indicó una partitura MusicXML.');
+      let scoreData = source;
+      if (customKey) {
+        try {
+          const stored = window.localStorage.getItem('cgdi_custom_score_' + customKey);
+          if (stored && stored.trim().length > 0) {
+            scoreData = stored;
+            const noticeEl = document.querySelector('.notice');
+            if (noticeEl) noticeEl.textContent = 'Partitura personalizada cargada (reemplazo oficial)';
+          }
+        } catch (e) {
+          console.warn('No se pudo leer la partitura de localStorage', e);
+        }
+      }
+      if (!scoreData) throw new Error('No se indicó una partitura MusicXML.');
       status.textContent = 'Descargando motor de partituras (OSMD)…';
       await loadScript('vendor/opensheetmusicdisplay.min.js');
       status.textContent = 'Renderizando partitura digital…';
@@ -116,7 +130,7 @@
         drawComposer: true,
         drawLyricist: true,
       });
-      await osmd.load(source);
+      await osmd.load(scoreData);
       await render();
       status.hidden = true;
     }

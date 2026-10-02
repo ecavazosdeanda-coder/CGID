@@ -1,8 +1,10 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../../content.dart';
+import '../services/hymn_customization_service.dart';
 import '../services/score_catalog.dart';
 import 'digital_score_view.dart';
 
@@ -25,6 +27,7 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
   bool fullScreen = false;
   bool showPedalNotice = false;
   bool showOriginal = false;
+  bool hasCustomScore = false;
   final FocusNode _focusNode = FocusNode();
 
   Future<void> toggleFullScreen() async {
@@ -38,9 +41,17 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
   @override
   void initState() {
     super.initState();
+    _checkCustomScore();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
     });
+  }
+
+  Future<void> _checkCustomScore() async {
+    final hasCustom = await hymnCustomizationService.hasCustomScore(widget.hymn.id);
+    if (mounted && hasCustom != hasCustomScore) {
+      setState(() => hasCustomScore = hasCustom);
+    }
   }
 
   @override
@@ -81,6 +92,98 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
     )];
   }
 
+  Future<void> _downloadOfficialScore() async {
+    final bytes = await hymnCustomizationService.getOfficialScoreBytes(widget.hymn.id);
+    if (bytes == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo encontrar el archivo oficial.')),
+        );
+      }
+      return;
+    }
+    hymnCustomizationService.downloadFile(bytes, '${widget.hymn.id}_partitura.mxl');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Archivo descargado (.mxl). Ábrelo en MuseScore para afinar notas y compases.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _uploadCustomScore() async {
+    try {
+      final file = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['mxl', 'musicxml', 'xml'],
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      final ok = await hymnCustomizationService.saveCustomScore(
+        hymnId: widget.hymn.id,
+        bytes: bytes,
+        fileName: file.name,
+      );
+      if (ok) {
+        setState(() => hasCustomScore = true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Colors.teal,
+              content: Text('¡Partitura corregida guardada y renderizada con éxito!'),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Colors.red,
+              content: Text('No se pudo procesar el archivo MusicXML.'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al subir archivo: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreOfficialScore() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restablecer partitura oficial'),
+        content: const Text(
+          '¿Deseas descartar tu partitura personalizada y volver a la versión oficial?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Restablecer'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await hymnCustomizationService.clearCustomScore(widget.hymn.id);
+    if (mounted) {
+      setState(() => hasCustomScore = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Partitura restablecida a la oficial.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -94,6 +197,47 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
             : AppBar(
                 title: Text(widget.hymn.title),
                 actions: [
+                  PopupMenuButton<String>(
+                    tooltip: 'Opciones y corrección de partitura',
+                    icon: Icon(
+                      hasCustomScore ? Icons.check_circle : Icons.tune,
+                      color: hasCustomScore ? Colors.tealAccent : null,
+                    ),
+                    onSelected: (value) {
+                      if (value == 'download') _downloadOfficialScore();
+                      if (value == 'upload') _uploadCustomScore();
+                      if (value == 'restore') _restoreOfficialScore();
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'download',
+                        child: ListTile(
+                          leading: Icon(Icons.download),
+                          title: Text('Descargar MusicXML (.mxl)'),
+                          subtitle: Text('Para abrir y afinar en MuseScore'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'upload',
+                        child: ListTile(
+                          leading: Icon(Icons.upload_file),
+                          title: Text('Subir partitura corregida'),
+                          subtitle: Text('.mxl o .musicxml corregido'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      if (hasCustomScore)
+                        const PopupMenuItem(
+                          value: 'restore',
+                          child: ListTile(
+                            leading: Icon(Icons.restore, color: Colors.red),
+                            title: Text('Restablecer oficial', style: TextStyle(color: Colors.red)),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                    ],
+                  ),
                   IconButton(
                     tooltip: 'Pedales Bluetooth (PageFlip/AirTurn)',
                     icon: const Icon(Icons.settings_remote_outlined),
@@ -148,7 +292,9 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
               Material(
                 color: showOriginal
                     ? Theme.of(context).colorScheme.errorContainer
-                    : Theme.of(context).colorScheme.tertiaryContainer,
+                    : (hasCustomScore
+                        ? Colors.teal.shade800
+                        : Theme.of(context).colorScheme.tertiaryContainer),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -159,7 +305,10 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                       Icon(
                         showOriginal
                             ? Icons.picture_as_pdf_outlined
-                            : Icons.auto_awesome,
+                            : (hasCustomScore
+                                ? Icons.check_circle
+                                : Icons.auto_awesome),
+                        color: hasCustomScore ? Colors.white : null,
                         size: 18,
                       ),
                       const SizedBox(width: 9),
@@ -167,10 +316,28 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                         child: Text(
                           showOriginal
                               ? 'Original escaneado: se muestra únicamente como referencia.'
-                              : 'Partitura limpia reconstruida desde MusicXML. Verifica notas y ritmo antes de uso oficial.',
-                          style: const TextStyle(fontSize: 13),
+                              : (hasCustomScore
+                                  ? 'Partitura personalizada activa (corregida manualmente). Mostrando tu archivo.'
+                                  : 'Partitura limpia reconstruida desde MusicXML. Verifica notas y ritmo antes de uso oficial.'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: hasCustomScore ? Colors.white : null,
+                          ),
                         ),
                       ),
+                      if (!showOriginal)
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            foregroundColor: hasCustomScore ? Colors.white : null,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          onPressed: _uploadCustomScore,
+                          icon: const Icon(Icons.upload_file, size: 16),
+                          label: Text(
+                            hasCustomScore ? 'Reemplazar' : 'Subir corregida',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -213,6 +380,7 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                   : buildDigitalScoreView(
                       widget.score.files[index],
                       dark: dark,
+                      customKey: hasCustomScore ? widget.hymn.id : null,
                     ),
             ),
           ],

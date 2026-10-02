@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:xml/xml.dart';
 
 import '../../../content.dart';
+import 'hymn_customization_service.dart';
 
 class DigitalScoreInfo {
   final String id;
@@ -152,6 +153,10 @@ class ScoreCatalog {
   DigitalScoreInfo? operator [](String hymnId) => _entries[hymnId];
   bool contains(String hymnId) => _entries.containsKey(hymnId);
 
+  void invalidate(String hymnId) {
+    _chordCache.remove(hymnId);
+  }
+
   Future<void> load() async {
     final catalog = jsonDecode(
       await rootBundle.loadString('assets/scores/catalog.json'),
@@ -172,6 +177,19 @@ class ScoreCatalog {
       _chordCache.putIfAbsent(hymnId, () => _loadChordChart(hymnId));
 
   Future<ChordChart?> _loadChordChart(String hymnId) async {
+    // 1. Primero verifica si el usuario subió una partitura personalizada corregida
+    final customXml = await hymnCustomizationService.getCustomScoreXml(hymnId);
+    if (customXml != null && customXml.trim().isNotEmpty) {
+      try {
+        final document = XmlDocument.parse(customXml);
+        final keyLabel = _readKey(document);
+        final systems = _readChordSystems(document);
+        if (systems.isNotEmpty) {
+          return ChordChart(keyLabel: keyLabel, systems: systems);
+        }
+      } catch (_) {}
+    }
+
     final score = _entries[hymnId];
     if (score == null || score.files.isEmpty) return null;
 

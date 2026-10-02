@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
-Widget buildDigitalScoreView(String source, {required bool dark}) => Center(
+Widget buildDigitalScoreView(
+  String source, {
+  required bool dark,
+  String? customKey,
+}) => Center(
   child: ConstrainedBox(
     constraints: const BoxConstraints(maxWidth: 560),
     child: Card(
