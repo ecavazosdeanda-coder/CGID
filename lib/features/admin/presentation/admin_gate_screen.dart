@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../content.dart';
 import '../../workspace/providers/tab_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/user_profile_provider.dart';
 import 'admin_dashboard_screen.dart';
 
 class AdminGateScreen extends ConsumerStatefulWidget {
@@ -28,6 +29,7 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   String? _error;
+  String? _notice;
   bool _firebaseReady = false;
 
   @override
@@ -57,7 +59,9 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
   }
 
   void _showForgotPasswordDialog() {
-    final resetEmailController = TextEditingController(text: _emailController.text.trim());
+    final resetEmailController = TextEditingController(
+      text: _emailController.text.trim(),
+    );
     bool resetLoading = false;
     String? resetError;
 
@@ -115,7 +119,9 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                       : () async {
                           final email = resetEmailController.text.trim();
                           if (email.isEmpty) {
-                            setDialogState(() => resetError = 'Por favor ingresa un correo.');
+                            setDialogState(
+                              () => resetError = 'Por favor ingresa un correo.',
+                            );
                             return;
                           }
                           final messenger = ScaffoldMessenger.of(context);
@@ -126,7 +132,9 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                           });
 
                           try {
-                            await ref.read(authServiceProvider).sendPasswordResetEmail(email);
+                            await ref
+                                .read(authServiceProvider)
+                                .sendPasswordResetEmail(email);
                             if (mounted) {
                               nav.pop();
                               messenger.showSnackBar(
@@ -142,7 +150,9 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                           } on FirebaseAuthException catch (e) {
                             setDialogState(() {
                               resetLoading = false;
-                              resetError = e.message ?? 'Error al enviar enlace (${e.code}).';
+                              resetError =
+                                  e.message ??
+                                  'Error al enviar enlace (${e.code}).';
                             });
                           } catch (e) {
                             setDialogState(() {
@@ -155,7 +165,10 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text('Enviar Enlace'),
                 ),
@@ -179,7 +192,9 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
     if (_isActivating) {
       final confirmPassword = _confirmPasswordController.text;
       if (password.length < 6) {
-        setState(() => _error = 'La contraseña debe tener al menos 6 caracteres.');
+        setState(
+          () => _error = 'La contraseña debe tener al menos 6 caracteres.',
+        );
         return;
       }
       if (password != confirmPassword) {
@@ -191,14 +206,22 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _notice = null;
     });
 
     try {
       if (_isActivating) {
-        await ref.read(authServiceProvider).activateAccountWithEmail(
-              email: email,
-              password: password,
-            );
+        await ref
+            .read(authServiceProvider)
+            .activateAccountWithEmail(email: email, password: password);
+        if (mounted) {
+          setState(() {
+            _isActivating = false;
+            _passwordController.clear();
+            _confirmPasswordController.clear();
+            _notice = 'Te enviamos un enlace de verificación. Ábrelo y después inicia sesión con la contraseña que acabas de crear.';
+          });
+        }
       } else {
         await ref.read(authServiceProvider).signInWithEmail(email, password);
       }
@@ -218,6 +241,15 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
             break;
           case 'invalid-email':
             _error = 'El formato del correo es inválido.';
+            break;
+          case 'invitation-not-found':
+            _error = 'No hay una invitación activa para este correo. Solicítala al administrador.';
+            break;
+          case 'invalid-invitation':
+            _error = 'La invitación está incompleta. Solicita al administrador que la renueve.';
+            break;
+          case 'email-not-verified':
+            _error = 'Debes verificar tu correo. Te enviamos un enlace nuevo; después vuelve a iniciar sesión.';
             break;
           default:
             _error = e.message ?? 'Error de autenticación (${e.code}).';
@@ -244,9 +276,16 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.warning_amber_rounded, size: 56, color: Colors.orange),
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    size: 56,
+                    color: Colors.orange,
+                  ),
                   const SizedBox(height: 16),
-                  Text('Firebase no configurado', style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Firebase no configurado',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 12),
                   const Text(
                     'La autenticación pastoral requiere que se configure Firebase en el proyecto.\n\nEjecuta "flutterfire configure" en la terminal y luego llama a "Firebase.initializeApp()" en main.dart.',
@@ -265,15 +304,62 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
     return authState.when(
       data: (user) {
         if (user != null) {
-          return AdminDashboardScreen(
-            onPresent: widget.onPresent,
-            onCustomizeChurch: widget.onCustomizeChurch,
+          final profileAsync = ref.watch(userProfileProvider);
+          return profileAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => _buildUnauthorizedProfile(
+              'No fue posible verificar los permisos de esta cuenta.',
+            ),
+            data: (profile) => profile == null
+                ? _buildUnauthorizedProfile(
+                    'Esta cuenta no tiene un perfil ministerial autorizado.',
+                  )
+                : AdminDashboardScreen(
+                    onPresent: widget.onPresent,
+                    onCustomizeChurch: widget.onCustomizeChurch,
+                  ),
           );
         }
         return _buildLoginForm(context);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, st) => Center(child: Text('Error de Auth: $e')),
+    );
+  }
+
+  Widget _buildUnauthorizedProfile(String message) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.gpp_bad_outlined,
+                  size: 52,
+                  color: Colors.orange,
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Acceso no autorizado',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(message, textAlign: TextAlign.center),
+                const SizedBox(height: 18),
+                FilledButton.icon(
+                  onPressed: () => ref.read(authServiceProvider).signOut(),
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Cerrar sesión'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -299,7 +385,10 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 32,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -335,7 +424,9 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
-                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          color: dark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -356,11 +447,14 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                                 onTap: () => setState(() {
                                   _isActivating = false;
                                   _error = null;
+                                  _notice = null;
                                 }),
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: !_isActivating
-                                        ? (dark ? Colors.grey.shade800 : Colors.white)
+                                        ? (dark
+                                              ? Colors.grey.shade800
+                                              : Colors.white)
                                         : Colors.transparent,
                                     borderRadius: BorderRadius.circular(8),
                                     boxShadow: !_isActivating
@@ -392,11 +486,14 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                                 onTap: () => setState(() {
                                   _isActivating = true;
                                   _error = null;
+                                  _notice = null;
                                 }),
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: _isActivating
-                                        ? (dark ? Colors.grey.shade800 : Colors.white)
+                                        ? (dark
+                                              ? Colors.grey.shade800
+                                              : Colors.white)
                                         : Colors.transparent,
                                     borderRadius: BorderRadius.circular(8),
                                     boxShadow: _isActivating
@@ -438,7 +535,10 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           prefixIcon: const Icon(Icons.mail_outline, size: 20),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 14,
+                          ),
                         ),
                         onSubmitted: (_) => _submit(),
                       ),
@@ -447,19 +547,28 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                         controller: _passwordController,
                         obscureText: _obscurePassword,
                         decoration: InputDecoration(
-                          labelText: _isActivating ? 'Nueva Contraseña' : 'Contraseña',
+                          labelText: _isActivating
+                              ? 'Nueva Contraseña'
+                              : 'Contraseña',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           prefixIcon: const Icon(Icons.lock_outline, size: 20),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              _obscurePassword
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
                               size: 20,
                             ),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 14,
+                          ),
                         ),
                         onSubmitted: (_) => _submit(),
                       ),
@@ -476,12 +585,19 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                             prefixIcon: const Icon(Icons.lock_reset, size: 20),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                _obscureConfirm
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
                                 size: 20,
                               ),
-                              onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                              onPressed: () => setState(
+                                () => _obscureConfirm = !_obscureConfirm,
+                              ),
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 14,
+                            ),
                           ),
                           onSubmitted: (_) => _submit(),
                         ),
@@ -500,7 +616,9 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                               '¿Olvidaste tu contraseña?',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: dark ? Colors.indigo.shade200 : Colors.indigo.shade700,
+                                color: dark
+                                    ? Colors.indigo.shade200
+                                    : Colors.indigo.shade700,
                               ),
                             ),
                           ),
@@ -511,7 +629,10 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                       if (_error != null) ...[
                         const SizedBox(height: 12),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.red.withAlpha(20),
                             borderRadius: BorderRadius.circular(8),
@@ -519,12 +640,54 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.error_outline, color: Colors.redAccent, size: 18),
+                              const Icon(
+                                Icons.error_outline,
+                                color: Colors.redAccent,
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   _error!,
-                                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                                  style: const TextStyle(
+                                    color: Colors.redAccent,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (_notice != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withAlpha(20),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.green.withAlpha(80),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.mark_email_read_outlined,
+                                color: Colors.green,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _notice!,
+                                  style: const TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                             ],
@@ -556,7 +719,9 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                                   ),
                                 )
                               : Text(
-                                  _isActivating ? 'Activar Cuenta' : 'Iniciar Sesión',
+                                  _isActivating
+                                      ? 'Activar Cuenta'
+                                      : 'Iniciar Sesión',
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
@@ -574,7 +739,11 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
               // Enlace limpio para regresar a la biblioteca
               TextButton.icon(
                 onPressed: () => ref.read(tabProvider.notifier).setTab(0),
-                icon: const Icon(Icons.arrow_back, size: 16, color: Colors.grey),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  size: 16,
+                  color: Colors.grey,
+                ),
                 label: const Text(
                   'Volver a la Biblioteca',
                   style: TextStyle(color: Colors.grey, fontSize: 13),

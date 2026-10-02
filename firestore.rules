@@ -117,6 +117,82 @@ service cloud.firestore {
              (!('updatedAt' in data) || data.updatedAt is timestamp || (data.updatedAt is string && data.updatedAt.size() <= 100));
     }
 
+    function isValidInvitationData(data) {
+      return data.keys().hasAll(['email', 'role', 'churchId', 'churchName']) &&
+             data.keys().hasOnly(['email', 'role', 'churchId', 'churchName', 'createdAt']) &&
+             isValidEmail(data.email) &&
+             data.role in ['admin', 'pastor', 'proyeccionista', 'musico'] &&
+             isValidId(data.churchId) &&
+             data.churchName is string &&
+             data.churchName.size() > 0 &&
+             data.churchName.size() <= 200 &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
+    }
+
+    function hasMatchingInvitation(data) {
+      return request.auth.token.email != null &&
+             request.auth.token.email_verified == true &&
+             exists(/databases/$(database)/documents/account_invitations/$(request.auth.token.email)) &&
+             get(/databases/$(database)/documents/account_invitations/$(request.auth.token.email)).data.email == request.auth.token.email &&
+             data.email == request.auth.token.email &&
+             data.role == get(/databases/$(database)/documents/account_invitations/$(request.auth.token.email)).data.role &&
+             data.churchId == get(/databases/$(database)/documents/account_invitations/$(request.auth.token.email)).data.churchId &&
+             data.churchName == get(/databases/$(database)/documents/account_invitations/$(request.auth.token.email)).data.churchName;
+    }
+
+    function isValidRemoteSessionId(sessionId) {
+      return sessionId is string &&
+             sessionId.matches('^[A-HJ-NP-Z2-9]{10}$');
+    }
+
+    function isValidRemoteCommand(data) {
+      return !('lastCommand' in data) ||
+             (
+               data.lastCommand is map &&
+               data.lastCommand.keys().hasAll(['id', 'action', 'timestamp']) &&
+               data.lastCommand.keys().hasOnly(['id', 'action', 'payload', 'timestamp']) &&
+               data.lastCommand.id is string &&
+               data.lastCommand.id.size() > 0 &&
+               data.lastCommand.id.size() <= 100 &&
+               data.lastCommand.action in ['next', 'prev', 'black', 'next_section', 'prev_section', 'jump', 'project_verse'] &&
+               data.lastCommand.timestamp is int &&
+               (!('payload' in data.lastCommand) ||
+                 data.lastCommand.payload == null ||
+                 (data.lastCommand.payload is map && data.lastCommand.payload.size() <= 8))
+             );
+    }
+
+    function isValidRemoteSessionData(data) {
+      return data.keys().hasOnly([
+               'blackout', 'slideIndex', 'totalSlides',
+               'currentTitle', 'currentLabel', 'currentText',
+               'nextTitle', 'nextLabel', 'nextText',
+               'planIndex', 'planCount', 'planItems', 'currentNotes',
+               'countdownEndsAt', 'bibleBookCount', 'updatedAt',
+               'hostActive', 'expiresAt', 'closedAt', 'lastCommand'
+             ]) &&
+             data.blackout is bool &&
+             data.slideIndex is int &&
+             data.totalSlides is int &&
+             data.currentTitle is string && data.currentTitle.size() <= 500 &&
+             data.currentLabel is string && data.currentLabel.size() <= 500 &&
+             data.currentText is string && data.currentText.size() <= 10000 &&
+             data.nextTitle is string && data.nextTitle.size() <= 500 &&
+             data.nextLabel is string && data.nextLabel.size() <= 500 &&
+             data.nextText is string && data.nextText.size() <= 10000 &&
+             data.planIndex is int &&
+             data.planCount is int &&
+             data.planItems is list && data.planItems.size() <= 100 &&
+             data.currentNotes is string && data.currentNotes.size() <= 10000 &&
+             (!('countdownEndsAt' in data) || data.countdownEndsAt == null || data.countdownEndsAt is int) &&
+             data.bibleBookCount is int &&
+             data.updatedAt is timestamp &&
+             data.hostActive is bool &&
+             data.expiresAt is timestamp &&
+             (!('closedAt' in data) || data.closedAt is timestamp) &&
+             isValidRemoteCommand(data);
+    }
+
     // Default deny: start by denying all read and write operations across the database
     match /{document=**} {
       allow read, write: if false;
@@ -127,13 +203,32 @@ service cloud.firestore {
       // Reads:
       // - Single document get: Authenticated user can read their own profile, or admins/pastors can read profiles
       // - Collection list: Admins and Pastors can list profiles
-      allow get: if isAuthenticated() && (request.auth.uid == uid || isAdmin() || isPastor());
-      allow list: if isAuthenticated() && (isAdmin() || isPastor());
+      allow get: if isAuthenticated() &&
+                   (
+                     request.auth.uid == uid ||
+                     isAdmin() ||
+                     (
+                       isPastor() &&
+                       'churchId' in resource.data &&
+                       resource.data.churchId == getUserData().churchId
+                     )
+                   );
+      // Firestore rechazará una consulta pastoral que no esté limitada a su
+      // iglesia, porque cada documento devuelto debe cumplir esta condición.
+      allow list: if isAuthenticated() &&
+                    (
+                      isAdmin() ||
+                      (
+                        isPastor() &&
+                        'churchId' in resource.data &&
+                        resource.data.churchId == getUserData().churchId
+                      )
+                    );
 
       // Creates:
       // - Admins can create user profiles with any valid role and church assignment
       // - Pastors can create ministerial user profiles (proyeccionista, musico) assigned strictly to their own church
-      // - Users can create their own profile (self-bootstrap as bootstrap admin or non-admin role without self-assigned church)
+      // - A user can create only the exact profile authorized by their invitation
       allow create: if isAuthenticated() &&
                        isValidId(uid) &&
                        isValidUserData(request.resource.data) &&
@@ -150,11 +245,7 @@ service cloud.firestore {
                            request.auth.uid == uid &&
                            (
                              isBootstrapAdmin() ||
-                             (
-                               request.resource.data.role in ['pastor', 'proyeccionista', 'musico'] &&
-                               (!('churchId' in request.resource.data) || request.resource.data.churchId == null) &&
-                               request.resource.data.email == request.auth.token.email
-                             )
+                             hasMatchingInvitation(request.resource.data)
                            )
                          )
                        );
@@ -212,6 +303,41 @@ service cloud.firestore {
                        );
     }
 
+    // Pending ministerial invitations. They are separate from active profiles
+    // so an invited email never appears as a valid user before activation.
+    match /account_invitations/{email} {
+      allow get: if isAuthenticated() &&
+                    request.auth.token.email != null &&
+                    request.auth.token.email_verified == true &&
+                    request.auth.token.email == email &&
+                    resource.data.email == request.auth.token.email;
+      allow list: if isAdmin();
+
+      allow create, update: if isValidInvitationData(request.resource.data) &&
+                               request.resource.data.email == email &&
+                               (
+                                 isAdmin() ||
+                                 (
+                                   isPastor() &&
+                                   request.resource.data.role in ['proyeccionista', 'musico'] &&
+                                   isAssignedToChurch(request.resource.data.churchId)
+                                 )
+                               );
+
+      allow delete: if isAdmin() ||
+                       (
+                         isPastor() &&
+                         resource.data.role in ['proyeccionista', 'musico'] &&
+                         isAssignedToChurch(resource.data.churchId)
+                       ) ||
+                       (
+                         isAuthenticated() &&
+                         request.auth.token.email != null &&
+                         request.auth.token.email == email &&
+                         resource.data.email == request.auth.token.email
+                       );
+    }
+
     // Church documents and subcollections
     match /churches/{churchId} {
       // Allow reading church metadata if the ID is valid
@@ -247,12 +373,26 @@ service cloud.firestore {
 
     // Remote Control Sessions (Host screen and paired mobile remotes)
     match /remote_sessions/{sessionId} {
-      // Reads: Open so remote clients can listen to projector state or check session validity
-      allow read: if isValidId(sessionId);
+      // The high-entropy document ID is the pairing secret. Sessions expire
+      // automatically and every write must preserve the strict schema.
+      allow read: if isValidRemoteSessionId(sessionId) &&
+                     resource.data.expiresAt is timestamp &&
+                     request.time < resource.data.expiresAt;
 
-      // Writes: Host screen posts state updates and paired mobile remotes send commands
-      allow write: if isValidId(sessionId) &&
-                      request.resource.data.size() < 50;
+      allow create: if isValidRemoteSessionId(sessionId) &&
+                       isValidRemoteSessionData(request.resource.data) &&
+                       request.resource.data.hostActive == true &&
+                       request.resource.data.expiresAt > request.time &&
+                       request.resource.data.expiresAt <= request.time + duration.value(8, 'h');
+
+      allow update: if isValidRemoteSessionId(sessionId) &&
+                       resource.data.expiresAt is timestamp &&
+                       request.time < resource.data.expiresAt &&
+                       isValidRemoteSessionData(request.resource.data) &&
+                       request.resource.data.expiresAt > request.time &&
+                       request.resource.data.expiresAt <= request.time + duration.value(8, 'h');
+
+      allow delete: if false;
     }
   }
 }

@@ -214,7 +214,7 @@ class _PastorAssignmentDialogState extends ConsumerState<PastorAssignmentDialog>
                             content: Text(
                               password.isNotEmpty
                                   ? 'Usuario $email registrado con rol y contraseña asignada.'
-                                  : 'Usuario $email registrado para $churchName.',
+                                  : 'Invitación creada para $email en $churchName. Ya puede activar su cuenta desde Primer Acceso.',
                             ),
                           ),
                         );

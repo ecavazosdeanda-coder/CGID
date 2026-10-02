@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Interfaz unificada de conexión para el control remoto móvil
@@ -16,37 +18,42 @@ class CloudRemoteBridge {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String collectionName = 'remote_sessions';
 
-  /// Genera un código de sesión corto aleatorio de 6 dígitos alfanuméricos
+  /// Genera un código de sesión aleatorio de 10 caracteres (~50 bits).
+  /// El identificador funciona también como secreto de emparejamiento, por lo
+  /// que no debe derivarse de la hora ni de otros valores predecibles.
   static String generateSessionCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Sin caracteres confusos (0, O, 1, I)
-    final now = DateTime.now().microsecondsSinceEpoch;
-    var code = '';
-    var n = now;
-    for (int i = 0; i < 6; i++) {
-      code += chars[(n + i * 7) % chars.length];
-      n = n ~/ 10;
-    }
-    return code;
+    final random = Random.secure();
+    return List.generate(10, (_) => chars[random.nextInt(chars.length)]).join();
   }
 
   /// HOST: Crea o actualiza la sesión en la nube
   static DocumentReference<Map<String, dynamic>> sessionDoc(String sessionId) {
-    return _firestore.collection(collectionName).doc(sessionId.trim().toUpperCase());
+    return _firestore
+        .collection(collectionName)
+        .doc(sessionId.trim().toUpperCase());
   }
 
   /// HOST: Publica el estado actual en la nube
-  static Future<void> publishState(String sessionId, Map<String, dynamic> state) async {
+  static Future<void> publishState(
+    String sessionId,
+    Map<String, dynamic> state,
+  ) async {
     try {
       await sessionDoc(sessionId).set({
         ...state,
         'updatedAt': FieldValue.serverTimestamp(),
+        'expiresAt': Timestamp.fromDate(
+          DateTime.now().toUtc().add(const Duration(hours: 8)),
+        ),
         'hostActive': true,
       }, SetOptions(merge: true));
     } catch (_) {}
   }
 
   /// HOST: Escucha los comandos entrantes de los celulares conectados
-  static StreamSubscription<DocumentSnapshot<Map<String, dynamic>>> listenCommands(
+  static StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>
+  listenCommands(
     String sessionId,
     void Function(String action, Map<String, dynamic>? payload) onCommand,
   ) {
@@ -70,10 +77,9 @@ class CloudRemoteBridge {
   /// HOST: Cierra la sesión
   static Future<void> closeSession(String sessionId) async {
     try {
-      await sessionDoc(sessionId).update({
-        'hostActive': false,
-        'closedAt': FieldValue.serverTimestamp(),
-      });
+      await sessionDoc(
+        sessionId,
+      ).update({'hostActive': false, 'closedAt': FieldValue.serverTimestamp()});
     } catch (_) {}
   }
 
@@ -100,10 +106,7 @@ class CloudRemoteBridge {
     return sessionDoc(sessionId).snapshots().map((snap) {
       if (!snap.exists) return <String, dynamic>{'connected': false};
       final data = snap.data() ?? <String, dynamic>{};
-      return {
-        ...data,
-        'connected': data['hostActive'] == true,
-      };
+      return {...data, 'connected': data['hostActive'] == true};
     });
   }
 }

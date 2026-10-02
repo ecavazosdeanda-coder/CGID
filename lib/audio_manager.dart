@@ -338,14 +338,12 @@ class AudioManager {
     return extractedCount;
   }
 
-  static const String defaultDriveApiKey =
-      'AIzaSyBpM3uw3U_Gn_0pTy9yqob5Vosq9iB2Cig';
   static const String defaultDriveFolderId =
       '1VC5OmPHMEZrQbIAlDsHIjAnh6DAXnfei';
 
   Future<String?> getDriveApiKey() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('drive_api_key') ?? defaultDriveApiKey;
+    return prefs.getString('drive_api_key');
   }
 
   Future<void> setDriveApiKey(String key) async {

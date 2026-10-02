@@ -59,7 +59,6 @@ import '../remote/services/cloud_remote_bridge.dart';
 
 import 'package:printing/printing.dart';
 
-
 import '../hymnal/presentation/catalog_screen.dart';
 import '../bible/presentation/bible_screen.dart';
 
@@ -492,7 +491,9 @@ class WorkspaceState extends ConsumerState<Workspace> {
     try {
       await projection.sendOutput(outputState);
       if (cloudSessionId != null) {
-        unawaited(CloudRemoteBridge.publishState(cloudSessionId!, getRemoteState()));
+        unawaited(
+          CloudRemoteBridge.publishState(cloudSessionId!, getRemoteState()),
+        );
       }
     } catch (_) {
       message('No se pudo sincronizar la salida. Intenta abrirla de nuevo.');
@@ -618,7 +619,11 @@ class WorkspaceState extends ConsumerState<Workspace> {
       ],
       (tabIndex: 7, label: 'Literatura', icon: Icons.library_books_outlined),
       (tabIndex: 8, label: 'Acerca de', icon: Icons.info_outline),
-      (tabIndex: 9, label: isLoggedIn ? 'Administración' : 'Acceso Ministerial', icon: Icons.admin_panel_settings_outlined),
+      (
+        tabIndex: 9,
+        label: isLoggedIn ? 'Administración' : 'Acceso Ministerial',
+        icon: Icons.admin_panel_settings_outlined,
+      ),
     ];
 
     return LayoutBuilder(
@@ -913,15 +918,24 @@ class WorkspaceState extends ConsumerState<Workspace> {
                                 accentPanel: accentPanel,
                                 accentText: accentText,
                               ),
-                              4 => isLoggedIn
-                                  ? scores()
-                                  : _buildRestrictedSection('Partituras y Atril Digital'),
-                              5 => isLoggedIn
-                                  ? projector()
-                                  : _buildRestrictedSection('Cabina de Proyección'),
-                              6 => isLoggedIn
-                                  ? servicePlan()
-                                  : _buildRestrictedSection('Planificación de Cultos'),
+                              4 =>
+                                isLoggedIn
+                                    ? scores()
+                                    : _buildRestrictedSection(
+                                        'Partituras y Atril Digital',
+                                      ),
+                              5 =>
+                                isLoggedIn
+                                    ? projector()
+                                    : _buildRestrictedSection(
+                                        'Cabina de Proyección',
+                                      ),
+                              6 =>
+                                isLoggedIn
+                                    ? servicePlan()
+                                    : _buildRestrictedSection(
+                                        'Planificación de Cultos',
+                                      ),
                               7 => const LiteratureScreen(),
                               8 => about(),
                               9 => AdminGateScreen(
@@ -957,7 +971,9 @@ class WorkspaceState extends ConsumerState<Workspace> {
           constraints: const BoxConstraints(maxWidth: 480),
           child: Card(
             elevation: 3,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(28),
               child: Column(
@@ -1492,7 +1508,8 @@ class WorkspaceState extends ConsumerState<Workspace> {
                   label: const Text('Monitor de atril'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () => StreamOverlayDialog.show(context, outputState),
+                  onPressed: () =>
+                      StreamOverlayDialog.show(context, outputState),
                   icon: const Icon(Icons.sensors, color: Color(0xFF6366F1)),
                   label: const Text('Salida OBS / Transmisión'),
                 ),
@@ -1573,38 +1590,60 @@ class WorkspaceState extends ConsumerState<Workspace> {
                       if (cloudSessionId == null) {
                         final newCode = CloudRemoteBridge.generateSessionCode();
                         setState(() => cloudSessionId = newCode);
-                        await CloudRemoteBridge.publishState(newCode, getRemoteState());
+                        await CloudRemoteBridge.publishState(
+                          newCode,
+                          getRemoteState(),
+                        );
                         _cloudCommandSub?.cancel();
-                        _cloudCommandSub = CloudRemoteBridge.listenCommands(newCode, (action, payload) {
-                          if (!mounted) return;
-                          if (action == 'next') {
-                            setState(() => slideIndex = (slideIndex + 1).clamp(0, slides.isEmpty ? 0 : slides.length - 1));
-                            syncOutput();
-                          } else if (action == 'prev') {
-                            setState(() => slideIndex = (slideIndex - 1).clamp(0, slides.isEmpty ? 0 : slides.length - 1));
-                            syncOutput();
-                          } else if (action == 'black') {
-                            toggleBlack();
-                          } else if (action == 'next_section') {
-                            moveSection(1);
-                          } else if (action == 'prev_section') {
-                            moveSection(-1);
-                          } else if (action == 'jump' && payload != null) {
-                            final idx = payload['index'] as int?;
-                            if (idx != null && idx >= 0 && idx < plan.length) {
-                              prepare(plan[idx]);
+                        _cloudCommandSub = CloudRemoteBridge.listenCommands(
+                          newCode,
+                          (action, payload) {
+                            if (!mounted) return;
+                            if (action == 'next') {
+                              setState(
+                                () => slideIndex = (slideIndex + 1).clamp(
+                                  0,
+                                  slides.isEmpty ? 0 : slides.length - 1,
+                                ),
+                              );
+                              syncOutput();
+                            } else if (action == 'prev') {
+                              setState(
+                                () => slideIndex = (slideIndex - 1).clamp(
+                                  0,
+                                  slides.isEmpty ? 0 : slides.length - 1,
+                                ),
+                              );
+                              syncOutput();
+                            } else if (action == 'black') {
+                              toggleBlack();
+                            } else if (action == 'next_section') {
+                              moveSection(1);
+                            } else if (action == 'prev_section') {
+                              moveSection(-1);
+                            } else if (action == 'jump' && payload != null) {
+                              final idx = payload['index'] as int?;
+                              if (idx != null &&
+                                  idx >= 0 &&
+                                  idx < plan.length) {
+                                prepare(plan[idx]);
+                              }
+                            } else if (action == 'project_verse' &&
+                                payload != null) {
+                              final b = payload['b'] as int?;
+                              final c = payload['c'] as int?;
+                              final vStart = payload['vStart'] as int?;
+                              final vEnd = payload['vEnd'] as int?;
+                              if (b != null &&
+                                  c != null &&
+                                  vStart != null &&
+                                  vEnd != null) {
+                                final entry = lib.passage(b, c, vStart, vEnd);
+                                prepare(entry);
+                              }
                             }
-                          } else if (action == 'project_verse' && payload != null) {
-                            final b = payload['b'] as int?;
-                            final c = payload['c'] as int?;
-                            final vStart = payload['vStart'] as int?;
-                            final vEnd = payload['vEnd'] as int?;
-                            if (b != null && c != null && vStart != null && vEnd != null) {
-                              final entry = lib.passage(b, c, vStart, vEnd);
-                              prepare(entry);
-                            }
-                          }
-                        });
+                          },
+                        );
                       }
 
                       if (!mounted) return;
@@ -1614,7 +1653,10 @@ class WorkspaceState extends ConsumerState<Workspace> {
                           builder: (context, setDialogState) => AlertDialog(
                             title: const Row(
                               children: [
-                                Icon(Icons.cloud_sync, color: Color(0xff0284c7)),
+                                Icon(
+                                  Icons.cloud_sync,
+                                  color: Color(0xff0284c7),
+                                ),
                                 SizedBox(width: 8),
                                 Text('Control Remoto (Puente Nube)'),
                               ],
@@ -1623,16 +1665,22 @@ class WorkspaceState extends ConsumerState<Workspace> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Text(
-                                  'Escanea este código con tu celular o ingresa el código de 6 caracteres:',
+                                  'Escanea este código con tu celular o ingresa el código seguro de 10 caracteres:',
                                   textAlign: TextAlign.center,
                                 ),
                                 const SizedBox(height: 12),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 8,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xff0284c7).withValues(alpha: 0.15),
+                                    color: const Color(0xff0284c7)
+                                        .withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: const Color(0xff0284c7)),
+                                    border: Border.all(
+                                      color: const Color(0xff0284c7),
+                                    ),
                                   ),
                                   child: Text(
                                     cloudSessionId ?? '',
@@ -1657,7 +1705,10 @@ class WorkspaceState extends ConsumerState<Workspace> {
                                 const SizedBox(height: 10),
                                 const Text(
                                   '☁ Funciona en cualquier celular sin importar la red Wi-Fi.',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ],
@@ -1668,12 +1719,19 @@ class WorkspaceState extends ConsumerState<Workspace> {
                                   _cloudCommandSub?.cancel();
                                   _cloudCommandSub = null;
                                   if (cloudSessionId != null) {
-                                    unawaited(CloudRemoteBridge.closeSession(cloudSessionId!));
+                                    unawaited(
+                                      CloudRemoteBridge.closeSession(
+                                        cloudSessionId!,
+                                      ),
+                                    );
                                   }
                                   setState(() => cloudSessionId = null);
                                   Navigator.pop(context);
                                 },
-                                child: const Text('Cerrar sesión nube', style: TextStyle(color: Colors.red)),
+                                child: const Text(
+                                  'Cerrar sesión nube',
+                                  style: TextStyle(color: Colors.red),
+                                ),
                               ),
                               FilledButton(
                                 onPressed: () => Navigator.pop(context),
@@ -1846,7 +1904,9 @@ class WorkspaceState extends ConsumerState<Workspace> {
                   ),
                   label: Text(
                     (remoteUrls.isNotEmpty || cloudSessionId != null)
-                        ? (cloudSessionId != null ? 'Remoto Nube ($cloudSessionId)' : 'Remoto activo')
+                        ? (cloudSessionId != null
+                              ? 'Remoto Nube ($cloudSessionId)'
+                              : 'Remoto activo')
                         : 'Control Remoto',
                   ),
                 ),

@@ -14,24 +14,26 @@ final userProfileProvider = StreamProvider<UserProfile?>((ref) {
     return Stream.value(null);
   }
 
-  final docRef = FirebaseFirestore.instance.collection('users').doc(authUser.uid);
+  final docRef = FirebaseFirestore.instance
+      .collection('users')
+      .doc(authUser.uid);
 
   return docRef.snapshots().asyncMap((snapshot) async {
     if (!snapshot.exists || snapshot.data() == null) {
-      final isInitialAdmin = authUser.email?.toLowerCase() == 'ecavazosdeanda@gmail.com';
+      final isInitialAdmin =
+          authUser.email?.toLowerCase() == 'ecavazosdeanda@gmail.com';
+      if (!isInitialAdmin) {
+        return null;
+      }
       final defaultProfile = UserProfile(
         uid: authUser.uid,
         email: authUser.email ?? '',
-        role: isInitialAdmin ? 'admin' : 'pastor',
+        role: 'admin',
         churchId: null,
         churchName: null,
       );
 
-      try {
-        await docRef.set(defaultProfile.toFirestore());
-      } catch (e) {
-        // En caso de que las reglas aún no permitan escritura
-      }
+      await docRef.set(defaultProfile.toFirestore());
       return defaultProfile;
     }
 
@@ -42,14 +44,29 @@ final userProfileProvider = StreamProvider<UserProfile?>((ref) {
 /// Future de todos los usuarios registrados (con timeout para evitar congelamiento de UI)
 final allUsersProvider = FutureProvider<List<UserProfile>>((ref) async {
   try {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .get()
-        .timeout(
-          const Duration(seconds: 8),
-          onTimeout: () => throw Exception('Tiempo de espera agotado al conectar con Firestore.'),
-        );
-    return snapshot.docs.map((doc) => UserProfile.fromFirestore(doc.data(), doc.id)).toList();
+    final profile = await ref.watch(userProfileProvider.future);
+    if (profile == null || (!profile.isAdmin && !profile.isPastor)) {
+      return const [];
+    }
+
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection(
+      'users',
+    );
+    if (profile.isPastor) {
+      final churchId = profile.churchId;
+      if (churchId == null || churchId.isEmpty) return const [];
+      query = query.where('churchId', isEqualTo: churchId);
+    }
+
+    final snapshot = await query.get().timeout(
+      const Duration(seconds: 8),
+      onTimeout: () => throw Exception(
+        'Tiempo de espera agotado al conectar con Firestore.',
+      ),
+    );
+    return snapshot.docs
+        .map((doc) => UserProfile.fromFirestore(doc.data(), doc.id))
+        .toList();
   } catch (e) {
     debugPrint('Error en allUsersProvider: $e');
     rethrow;
@@ -57,7 +74,9 @@ final allUsersProvider = FutureProvider<List<UserProfile>>((ref) async {
 });
 
 /// Servicio para asignación de roles e iglesias a pastores
-final userManagementServiceProvider = Provider((ref) => UserManagementService());
+final userManagementServiceProvider = Provider(
+  (ref) => UserManagementService(),
+);
 
 class UserManagementService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -119,25 +138,50 @@ class UserManagementService {
       }
     }
 
-    final query = await _db.collection('users').where('email', isEqualTo: cleanEmail).get();
-    if (query.docs.isNotEmpty) {
-      await query.docs.first.reference.update({
+    Query<Map<String, dynamic>> existingProfileQuery = _db
+        .collection('users')
+        .where('email', isEqualTo: cleanEmail);
+    final actorUid = FirebaseAuth.instance.currentUser?.uid;
+    if (actorUid != null) {
+      final actor = await _db.collection('users').doc(actorUid).get();
+      if (actor.data()?['role'] != 'admin') {
+        // Esta condición no es solo visual: también permite que Firestore
+        // demuestre que una consulta pastoral está limitada a su iglesia.
+        existingProfileQuery = existingProfileQuery.where(
+          'churchId',
+          isEqualTo: churchId,
+        );
+      }
+    }
+
+    final existingProfiles = await existingProfileQuery.get();
+    if (existingProfiles.docs.isNotEmpty) {
+      await existingProfiles.docs.first.reference.update({
         'churchId': churchId,
         'churchName': churchName,
         'role': role,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-    } else {
-      final docRef = createdUid != null
-          ? _db.collection('users').doc(createdUid)
-          : _db.collection('users').doc();
-
-      await docRef.set({
+    } else if (createdUid != null) {
+      await _db.collection('users').doc(createdUid).set({
         'email': cleanEmail,
         'role': role,
         'churchId': churchId,
         'churchName': churchName,
         'updatedAt': FieldValue.serverTimestamp(),
+      });
+      await _db
+          .collection('account_invitations')
+          .doc(cleanEmail)
+          .delete()
+          .catchError((_) {});
+    } else {
+      await _db.collection('account_invitations').doc(cleanEmail).set({
+        'email': cleanEmail,
+        'role': role,
+        'churchId': churchId,
+        'churchName': churchName,
+        'createdAt': FieldValue.serverTimestamp(),
       });
     }
   }
@@ -193,12 +237,11 @@ class UserManagementService {
     required String churchName,
     String? password,
     String role = 'pastor',
-  }) =>
-      registerNewPastor(
-        email: email,
-        churchId: churchId,
-        churchName: churchName,
-        password: password,
-        role: role,
-      );
+  }) => registerNewPastor(
+    email: email,
+    churchId: churchId,
+    churchName: churchName,
+    password: password,
+    role: role,
+  );
 }

@@ -339,7 +339,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ],
 
         // SECCIÓN ESPECÍFICA: CABINA DE PROYECCIÓN DEL TEMPLO
-        if (profile == null || profile.canAccessProjection) ...[
+        if (profile?.canAccessProjection == true) ...[
           Card(
             elevation: 3,
             shape: RoundedRectangleBorder(
@@ -496,7 +496,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ],
 
         // SECCIÓN ESPECÍFICA: REPERTORIO Y ATRIL MUSICAL
-        if (profile == null || profile.canAccessMusic) ...[
+        if (profile?.canAccessMusic == true) ...[
           Card(
             elevation: 3,
             shape: RoundedRectangleBorder(
@@ -742,7 +742,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ],
 
         // HERRAMIENTAS PASTORALES (Diseño de Cultos y Avisos)
-        if (profile == null || profile.canEditPlans) ...[
+        if (profile?.canEditPlans == true) ...[
           Card(
             elevation: 2,
             child: Padding(
@@ -871,7 +871,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ],
 
         // SINCRONIZACIÓN EN LA NUBE (Para Administradores y Pastores con permisos de subida)
-        if (profile == null || profile.canSyncPlansToCloud) ...[
+        if (profile?.canSyncPlansToCloud == true) ...[
           Card(
             elevation: 2,
             child: Padding(
@@ -1120,7 +1120,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       label: const Text('Crear Respaldo'),
                       onPressed: _exportDatabase,
                     ),
-                    if (profile == null || profile.canRestoreDatabase)
+                    if (profile?.canRestoreDatabase == true)
                       ElevatedButton.icon(
                         icon: const Icon(Icons.upload),
                         label: const Text('Restaurar Respaldo'),

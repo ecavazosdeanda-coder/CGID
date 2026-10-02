@@ -5,6 +5,13 @@
 > **Línea Base:** CGID v1.0 (Producción Web Estable)  
 > **Fecha de creación/actualización:** Octubre 2026  
 
+> **Estado de ejecución (2 de octubre de 2026):** la v2 ya está publicada en
+> `https://cgdi-app-v2.web.app` y continúa en estabilización sobre `dev-v2`.
+> La matriz verificable de funciones completas, parciales y pendientes está en
+> [`AUDITORIA_V2_2026-10-02.md`](AUDITORIA_V2_2026-10-02.md). Las instrucciones
+> históricas de “no publicar” de este documento se conservan como referencia de
+> la fase inicial y ya no describen el estado operativo actual.
+
 ---
 
 ## 📑 ÍNDICE GENERAL
