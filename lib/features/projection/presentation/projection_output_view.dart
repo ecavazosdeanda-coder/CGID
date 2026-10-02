@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:media_kit_video/media_kit_video.dart';
 import 'package:marquee/marquee.dart';
+
 import '../../../appearance.dart';
 import '../../../slide_view.dart';
 import '../../../motion_background_view.dart';
 import '../../../content.dart';
 import '../../../countdown.dart';
 import '../../../glass.dart';
+
 class ProjectionOutputView extends StatelessWidget {
   final Map<String, dynamic> state;
 

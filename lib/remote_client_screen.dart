@@ -9,6 +9,7 @@ import 'package:network_info_plus/network_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import 'features/remote/services/cloud_remote_bridge.dart';
 import 'glass.dart';
 
 Uri? normalizeRemoteAddress(String rawAddress) {
@@ -32,7 +33,8 @@ Uri? normalizeRemoteAddress(String rawAddress) {
 //  RemoteClientScreen
 // ─────────────────────────────────────────────────────────────────────────────
 class RemoteClientScreen extends StatefulWidget {
-  const RemoteClientScreen({super.key});
+  final String? initialSessionId;
+  const RemoteClientScreen({super.key, this.initialSessionId});
   @override
   State<RemoteClientScreen> createState() => _RemoteClientScreenState();
 }
@@ -40,6 +42,8 @@ class RemoteClientScreen extends StatefulWidget {
 class _RemoteClientScreenState extends State<RemoteClientScreen>
     with SingleTickerProviderStateMixin {
   String? url;
+  String? cloudSessionId;
+  StreamSubscription? _cloudSubscription;
   bool _connected = false;
   bool get connected => _connected;
   set connected(bool value) {
@@ -54,6 +58,7 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
   String? myIp;
   late final TabController _tabController;
   final _ipController = TextEditingController();
+  final _cloudCodeController = TextEditingController();
   List<String> _recentIps = [];
 
   bool blackout = false;
@@ -148,20 +153,42 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
     _loadRecentIps();
     _clockDisplay = _formatClock();
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted && url != null) {
+      if (mounted && (url != null || cloudSessionId != null)) {
         setState(() => _clockDisplay = _formatClock());
       }
     });
+
+    if (widget.initialSessionId != null && widget.initialSessionId!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _connectToCloud(widget.initialSessionId!);
+      });
+    }
   }
 
   @override
   void dispose() {
-    _pingTimer?.cancel();
     _clockTimer?.cancel();
+    _clockTimer = null;
+    _disconnect();
     _tabController.dispose();
     _ipController.dispose();
-    unawaited(WakelockPlus.disable().catchError((_) {}));
+    _cloudCodeController.dispose();
     super.dispose();
+  }
+
+  void _disconnect() {
+    _pingTimer?.cancel();
+    _pingTimer = null;
+    _cloudSubscription?.cancel();
+    _cloudSubscription = null;
+    if (mounted) {
+      setState(() {
+        url = null;
+        cloudSessionId = null;
+        connected = false;
+      });
+    }
+    unawaited(WakelockPlus.disable().catchError((_) {}));
   }
 
   Future<void> _loadWifiIp() async {
@@ -211,17 +238,42 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
 
   // ── Connection ───────────────────────────────────────────────────────────────
   void _connectTo(String rawUrl) {
+    var trimmed = rawUrl.trim();
+    if (trimmed.startsWith('CLOUD:') || (!trimmed.contains('.') && !trimmed.contains(':') && trimmed.length >= 4 && trimmed.length <= 10)) {
+      final code = trimmed.startsWith('CLOUD:') ? trimmed.substring(6) : trimmed;
+      _connectToCloud(code);
+      return;
+    }
+
     final normalized = normalizeRemoteAddress(rawUrl);
     if (normalized == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escribe una dirección IP o URL válida.')),
+        const SnackBar(content: Text('Escribe una dirección IP o código de sesión válido.')),
       );
       return;
     }
+    _disconnect();
     final address = normalized.toString();
     setState(() => url = address);
     unawaited(_saveRecentIp(address));
     _startPing();
+  }
+
+  void _connectToCloud(String code) {
+    _disconnect();
+    final sessionId = code.trim().toUpperCase();
+    setState(() {
+      cloudSessionId = sessionId;
+      connected = true;
+    });
+    unawaited(_saveRecentIp('CLOUD:$sessionId'));
+
+    _cloudSubscription = CloudRemoteBridge.listenState(sessionId).listen((data) {
+      if (!mounted) return;
+      _updateStateFromJson(data);
+    }, onError: (_) {
+      if (mounted) setState(() => connected = false);
+    });
   }
 
   void _startPing() {
@@ -233,7 +285,7 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
   void _updateStateFromJson(Map<String, dynamic> data) {
     if (!mounted) return;
     setState(() {
-      connected = true;
+      connected = data['connected'] as bool? ?? true;
       blackout = data['blackout'] as bool? ?? false;
       slideIndex = data['slideIndex'] as int? ?? 0;
       totalSlides = data['totalSlides'] as int? ?? 0;
@@ -277,6 +329,17 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
   }
 
   Future<void> _send(String path) async {
+    if (cloudSessionId != null) {
+      final action = path.replaceFirst('/', '');
+      if (action.startsWith('jump/')) {
+        final idx = int.tryParse(action.substring(5)) ?? 0;
+        await CloudRemoteBridge.sendCommand(cloudSessionId!, 'jump', payload: {'index': idx});
+      } else {
+        await CloudRemoteBridge.sendCommand(cloudSessionId!, action);
+      }
+      return;
+    }
+
     if (url == null) return;
     try {
       final res = await http
@@ -291,18 +354,36 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
   }
 
   Future<void> _sendProjectVerse() async {
+    final payload = {
+      'b': _bibleBook,
+      'c': _bibleChapter - 1,
+      'vStart': _bibleVerseStart,
+      'vEnd': _bibleVerseEnd,
+    };
+
+    if (cloudSessionId != null) {
+      await CloudRemoteBridge.sendCommand(cloudSessionId!, 'project_verse', payload: payload);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Proyectando ${_bibleBooks[_bibleBook]} $_bibleChapter:$_bibleVerseStart vía Puente Nube',
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        _tabController.animateTo(0);
+      }
+      return;
+    }
+
     if (url == null) return;
     try {
       await http
           .post(
             Uri.parse('$url/project_verse'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'b': _bibleBook,
-              'c': _bibleChapter - 1,
-              'vStart': _bibleVerseStart,
-              'vEnd': _bibleVerseEnd,
-            }),
+            body: jsonEncode(payload),
           )
           .timeout(const Duration(milliseconds: 3000));
       if (mounted) {
@@ -325,7 +406,7 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
   @override
   Widget build(BuildContext context) {
     // ── QR / Connection screen ─────────────────────────────────────────────
-    if (url == null) {
+    if (url == null && cloudSessionId == null) {
       return _buildConnectionScreen();
     }
 
@@ -362,13 +443,13 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
             children: [
               Row(
                 children: [
-                  const Text(
-                    'Control Remoto',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  Text(
+                    cloudSessionId != null ? 'Remoto Nube ($cloudSessionId)' : 'Control Remoto',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(width: 8),
                   Icon(
-                    connected ? Icons.wifi : Icons.wifi_off,
+                    connected ? (cloudSessionId != null ? Icons.cloud_done : Icons.wifi) : Icons.wifi_off,
                     color: connected ? Colors.greenAccent : Colors.redAccent,
                     size: 16,
                   ),
@@ -408,14 +489,7 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
             IconButton(
               tooltip: 'Desconectar',
               icon: const Icon(Icons.link_off, size: 20),
-              onPressed: () {
-                _pingTimer?.cancel();
-                setState(() {
-                  url = null;
-                  connected = false;
-                });
-                WakelockPlus.disable();
-              },
+              onPressed: _disconnect,
             ),
           ],
         ),
@@ -1183,63 +1257,143 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
                 ),
               ),
 
-            // Manual IP input
+            // Cloud Session or Manual IP input
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: OperationalSurface(
-                padding: const EdgeInsets.all(10),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final field = TextField(
-                      controller: _ipController,
-                      style: const TextStyle(color: Colors.white),
-                      keyboardType: TextInputType.url,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: _connectTo,
-                      decoration: InputDecoration(
-                        hintText: 'IP manual, ej: 192.168.1.5:8765',
-                        hintStyle: const TextStyle(color: Color(0xff94a3b8)),
-                        filled: true,
-                        fillColor: const Color(0xff182229),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                      ),
-                    );
-                    final connect = FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xff0284c7),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                      ),
-                      onPressed: () => _connectTo(_ipController.text),
-                      icon: const Icon(Icons.link),
-                      label: const Text('Conectar'),
-                    );
-                    final stacked =
-                        constraints.maxWidth < 440 ||
-                        MediaQuery.textScalerOf(context).scale(1) > 1.3;
-                    if (stacked) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [field, const SizedBox(height: 10), connect],
-                      );
-                    }
-                    return Row(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Row(
                       children: [
-                        Expanded(child: field),
-                        const SizedBox(width: 8),
-                        connect,
+                        Icon(Icons.cloud_sync, color: Color(0xff38bdf8), size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Puente Nube (Web y Cualquier Red)',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
                       ],
-                    );
-                  },
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _cloudCodeController,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              letterSpacing: 2,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textCapitalization: TextCapitalization.characters,
+                            decoration: InputDecoration(
+                              hintText: 'CÓDIGO (Ej. 7K9X2B)',
+                              hintStyle: const TextStyle(color: Color(0xff64748b), letterSpacing: 1),
+                              filled: true,
+                              fillColor: const Color(0xff182229),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                            ),
+                            onSubmitted: (code) {
+                              if (code.trim().isNotEmpty) {
+                                _connectToCloud(code);
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xff0284c7),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: () {
+                            if (_cloudCodeController.text.trim().isNotEmpty) {
+                              _connectToCloud(_cloudCodeController.text);
+                            }
+                          },
+                          icon: const Icon(Icons.flash_on, size: 18),
+                          label: const Text('Enlazar'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Divider(color: Color(0xff233138)),
+                    const SizedBox(height: 6),
+                    const Row(
+                      children: [
+                        Icon(Icons.wifi, color: Color(0xff10b981), size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          'O Conexión Wi-Fi Local (IP directa)',
+                          style: TextStyle(
+                            color: Color(0xff94a3b8),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final field = TextField(
+                          controller: _ipController,
+                          style: const TextStyle(color: Colors.white),
+                          keyboardType: TextInputType.url,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: _connectTo,
+                          decoration: InputDecoration(
+                            hintText: '192.168.1.5:8765',
+                            hintStyle: const TextStyle(color: Color(0xff64748b)),
+                            filled: true,
+                            fillColor: const Color(0xff182229),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                          ),
+                        );
+                        final connect = OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Color(0xff334155)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                          ),
+                          onPressed: () => _connectTo(_ipController.text),
+                          icon: const Icon(Icons.link, size: 18),
+                          label: const Text('Conectar IP'),
+                        );
+                        return Row(
+                          children: [
+                            Expanded(child: field),
+                            const SizedBox(width: 8),
+                            connect,
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -1344,8 +1498,10 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
                       final List<Barcode> barcodes = capture.barcodes;
                       if (barcodes.isNotEmpty &&
                           barcodes.first.rawValue != null) {
-                        final detected = barcodes.first.rawValue!;
-                        if (normalizeRemoteAddress(detected) != null) {
+                        final detected = barcodes.first.rawValue!.trim();
+                        if (detected.startsWith('CLOUD:') ||
+                            (detected.length >= 4 && detected.length <= 10 && !detected.contains('.') && !detected.contains(':')) ||
+                            normalizeRemoteAddress(detected) != null) {
                           _connectTo(detected);
                         }
                       }

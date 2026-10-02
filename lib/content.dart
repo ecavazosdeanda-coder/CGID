@@ -282,6 +282,9 @@ List<SlideData> makeSlides(
         ),
     ];
   }
+  if (entry.sections.isEmpty) {
+    return [SlideData('', entry.subtitle, entry.title)];
+  }
   final result = <SlideData>[];
   final chorus = entry.sections
       .where((s) => s.label.toLowerCase().startsWith('coro'))

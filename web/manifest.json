@@ -1,12 +1,15 @@
 {
-    "name": "CGID · Biblioteca y proyección",
-    "short_name": "CGID",
-    "start_url": ".",
+    "name": "CGDI · Biblioteca y Proyección Eclesial",
+    "short_name": "CGDI",
+    "start_url": "./",
+    "scope": "./",
     "display": "standalone",
-    "background_color": "#143040",
-    "theme_color": "#143040",
-    "description": "Biblia, himnario, puntos de fe y herramientas de proyección de CGID.",
-    "orientation": "portrait-primary",
+    "background_color": "#102e48",
+    "theme_color": "#102e48",
+    "description": "Biblioteca sagrada, Himnario oficial, Biblia Reina-Valera 1909, Puntos de Fe, Literatura y Proyección de la Conferencia General de la Iglesia de Dios.",
+    "orientation": "any",
+    "categories": ["books", "lifestyle", "education"],
+    "lang": "es",
     "prefer_related_applications": false,
     "icons": [
         {
@@ -30,6 +33,32 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Himnario Oficial",
+            "short_name": "Himnario",
+            "description": "Consultar y cantar himnos sagrados",
+            "url": "./#/home"
+        },
+        {
+            "name": "Santa Biblia RVR 1909",
+            "short_name": "Biblia",
+            "description": "Leer y buscar las Sagradas Escrituras",
+            "url": "./#/home"
+        },
+        {
+            "name": "Cuaderno de Sermones",
+            "short_name": "Notas",
+            "description": "Mis notas y sermones de estudio",
+            "url": "./#/notas"
+        },
+        {
+            "name": "OBS Stream Overlay",
+            "short_name": "Overlay OBS",
+            "description": "Letras transparentes para transmisión en vivo",
+            "url": "./#/overlay"
         }
     ]
 }

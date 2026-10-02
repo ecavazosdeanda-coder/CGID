@@ -64,7 +64,7 @@ class AudioManager {
     try {
       final dir = await getAudioDirectory();
       final filename = _cleanTrackName(track);
-      
+
       // Intentar buscar el archivo directamente
       final directFile = File('${dir.path}/$filename');
       if (await directFile.exists() && await directFile.length() > 0) {
@@ -178,11 +178,13 @@ class AudioManager {
       final driveRegex = RegExp(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)');
       final match = driveRegex.firstMatch(urlStr);
       if (match != null) {
-        finalUrlStr = 'https://drive.google.com/uc?export=download&id=${match.group(1)}';
+        finalUrlStr =
+            'https://drive.google.com/uc?export=download&id=${match.group(1)}';
       } else if (urlStr.contains('drive.google.com/open')) {
         final idMatch = RegExp(r'id=([a-zA-Z0-9_-]+)').firstMatch(urlStr);
         if (idMatch != null) {
-          finalUrlStr = 'https://drive.google.com/uc?export=download&id=${idMatch.group(1)}';
+          finalUrlStr =
+              'https://drive.google.com/uc?export=download&id=${idMatch.group(1)}';
         }
       }
 
@@ -194,26 +196,35 @@ class AudioManager {
       if (response.statusCode == 200 &&
           response.headers['content-type']?.contains('text/html') == true) {
         final htmlContent = await response.stream.bytesToString();
-        
+
         // Buscar el formulario de confirmación en el HTML
         final actionMatch = RegExp(r'action="([^"]+)"').firstMatch(htmlContent);
-        final uuidMatch = RegExp(r'name="uuid"\s+value="([^"]+)"').firstMatch(htmlContent);
-        
+        final uuidMatch = RegExp(r'name="uuid"\s+value="([^"]+)"')
+            .firstMatch(htmlContent);
+
         if (actionMatch != null) {
           var newUrl = actionMatch.group(1)!;
           if (newUrl.startsWith('/')) {
             newUrl = 'https://drive.google.com$newUrl';
           }
-          final uuidParam = uuidMatch != null ? '&uuid=${uuidMatch.group(1)}' : '';
-          
-          final idMatch = RegExp(r'id=([a-zA-Z0-9_-]+)').firstMatch(finalUrlStr);
+          final uuidParam = uuidMatch != null
+              ? '&uuid=${uuidMatch.group(1)}'
+              : '';
+
+          final idMatch = RegExp(r'id=([a-zA-Z0-9_-]+)')
+              .firstMatch(finalUrlStr);
           final idParam = idMatch != null ? '?id=${idMatch.group(1)}' : '';
-          
-          final confirmUrl = '$newUrl$idParam&export=download&confirm=t$uuidParam';
-          
-          response = await _activeClient!.send(http.Request('GET', Uri.parse(confirmUrl)));
+
+          final confirmUrl =
+              '$newUrl$idParam&export=download&confirm=t$uuidParam';
+
+          response = await _activeClient!.send(
+            http.Request('GET', Uri.parse(confirmUrl)),
+          );
         } else {
-          throw StateError('No se pudo encontrar el enlace directo en Google Drive.');
+          throw StateError(
+            'No se pudo encontrar el enlace directo en Google Drive.',
+          );
         }
       }
 
@@ -244,13 +255,17 @@ class AudioManager {
             : '?';
 
         yield AudioDownloadProgress(
-          progress: ratio.clamp(0.0, 0.95), // 95% para descarga, 5% descompresión
-          status: 'Descargando: $mbDownloaded MB de $mbTotal MB (${(ratio * 100).toStringAsFixed(0)}%)',
+          progress: ratio.clamp(
+            0.0,
+            0.95,
+          ), // 95% para descarga, 5% descompresión
+          status:
+              'Descargando: $mbDownloaded MB de $mbTotal MB (${(ratio * 100).toStringAsFixed(0)}%)',
           bytesDownloaded: receivedBytes,
           totalBytes: contentLength,
         );
       }
-      
+
       await ios.flush();
       await ios.close();
 
@@ -266,7 +281,7 @@ class AudioManager {
         'zipPath': tempZipFile.path,
         'targetPath': targetDir.path,
       });
-      
+
       if (tempZipFile.existsSync()) tempZipFile.deleteSync();
 
       yield AudioDownloadProgress(
@@ -282,7 +297,7 @@ class AudioManager {
         final tempZipFile = File('${targetDir.path}/temp_audios.zip');
         if (tempZipFile.existsSync()) tempZipFile.deleteSync();
       } catch (_) {}
-      
+
       if (!_isDownloading) {
         yield AudioDownloadProgress(
           progress: 0.0,
@@ -301,10 +316,10 @@ class AudioManager {
   static int _extractZipOnDisk(Map<String, String> args) {
     final zipPath = args['zipPath']!;
     final targetPath = args['targetPath']!;
-    
+
     final inputStream = InputFileStream(zipPath);
     final archive = ZipDecoder().decodeStream(inputStream);
-    
+
     var extractedCount = 0;
     for (final file in archive) {
       if (file.isFile) {
@@ -319,12 +334,14 @@ class AudioManager {
       }
     }
     inputStream.close();
-    
+
     return extractedCount;
   }
 
-  static const String defaultDriveApiKey = 'AIzaSyBpM3uw3U_Gn_0pTy9yqob5Vosq9iB2Cig';
-  static const String defaultDriveFolderId = '1VC5OmPHMEZrQbIAlDsHIjAnh6DAXnfei';
+  static const String defaultDriveApiKey =
+      'AIzaSyBpM3uw3U_Gn_0pTy9yqob5Vosq9iB2Cig';
+  static const String defaultDriveFolderId =
+      '1VC5OmPHMEZrQbIAlDsHIjAnh6DAXnfei';
 
   Future<String?> getDriveApiKey() async {
     final prefs = await SharedPreferences.getInstance();
@@ -346,16 +363,20 @@ class AudioManager {
     await prefs.setString('drive_folder_id', id.trim());
   }
 
-  Future<File?> downloadSingleAudioFromDrive(String track, String apiKey) async {
+  Future<File?> downloadSingleAudioFromDrive(
+    String track,
+    String apiKey,
+  ) async {
     final folderId = await getDriveFolderId();
     if (folderId == null || folderId.isEmpty) return null;
 
     final targetName = _cleanTrackName(track);
-    
+
     // 1. Search for the file in the Drive folder
     final queryUrl = Uri.parse(
-        'https://www.googleapis.com/drive/v3/files?q=\'$folderId\'+in+parents+and+trashed=false&fields=files(id,name)&key=$apiKey');
-    
+      'https://www.googleapis.com/drive/v3/files?q=\'$folderId\'+in+parents+and+trashed=false&fields=files(id,name)&key=$apiKey',
+    );
+
     final searchResponse = await http.get(queryUrl);
     if (searchResponse.statusCode != 200) {
       throw StateError('Error de API: ${searchResponse.statusCode}');
@@ -375,7 +396,9 @@ class AudioManager {
     if (fileId == null) return null;
 
     // 2. Download the file
-    final downloadUrl = Uri.parse('https://www.googleapis.com/drive/v3/files/$fileId?alt=media&key=$apiKey');
+    final downloadUrl = Uri.parse(
+      'https://www.googleapis.com/drive/v3/files/$fileId?alt=media&key=$apiKey',
+    );
     final downloadResponse = await http.get(downloadUrl);
 
     if (downloadResponse.statusCode == 200) {

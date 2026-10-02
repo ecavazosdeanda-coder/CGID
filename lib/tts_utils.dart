@@ -1,11 +1,5 @@
-/// Utilidad para pre-procesar texto antes de pasarlo al motor TTS (Text-To-Speech).
-/// Convierte todas las citas bíblicas a lenguaje natural hablado en español:
-/// - "Apocalipsis 10:10" -> "Apocalipsis capítulo 10 versículo 10"
-/// - "Apocalipsis 10:10-15" -> "Apocalipsis capítulo 10 versículos 10 al 15"
-/// - "1 Pedro 2:9" -> "Primera de Pedro capítulo 2 versículo 9"
-/// - "2 Corintios 5:17" -> "Segunda de Corintios capítulo 5 versículo 17"
-/// - "3 Juan 1:2" -> "Tercera de Juan capítulo 1 versículo 2"
-/// - "Hechos 2:29,34" -> "Hechos capítulo 2 versículos 29 y 34"
+// Utilidad para pre-procesar texto antes de pasarlo al motor TTS (Text-To-Speech).
+// Convierte las citas bíblicas a lenguaje natural hablado en español.
 
 /// Convierte la velocidad seleccionada por el usuario al rango esperado por
 /// cada motor. Web Speech usa 1.0 como velocidad normal; los motores nativos

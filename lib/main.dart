@@ -1,5 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'firebase_options.dart';
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -12,14 +19,22 @@ import 'content.dart';
 import 'appearance.dart';
 import 'glass.dart';
 
-import 'projection_native.dart' if (dart.library.js_interop) 'projection_web.dart' as projection;
+import 'projection_native.dart'
+    if (dart.library.js_interop) 'projection_web.dart'
+    as projection;
 import 'stage_display.dart';
 
 import 'features/workspace/workspace.dart';
+
 import 'package:audio_service/audio_service.dart';
 
 import 'audio_handler.dart';
 import 'features/projection/presentation/output_screen.dart';
+import 'features/projection/presentation/stream_overlay_screen.dart';
+import 'features/projection/presentation/obs_dock_screen.dart';
+import 'features/notes/presentation/sermon_notes_screen.dart';
+import 'features/events/presentation/church_events_screen.dart';
+import 'remote_client_screen.dart';
 
 CgidAudioHandler? globalAudioHandler;
 
@@ -72,6 +87,14 @@ const serviceSectionIcons = <String, IconData>{
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Initialize Firebase for Auth, Firestore, etc.
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase initialization failed: $e');
+  }
   // audio_service exposes the operating system media session on mobile/macOS
   // and the browser Media Session API on web.  Keeping web enabled is what
   // allows Bluetooth/headset and browser media keys to control playback.
@@ -123,8 +146,88 @@ Future<void> main(List<String> args) async {
         ? VisualEffectsMode.solid
         : VisualEffectsMode.full;
   }
-  runApp(CgidApp(mode: mode));
+  runApp(ProviderScope(child: CgidApp(mode: mode)));
 }
+
+final _router = GoRouter(
+  initialLocation: '/home',
+  routes: [
+    GoRoute(
+      path: '/overlay',
+      builder: (context, state) => const StreamOverlayScreen(),
+    ),
+    GoRoute(
+      path: '/lowerthirds',
+      builder: (context, state) => const StreamOverlayScreen(),
+    ),
+    GoRoute(
+      path: '/obs-dock',
+      builder: (context, state) => const ObsDockScreen(),
+    ),
+    GoRoute(
+      path: '/notas',
+      builder: (context, state) => const SermonNotesScreen(),
+    ),
+    GoRoute(
+      path: '/eventos',
+      builder: (context, state) => const ChurchEventsScreen(),
+    ),
+    GoRoute(
+      path: '/remoto',
+      builder: (context, state) {
+        final code = state.uri.queryParameters['code'];
+        return RemoteClientScreen(initialSessionId: code);
+      },
+    ),
+    GoRoute(
+      path: '/:tab',
+      builder: (context, state) {
+        final tab = state.pathParameters['tab'] ?? 'home';
+        return WorkspaceLoader(initialTab: tab);
+      },
+    ),
+  ],
+);
+
+final _projectionRouter = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(path: '/', builder: (context, state) => const OutputScreen()),
+  ],
+);
+
+final _stageRouter = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(path: '/', builder: (context, state) => const StageDisplayScreen()),
+  ],
+);
+
+final _overlayRouter = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(path: '/', builder: (context, state) => const StreamOverlayScreen()),
+    GoRoute(
+      path: '/overlay',
+      builder: (context, state) => const StreamOverlayScreen(),
+    ),
+    GoRoute(
+      path: '/lowerthirds',
+      builder: (context, state) => const StreamOverlayScreen(),
+    ),
+  ],
+);
+
+final _dockRouter = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(path: '/', builder: (context, state) => const ObsDockScreen()),
+    GoRoute(
+      path: '/obs-dock',
+      builder: (context, state) => const ObsDockScreen(),
+    ),
+  ],
+);
 
 class CgidApp extends StatelessWidget {
   final String mode;
@@ -135,7 +238,7 @@ class CgidApp extends StatelessWidget {
     builder: (context, modeValue, _) =>
         ValueListenableBuilder<VisualEffectsMode>(
           valueListenable: appVisualEffectsMode,
-          builder: (context, effects, _) => MaterialApp(
+          builder: (context, effects, _) => MaterialApp.router(
             title: 'CGID · Biblioteca y proyección',
             debugShowCheckedModeBanner: false,
             theme: cgidTheme(Brightness.light),
@@ -145,29 +248,24 @@ class CgidApp extends StatelessWidget {
               mode: effects,
               child: child ?? const SizedBox.shrink(),
             ),
-            home: mode == 'projection'
-                ? const OutputScreen()
+            routerConfig: mode == 'projection'
+                ? _projectionRouter
                 : mode == 'stage'
-                ? const StageDisplayScreen()
-                : const WorkspaceLoader(),
+                ? _stageRouter
+                : mode == 'overlay'
+                ? _overlayRouter
+                : mode == 'dock'
+                ? _dockRouter
+                : _router,
           ),
         ),
   );
 }
 
-
-
-
-
-
-
-
-
-
-
 Widget highlightSearchText(BuildContext context, String text, String query) {
-  if (query.trim().isEmpty)
+  if (query.trim().isEmpty) {
     return Text(text, maxLines: 3, overflow: TextOverflow.ellipsis);
+  }
   final q = normalized(query.trim());
   final normText = normalized(text);
   final spans = <TextSpan>[];
@@ -199,4 +297,3 @@ Widget highlightSearchText(BuildContext context, String text, String query) {
     overflow: TextOverflow.ellipsis,
   );
 }
-

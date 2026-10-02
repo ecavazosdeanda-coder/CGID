@@ -8,6 +8,22 @@
         "Tamaulipas"
       ],
       "presbyterName": "Pbro. Encargado de Región"
+    },
+    {
+      "id": "region-1",
+      "name": "Región 1",
+      "states": [
+        "Ciudad de México"
+      ],
+      "presbyterName": ""
+    },
+    {
+      "id": "region-5",
+      "name": "Región 5",
+      "states": [
+        "Jalisco"
+      ],
+      "presbyterName": ""
     }
   ],
   "churches": [
@@ -20,9 +36,10 @@
       "address": "Dirección Conocida, Monterrey, N.L.",
       "latitude": 25.686614,
       "longitude": -100.316112,
-      "googleMapsUrl": "https://maps.google.com/",
+      "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=25.686614,-100.316112",
       "pastorName": "Pbro. Local",
-      "defaultMeetUrl": "https://meet.google.com/abc-defg-hij",
+      "defaultMeetUrl": "",
+      "audioStreamUrl": "https://stream.zeno.fm/f3wvbbqmdg8uv",
       "weeklyServices": [
         {
           "weekday": 5,
@@ -47,14 +64,115 @@
         },
         {
           "weekday": 6,
+          "start": "16:30",
+          "end": "17:45",
+          "title": "Sociedad de Jóvenes / Femenil / Infantil",
+          "type": "sociedadJuvenil"
+        },
+        {
+          "weekday": 6,
           "start": "18:00",
           "end": "19:30",
           "title": "Culto Vespertino",
           "type": "cultoVespertino"
+        },
+        {
+          "weekday": 2,
+          "start": "19:30",
+          "end": "21:00",
+          "title": "Reunión de Oración y Testimonios",
+          "type": "oracionEntreSemana"
+        },
+        {
+          "weekday": 3,
+          "start": "19:30",
+          "end": "21:00",
+          "title": "Estudio Bíblico / Discipulado",
+          "type": "estudioBiblico"
+        },
+        {
+          "weekday": 4,
+          "start": "19:00",
+          "end": "21:00",
+          "title": "Ensayo de Coro / Grupo de Alabanza",
+          "type": "ensayoAlabanza"
         }
       ],
       "currentNotices": [],
       "isUnifiedServiceActive": false
+    },
+    {
+      "id": "mx-cdmx-central",
+      "regionId": "region-1",
+      "name": "Iglesia de Dios en CDMX (Templo Central)",
+      "state": "Ciudad de México",
+      "city": "CDMX",
+      "address": "Centro, CDMX",
+      "latitude": 19.4326,
+      "longitude": -99.1332,
+      "googleMapsUrl": "",
+      "pastorName": "Pbro. Local",
+      "defaultMeetUrl": "",
+      "weeklyServices": [],
+      "currentNotices": [],
+      "isUnifiedServiceActive": false
+    },
+    {
+      "id": "mx-jal-gdl",
+      "regionId": "region-5",
+      "name": "Iglesia de Dios en Guadalajara",
+      "state": "Jalisco",
+      "city": "Guadalajara",
+      "address": "Centro, GDL",
+      "latitude": 20.6596,
+      "longitude": -103.3496,
+      "googleMapsUrl": "",
+      "pastorName": "Pbro. Local",
+      "defaultMeetUrl": "",
+      "weeklyServices": [],
+      "currentNotices": [],
+      "isUnifiedServiceActive": false
+    }
+  ],
+  "events": [
+    {
+      "id": "evt-nac-2026-01",
+      "title": "Convocatoria y Asamblea General de la Iglesia de Dios",
+      "description": "Reunión solemne anual de delegados, pastores, obreros y hermandad en general para confraternidad y adoración.",
+      "scope": "nacional",
+      "regionId": null,
+      "churchId": null,
+      "startDateTime": "2026-11-14T09:00:00",
+      "endDateTime": "2026-11-15T18:00:00",
+      "locationName": "Santuario Nacional Conferencia General",
+      "googleMapsUrl": "https://maps.google.com/?q=Conferencia+General+Iglesia+de+Dios",
+      "streamUrl": "https://meet.google.com/cgdi-nacional"
+    },
+    {
+      "id": "evt-reg15-2026-01",
+      "title": "Confraternidad Juvenil Regional 15",
+      "description": "Encuentro de Sociedades Juveniles de Nuevo León y Tamaulipas: conferencias, devocionales y concierto de alabanza.",
+      "scope": "regional",
+      "regionId": "region-15",
+      "churchId": null,
+      "startDateTime": "2026-10-24T10:00:00",
+      "endDateTime": "2026-10-24T19:30:00",
+      "locationName": "Templo Bethel Monterrey",
+      "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=25.686614,-100.316112",
+      "streamUrl": ""
+    },
+    {
+      "id": "evt-mty-2026-01",
+      "title": "Aniversario del Templo Bethel",
+      "description": "Celebración de gratitud a Dios por años de bendición en la congregación local con culto especial de consagración.",
+      "scope": "local",
+      "regionId": "region-15",
+      "churchId": "mx-nl-mty-bethel",
+      "startDateTime": "2026-10-17T17:00:00",
+      "endDateTime": "2026-10-17T20:30:00",
+      "locationName": "Templo Bethel Monterrey",
+      "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=25.686614,-100.316112",
+      "streamUrl": ""
     }
   ]
 }

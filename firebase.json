@@ -1,0 +1,44 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "cgdi-app-v2",
+          "appId": "1:985475660075:android:633694321377a793e76d6e",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "cgdi-app-v2",
+          "configurations": {
+            "android": "1:985475660075:android:633694321377a793e76d6e",
+            "web": "1:985475660075:web:7b7a203b7e3aa77be76d6e"
+          }
+        }
+      }
+    }
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

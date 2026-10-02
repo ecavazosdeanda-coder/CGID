@@ -1,0 +1,258 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users/{uid}
+    // Document ID: Firebase Auth UID (string, 1-100 chars)
+    // Fields:
+    //   - email: string (required, valid email address, max 200 chars)
+    //   - role: string (required, 'admin' | 'pastor' | 'proyeccionista' | 'musico')
+    //   - churchId: string (optional, assigned church ID, 1-100 chars)
+    //   - churchName: string (optional, display name of assigned church, 1-200 chars)
+    //   - updatedAt: string or timestamp (optional, last profile update timestamp/ISO string)
+    //
+    // Collection: churches/{churchId}
+    // Document ID: churchId (string, 1-100 chars)
+    // Fields:
+    //   - metadata / configuration (managed by platform administrators)
+    //
+    // Collection: churches/{churchId}/plans/{planId}
+    // Document ID: planId (string, 1-100 chars, e.g. 'weekly_plans')
+    // Fields:
+    //   - plans: map (required) - Map of plan names (e.g. 'Culto del sábado')
+    //            to list of liturgy/service entries. Bound: maximum 100 plans per church.
+    //   - updatedAt: timestamp or string (optional) - Server timestamp when last synchronized.
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 100;
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+             email.size() > 0 &&
+             email.size() <= 200 &&
+             email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasUserProfile() {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isBootstrapAdmin() {
+      return isAuthenticated() &&
+             request.auth.token.email != null &&
+             (request.auth.token.email == 'ecavazosdeanda@gmail.com' ||
+              request.auth.token.email.matches('(?i)^ecavazosdeanda@gmail\\.com$'));
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+             (
+               isBootstrapAdmin() ||
+               (
+                 hasUserProfile() &&
+                 'role' in getUserData() &&
+                 getUserData().role == 'admin'
+               )
+             );
+    }
+
+    // Check if the authenticated user has the 'pastor' role
+    function isPastor() {
+      return isAuthenticated() &&
+             hasUserProfile() &&
+             'role' in getUserData() &&
+             getUserData().role == 'pastor';
+    }
+
+    // Check if the authenticated user is assigned to a specific church
+    function isAssignedToChurch(churchId) {
+      return hasUserProfile() &&
+             'churchId' in getUserData() &&
+             getUserData().churchId != null &&
+             getUserData().churchId == churchId;
+    }
+
+    // Multi-tenant authorization for church service plans:
+    // Allowed ONLY for authenticated admin or pastor assigned to that churchId.
+    // Proyeccionistas and músicos have read-only permissions in the cloud to prevent accidental overwrites.
+    function canWriteChurchPlans(churchId) {
+      return isAuthenticated() && (isAdmin() || (isPastor() && isAssignedToChurch(churchId)));
+    }
+
+    // Domain Validator for User Profiles
+    function isValidUserData(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+             data.keys().hasOnly(['email', 'role', 'churchId', 'churchName', 'updatedAt']) &&
+             isValidEmail(data.email) &&
+             data.role in ['admin', 'pastor', 'proyeccionista', 'musico'] &&
+             (!('churchId' in data) || data.churchId == null || (data.churchId is string && data.churchId.size() > 0 && data.churchId.size() <= 100)) &&
+             (!('churchName' in data) || data.churchName == null || (data.churchName is string && data.churchName.size() > 0 && data.churchName.size() <= 200)) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp || (data.updatedAt is string && data.updatedAt.size() <= 100));
+    }
+
+    // Domain Validator for Service Plans
+    function isValidPlanData(data) {
+      return data.keys().hasAll(['plans']) &&
+             data.keys().hasOnly(['plans', 'updatedAt']) &&
+             data.plans is map &&
+             data.plans.size() <= 100 &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp || (data.updatedAt is string && data.updatedAt.size() <= 100));
+    }
+
+    // Default deny: start by denying all read and write operations across the database
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // User Profiles Collection
+    match /users/{uid} {
+      // Reads:
+      // - Single document get: Authenticated user can read their own profile, or admins/pastors can read profiles
+      // - Collection list: Admins and Pastors can list profiles
+      allow get: if isAuthenticated() && (request.auth.uid == uid || isAdmin() || isPastor());
+      allow list: if isAuthenticated() && (isAdmin() || isPastor());
+
+      // Creates:
+      // - Admins can create user profiles with any valid role and church assignment
+      // - Pastors can create ministerial user profiles (proyeccionista, musico) assigned strictly to their own church
+      // - Users can create their own profile (self-bootstrap as bootstrap admin or non-admin role without self-assigned church)
+      allow create: if isAuthenticated() &&
+                       isValidId(uid) &&
+                       isValidUserData(request.resource.data) &&
+                       (
+                         isAdmin() ||
+                         (
+                           isPastor() &&
+                           request.resource.data.role in ['proyeccionista', 'musico'] &&
+                           'churchId' in request.resource.data &&
+                           request.resource.data.churchId != null &&
+                           isAssignedToChurch(request.resource.data.churchId)
+                         ) ||
+                         (
+                           request.auth.uid == uid &&
+                           (
+                             isBootstrapAdmin() ||
+                             (
+                               request.resource.data.role in ['pastor', 'proyeccionista', 'musico'] &&
+                               (!('churchId' in request.resource.data) || request.resource.data.churchId == null) &&
+                               request.resource.data.email == request.auth.token.email
+                             )
+                           )
+                         )
+                       );
+
+      // Updates:
+      // - Admins can update any user profile
+      // - Pastors can update user profiles belonging to their church, keeping them in ministerial roles and the same church
+      // - Users can update their own document only if it does NOT elevate privileges or modify assigned church
+      allow update: if isAuthenticated() &&
+                       isValidId(uid) &&
+                       isValidUserData(request.resource.data) &&
+                       (
+                         isAdmin() ||
+                         (
+                           isPastor() &&
+                           'churchId' in resource.data &&
+                           'churchId' in getUserData() &&
+                           getUserData().churchId != null &&
+                           resource.data.churchId == getUserData().churchId &&
+                           'churchId' in request.resource.data &&
+                           request.resource.data.churchId == resource.data.churchId &&
+                           request.resource.data.role in ['proyeccionista', 'musico']
+                         ) ||
+                         (
+                           request.auth.uid == uid &&
+                           request.resource.data.role == resource.data.role &&
+                           request.resource.data.email == resource.data.email &&
+                           (
+                             (!('churchId' in resource.data) && (!('churchId' in request.resource.data) || request.resource.data.churchId == null)) ||
+                             (('churchId' in resource.data) && request.resource.data.churchId == resource.data.churchId)
+                           ) &&
+                           (
+                             (!('churchName' in resource.data) && (!('churchName' in request.resource.data) || request.resource.data.churchName == null)) ||
+                             (('churchName' in resource.data) && request.resource.data.churchName == resource.data.churchName)
+                           )
+                         )
+                       );
+
+      // Deletes:
+      // - Admins can delete any user profile
+      // - Pastors can delete ministerial user profiles (proyeccionista, musico) belonging to their church
+      allow delete: if isAuthenticated() &&
+                       isValidId(uid) &&
+                       (
+                         isAdmin() ||
+                         (
+                           isPastor() &&
+                           'churchId' in resource.data &&
+                           'churchId' in getUserData() &&
+                           getUserData().churchId != null &&
+                           resource.data.churchId == getUserData().churchId &&
+                           'role' in resource.data &&
+                           resource.data.role in ['proyeccionista', 'musico']
+                         )
+                       );
+    }
+
+    // Church documents and subcollections
+    match /churches/{churchId} {
+      // Allow reading church metadata if the ID is valid
+      allow read: if isValidId(churchId);
+      allow write: if isAdmin() && isValidId(churchId);
+
+      // Service plans subcollection (e.g. /churches/{churchId}/plans/weekly_plans)
+      match /plans/{planId} {
+        // Reads: Open for sanctuary projectionists, musicians, congregation devices, and temple displays
+        allow read: if true;
+
+        // Writes (create, update): Enforce strict role validation (admin or assigned pastor only) and schema validation
+        allow create, update: if canWriteChurchPlans(churchId) &&
+                                 isValidId(churchId) &&
+                                 isValidId(planId) &&
+                                 isValidPlanData(request.resource.data);
+
+        // Deletions: Restricted to admins or pastors assigned to this churchId
+        allow delete: if canWriteChurchPlans(churchId) &&
+                         isValidId(churchId) &&
+                         isValidId(planId);
+      }
+    }
+
+    // Literature catalog collection
+    match /literature/{docId} {
+      // Reads: Open for all members, visitors, and offline synchronization
+      allow read: if true;
+
+      // Writes: Only Master Administrators can add, edit, or remove literature
+      allow create, update, delete: if isAdmin() && isValidId(docId);
+    }
+
+    // Remote Control Sessions (Host screen and paired mobile remotes)
+    match /remote_sessions/{sessionId} {
+      // Reads: Open so remote clients can listen to projector state or check session validity
+      allow read: if isValidId(sessionId);
+
+      // Writes: Host screen posts state updates and paired mobile remotes send commands
+      allow write: if isValidId(sessionId) &&
+                      request.resource.data.size() < 50;
+    }
+  }
+}

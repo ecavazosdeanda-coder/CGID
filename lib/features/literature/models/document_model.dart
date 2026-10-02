@@ -3,7 +3,7 @@ enum DocumentCategory {
   escuelaSabatica,
   estudiosDoctrinales,
   revistasOficiales,
-  otro
+  otro,
 }
 
 class DocumentModel {
@@ -44,13 +44,35 @@ class DocumentModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'description': description,
-        'category': category.name,
-        'assetPath': assetPath,
-        'url': url,
-        'author': author,
-        'year': year,
-      };
+    'id': id,
+    'title': title,
+    'description': description,
+    'category': category.name,
+    if (assetPath != null) 'assetPath': assetPath,
+    if (url != null) 'url': url,
+    'author': author,
+    'year': year,
+  };
+
+  DocumentModel copyWith({
+    String? id,
+    String? title,
+    String? description,
+    DocumentCategory? category,
+    String? assetPath,
+    String? url,
+    String? author,
+    String? year,
+  }) {
+    return DocumentModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      assetPath: assetPath ?? this.assetPath,
+      url: url ?? this.url,
+      author: author ?? this.author,
+      year: year ?? this.year,
+    );
+  }
 }

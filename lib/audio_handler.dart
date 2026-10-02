@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 
 /// Manejador de audio para vincular eventos de Android Auto, auriculares Bluetooth
@@ -115,8 +116,10 @@ class CgidAudioHandler extends BaseAudioHandler with SeekHandler {
   Future<void> skipToPrevious() async => await onPreviousCallback?.call();
 
   @override
-  Future<void> seek(Duration position) async => await onSeekCallback?.call(position);
+  Future<void> seek(Duration position) async =>
+      await onSeekCallback?.call(position);
 
   @override
-  Future<void> setSpeed(double speed) async => await onSetSpeedCallback?.call(speed);
+  Future<void> setSpeed(double speed) async =>
+      await onSetSpeedCallback?.call(speed);
 }

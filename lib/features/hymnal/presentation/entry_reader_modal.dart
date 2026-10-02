@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+
 import '../../../content.dart';
 import '../../../glass.dart';
 import '../../../playback.dart';
-import '../../../audio_handler.dart';
+import 'lectern_reader_screen.dart';
+import '../../notes/presentation/note_editor_dialog.dart';
+
 class EntryReaderModal extends StatefulWidget {
   final Entry initialEntry;
   final PlaybackController playback;
@@ -67,6 +70,34 @@ class _EntryReaderModalState extends State<EntryReaderModal> {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 18),
         ),
+        actions: [
+          if (currentEntry.id.startsWith('h'))
+            IconButton(
+              icon: const Icon(Icons.queue_music),
+              tooltip: 'Atril Digital (Acordes y Transposición)',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => LecternReaderScreen(entry: currentEntry),
+                  ),
+                );
+              },
+            ),
+          IconButton(
+            icon: const Icon(Icons.edit_note),
+            tooltip: 'Tomar nota en mi cuaderno',
+            onPressed: () {
+              final isBible = currentEntry.id.startsWith('b');
+              final isHymn = currentEntry.id.startsWith('h');
+              NoteEditorDialog.show(
+                context,
+                bibleReference: isBible ? currentEntry.title : null,
+                hymnReference: isHymn ? currentEntry.title : null,
+              );
+            },
+          ),
+        ],
       ),
       body: AmbientBackground(
         child: widget.readerBuilder(currentEntry, modal: true),

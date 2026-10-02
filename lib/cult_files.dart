@@ -290,9 +290,6 @@ class CultFiles {
     final entries = entriesRaw
         .map((e) => Entry.fromJson(Map<String, dynamic>.from(e)))
         .toList();
-    return {
-      'name': name,
-      'entries': entries,
-    };
+    return {'name': name, 'entries': entries};
   }
 }

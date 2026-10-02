@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:http/http.dart' as http;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'providers/plan_provider.dart';
+import 'providers/tab_provider.dart';
+
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../content.dart';
 import '../../slide_view.dart';
 import '../../appearance.dart';
@@ -20,23 +28,44 @@ import '../../remote_server.dart';
 import '../../remote_client_screen.dart';
 import '../../audio_manager_screen.dart';
 import '../../service_templates.dart';
-import '../../projection_native.dart' if (dart.library.js_interop) '../../projection_web.dart' as projection;
-import '../../cult_picker_native.dart' if (dart.library.js_interop) '../../cult_picker_web.dart' as cult_picker;
+import '../../projection_native.dart'
+    if (dart.library.js_interop) '../../projection_web.dart'
+    as projection;
+import '../../cult_picker_native.dart'
+    if (dart.library.js_interop) '../../cult_picker_web.dart'
+    as cult_picker;
 
-import '../../countdown.dart';
-import '../../stage_display.dart';
-import '../../main.dart' show digitalScorePages, globalAudioHandler, serviceTemplateIcons, serviceTemplateIconLabels, serviceSectionIcons, syncPlatformBranding, highlightSearchText;
+import '../admin/presentation/admin_gate_screen.dart';
+import '../admin/providers/auth_provider.dart';
+import '../../main.dart'
+    show
+        digitalScorePages,
+        globalAudioHandler,
+        serviceTemplateIcons,
+        serviceTemplateIconLabels,
+        serviceSectionIcons,
+        syncPlatformBranding;
 import '../meet_service/presentation/live_meet_card.dart';
 import '../hymnal/presentation/digital_score_screen.dart';
 import '../hymnal/presentation/entry_reader_modal.dart';
+import '../projection/presentation/stream_overlay_dialog.dart';
 import '../hymnal/presentation/lectern_reader_screen.dart';
 import '../literature/presentation/literature_screen.dart';
-import '../admin/presentation/admin_dashboard_screen.dart';
+import '../ai_assistant/presentation/doctrinal_ai_dialog.dart';
 import '../bulletin/utils/bulletin_pdf_generator.dart';
+import '../notes/presentation/sermon_notes_screen.dart';
+import '../events/presentation/church_events_screen.dart';
+import '../remote/services/cloud_remote_bridge.dart';
+
 import 'package:printing/printing.dart';
 
+
+import '../hymnal/presentation/catalog_screen.dart';
+import '../bible/presentation/bible_screen.dart';
+
 class WorkspaceLoader extends StatefulWidget {
-  const WorkspaceLoader({super.key});
+  final String initialTab;
+  const WorkspaceLoader({super.key, this.initialTab = 'home'});
   @override
   State<WorkspaceLoader> createState() => _WorkspaceLoaderState();
 }
@@ -61,40 +90,55 @@ class _WorkspaceLoaderState extends State<WorkspaceLoader> {
       if (!snapshot.hasData) {
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       }
-      return Workspace(library: snapshot.data!.$1, prefs: snapshot.data!.$2);
+      return Workspace(
+        library: snapshot.data!.$1,
+        prefs: snapshot.data!.$2,
+        initialTab: widget.initialTab,
+      );
     },
   );
 }
 
-class Workspace extends StatefulWidget {
+class Workspace extends ConsumerStatefulWidget {
   final Library library;
   final SharedPreferences prefs;
-  const Workspace({super.key, required this.library, required this.prefs});
+  final String initialTab;
+  const Workspace({
+    super.key,
+    required this.library,
+    required this.prefs,
+    required this.initialTab,
+  });
   @override
-  State<Workspace> createState() => WorkspaceState();
+  ConsumerState<Workspace> createState() => WorkspaceState();
 }
 
-class WorkspaceState extends State<Workspace> {
-  int tab = 0,
-      bibleSearchPage = 0,
-      slideIndex = 0,
-      book = 0,
-      chapter = 0,
-      startVerse = 1,
-      endVerse = 1,
-      slideTheme = 0,
-      lines = 4;
-  bool favoritesOnly = false,
-      blackout = false,
-      showTitle = true,
-      repeatChorus = true,
-      unlimitedVerses = true,
-      hymnScoresOnly = false;
+class WorkspaceState extends ConsumerState<Workspace> {
+  int get tab => ref.watch(tabProvider);
+  set tab(int value) {
+    ref.read(tabProvider.notifier).setTab(value);
+    const paths = [
+      'home',
+      'hymnal',
+      'bible',
+      'faith',
+      'scores',
+      'projection',
+      'cults',
+      'literature',
+      'about',
+      'admin',
+    ];
+    if (value >= 0 && value < paths.length) {
+      context.go('/${paths[value]}');
+    }
+  }
+
+  int slideIndex = 0, slideTheme = 0, lines = 4;
+  bool blackout = false, showTitle = true, repeatChorus = true;
   int? countdownEndsAt;
   Timer? _countdownTimer;
   Timer? _brandingTimer;
-  String hymnCategoryFilter = 'Todas';
-  String hymnComposerFilter = 'Todos';
   String? marqueeText;
   String? videoBackgroundPath;
   final marqueeController = TextEditingController();
@@ -102,6 +146,8 @@ class WorkspaceState extends State<Workspace> {
   double aspect = 16 / 9;
   List<String> remoteUrls = [];
   String? selectedRemoteUrl;
+  String? cloudSessionId;
+  StreamSubscription? _cloudCommandSub;
   late final remoteServer = RemoteServer(
     onMove: (delta) {
       if (mounted) {
@@ -147,10 +193,9 @@ class WorkspaceState extends State<Workspace> {
         : null;
 
     // Find which plan item is currently presented
-    int planIndex = -1;
+    final planIndex = _presentedPlanIndex;
     String currentNotes = '';
     if (presented != null) {
-      planIndex = plan.indexWhere((e) => e.id == presented!.id);
       if (planIndex >= 0 && planIndex < plan.length) {
         currentNotes = plan[planIndex].notes;
       } else {
@@ -182,16 +227,17 @@ class WorkspaceState extends State<Workspace> {
     };
   }
 
-  String query = '', activePlan = 'Culto del sábado';
+  String query = '';
+  String get activePlan => ref.read(planProvider).activePlan;
   final search = TextEditingController();
   final planName = TextEditingController();
   final focus = FocusNode();
   Entry? selected, presented;
-  List<Entry> plan = [];
+  List<Entry> get plan => ref.read(planProvider).plan;
   List<SlideData> slides = [];
   Set<String> favorites = {};
   List<String> history = [];
-  Map<String, dynamic> savedPlans = {};
+  Map<String, dynamic> get savedPlans => ref.read(planProvider).savedPlans;
   List<ServiceTemplate> serviceTemplates = [];
   Library get lib => widget.library;
   bool get dark => Theme.of(context).brightness == Brightness.dark;
@@ -203,6 +249,27 @@ class WorkspaceState extends State<Workspace> {
   Color get secondaryText => Theme.of(context).colorScheme.onSurfaceVariant;
   Color get accentText =>
       dark ? const Color(0xffacd6c5) : const Color(0xff537565);
+  Widget get notesButton => IconButton(
+    tooltip: 'Cuaderno de Sermones y Notas',
+    icon: const Icon(Icons.edit_note, color: Color(0xFF10B981)),
+    onPressed: () => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SermonNotesScreen()),
+    ),
+  );
+  Widget get eventsButton => IconButton(
+    tooltip: 'Eventos y Convocatorias',
+    icon: const Icon(Icons.calendar_month, color: Color(0xFFD97706)),
+    onPressed: () => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ChurchEventsScreen()),
+    ),
+  );
+  Widget get aiButton => IconButton(
+    tooltip: 'Asistente Doctrinal IA',
+    icon: const Icon(Icons.auto_awesome, color: Colors.blueAccent),
+    onPressed: () => DoctrinalAiDialog.show(context),
+  );
   Widget get themeButton => IconButton(
     tooltip: dark ? 'Modo claro' : 'Modo oscuro',
     icon: Icon(dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
@@ -229,6 +296,12 @@ class WorkspaceState extends State<Workspace> {
   @override
   void initState() {
     super.initState();
+    ref.listenManual(planProvider, (previous, next) {
+      if (previous?.activePlan != next.activePlan &&
+          planName.text != next.activePlan) {
+        planName.text = next.activePlan;
+      }
+    });
     globalChurchName =
         widget.prefs.getString('churchName') ??
         'Conferencia General de la Iglesia de Dios';
@@ -241,12 +314,26 @@ class WorkspaceState extends State<Workspace> {
     favorites = (widget.prefs.getStringList('favorites') ?? []).toSet();
     history = widget.prefs.getStringList('history') ?? [];
     try {
-      savedPlans = jsonDecode(widget.prefs.getString('plans') ?? '{}');
-      activePlan = widget.prefs.getString('activePlan') ?? activePlan;
-      plan = [
-        for (final e in savedPlans[activePlan] ?? [])
-          Entry.fromJson(Map<String, dynamic>.from(e)),
-      ];
+      Future.microtask(() {
+        ref.read(planProvider.notifier).init(widget.prefs);
+        const paths = [
+          'home',
+          'hymnal',
+          'bible',
+          'faith',
+          'scores',
+          'projection',
+          'cults',
+          'literature',
+          'about',
+          'admin',
+        ];
+        int index = paths.indexOf(widget.initialTab);
+        if (index == -1) index = 0;
+        ref.read(tabProvider.notifier).setTab(index);
+        planName.text = ref.read(planProvider).activePlan;
+      });
+
       final storedTemplates = jsonDecode(
         widget.prefs.getString('serviceTemplates') ?? '[]',
       );
@@ -261,7 +348,6 @@ class WorkspaceState extends State<Workspace> {
         );
       });
     }
-    planName.text = activePlan;
     slideTheme = widget.prefs.getInt('slideTheme') ?? 0;
     selected = lib.hymns.first;
     playback.loadTracks();
@@ -287,10 +373,38 @@ class WorkspaceState extends State<Workspace> {
   }
 
   @override
+  void didUpdateWidget(covariant Workspace oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTab != oldWidget.initialTab) {
+      const paths = [
+        'home',
+        'hymnal',
+        'bible',
+        'faith',
+        'scores',
+        'projection',
+        'cults',
+        'literature',
+        'about',
+        'admin',
+      ];
+      int index = paths.indexOf(widget.initialTab);
+      if (index == -1) index = 0;
+      Future.microtask(() {
+        if (mounted) ref.read(tabProvider.notifier).setTab(index);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     playback.dispose();
     _brandingTimer?.cancel();
     unawaited(remoteServer.stop());
+    _cloudCommandSub?.cancel();
+    if (cloudSessionId != null) {
+      unawaited(CloudRemoteBridge.closeSession(cloudSessionId!));
+    }
     _countdownTimer?.cancel();
     search.dispose();
     planName.dispose();
@@ -314,16 +428,28 @@ class WorkspaceState extends State<Workspace> {
     final name = planName.text.trim().isEmpty
         ? 'Culto sin nombre'
         : planName.text.trim();
-    savedPlans[name] = plan.map((e) => e.toJson()).toList();
-    activePlan = name;
-    persist('plans', jsonEncode(savedPlans));
-    persist('activePlan', activePlan);
+    ref.read(planProvider.notifier).saveAs(name);
   }
 
   void addPlan(Entry entry) {
-    setState(() => plan.add(entry));
-    savePlan();
+    ref.read(planProvider.notifier).addEntry(entry);
     message('Agregado al culto: ${entry.title}');
+  }
+
+  void removePlanEntry(int index) {
+    if (index < 0 || index >= plan.length) return;
+    final entry = plan[index];
+    ref.read(planProvider.notifier).removeEntry(index);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${entry.title} se quitó del orden.'),
+        action: SnackBarAction(
+          label: 'Deshacer',
+          onPressed: () =>
+              ref.read(planProvider.notifier).insertEntry(index, entry),
+        ),
+      ),
+    );
   }
 
   void favorite(Entry e) {
@@ -365,6 +491,9 @@ class WorkspaceState extends State<Workspace> {
   Future<void> syncOutput() async {
     try {
       await projection.sendOutput(outputState);
+      if (cloudSessionId != null) {
+        unawaited(CloudRemoteBridge.publishState(cloudSessionId!, getRemoteState()));
+      }
     } catch (_) {
       message('No se pudo sincronizar la salida. Intenta abrirla de nuevo.');
     }
@@ -417,29 +546,32 @@ class WorkspaceState extends State<Workspace> {
 
   void moveSection(int delta) {
     if (plan.isEmpty) return;
-    int currentIndex = -1;
-    if (presented != null) {
-      currentIndex = plan.indexOf(presented!);
-    }
-    int newIndex = currentIndex + delta;
+    final currentIndex = _presentedPlanIndex;
+    final newIndex = currentIndex + delta;
     if (newIndex >= 0 && newIndex < plan.length) {
       prepare(plan[newIndex]);
     }
   }
 
+  int get _presentedPlanIndex {
+    final current = presented;
+    if (current == null) return -1;
+    final identicalIndex = plan.indexWhere(
+      (entry) => identical(entry, current),
+    );
+    if (identicalIndex >= 0) return identicalIndex;
+    return plan.indexWhere(
+      (entry) => entry.id == current.id && entry.title == current.title,
+    );
+  }
+
   void changeTab(int value) {
     playback.stop();
     setState(() {
-      tab = value;
-      query = '';
-      search.clear();
-      favoritesOnly = false;
-      hymnCategoryFilter = 'Todas';
-      hymnComposerFilter = 'Todos';
-      hymnScoresOnly = false;
       if (value == 1) selected = lib.hymns.first;
       if (value == 3) selected = lib.faith.first;
     });
+    tab = value;
   }
 
   Future<void> openDigitalScore(Entry hymn) async {
@@ -457,6 +589,10 @@ class WorkspaceState extends State<Workspace> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(planProvider);
+    final authUser = ref.watch(authStateProvider).value;
+    final isLoggedIn = authUser != null;
+
     const labels = [
       'Inicio',
       'Himnario',
@@ -469,18 +605,22 @@ class WorkspaceState extends State<Workspace> {
       'Acerca de',
       'Administración',
     ];
-    const icons = [
-      Icons.home_outlined,
-      Icons.music_note_outlined,
-      Icons.menu_book_outlined,
-      Icons.auto_stories_outlined,
-      Icons.library_music_outlined,
-      Icons.cast,
-      Icons.playlist_play,
-      Icons.library_books_outlined,
-      Icons.info_outline,
-      Icons.admin_panel_settings_outlined,
+
+    final navItems = <({int tabIndex, String label, IconData icon})>[
+      (tabIndex: 0, label: 'Inicio', icon: Icons.home_outlined),
+      (tabIndex: 1, label: 'Himnario', icon: Icons.music_note_outlined),
+      (tabIndex: 2, label: 'Biblia', icon: Icons.menu_book_outlined),
+      (tabIndex: 3, label: 'Puntos de fe', icon: Icons.auto_stories_outlined),
+      if (isLoggedIn) ...[
+        (tabIndex: 4, label: 'Partituras', icon: Icons.library_music_outlined),
+        (tabIndex: 5, label: 'Proyección', icon: Icons.cast),
+        (tabIndex: 6, label: 'Cultos', icon: Icons.playlist_play),
+      ],
+      (tabIndex: 7, label: 'Literatura', icon: Icons.library_books_outlined),
+      (tabIndex: 8, label: 'Acerca de', icon: Icons.info_outline),
+      (tabIndex: 9, label: isLoggedIn ? 'Administración' : 'Acceso Ministerial', icon: Icons.admin_panel_settings_outlined),
     ];
+
     return LayoutBuilder(
       builder: (context, box) {
         final textScale = MediaQuery.textScalerOf(context).scale(1);
@@ -547,33 +687,32 @@ class WorkspaceState extends State<Workspace> {
                   Expanded(
                     child: ListView(
                       children: [
-                        for (var i = 0; i < labels.length; i++)
-                          if (kIsWeb || i != 7)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 3,
-                              ),
-                              child: ListTile(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                selected: tab == i,
-                                selectedTileColor: const Color(0xff2c4d60),
-                                textColor: const Color(0xffc0d0da),
-                                iconColor: const Color(0xffc0d0da),
-                                selectedColor: Colors.white,
-                                leading: Icon(icons[i], size: 21),
-                                title: Text(
-                                  labels[i],
-                                  style: const TextStyle(fontSize: 14),
-                                ),
-                                onTap: () {
-                                  changeTab(i);
-                                  if (!wide) Navigator.pop(context);
-                                },
-                              ),
+                        for (final item in navItems)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 3,
                             ),
+                            child: ListTile(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              selected: tab == item.tabIndex,
+                              selectedTileColor: const Color(0xff2c4d60),
+                              textColor: const Color(0xffc0d0da),
+                              iconColor: const Color(0xffc0d0da),
+                              selectedColor: Colors.white,
+                              leading: Icon(item.icon, size: 21),
+                              title: Text(
+                                item.label,
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                              onTap: () {
+                                changeTab(item.tabIndex);
+                                if (!wide) Navigator.pop(context);
+                              },
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -635,7 +774,8 @@ class WorkspaceState extends State<Workspace> {
                           ],
                         ),
                         actions: [
-                          if (Theme.of(context).platform ==
+                          if (kIsWeb ||
+                              Theme.of(context).platform ==
                                   TargetPlatform.android ||
                               Theme.of(context).platform == TargetPlatform.iOS)
                             IconButton(
@@ -662,6 +802,9 @@ class WorkspaceState extends State<Workspace> {
                               ),
                             ),
                           effectsButton,
+                          notesButton,
+                          eventsButton,
+                          aiButton,
                           themeButton,
                         ],
                       ),
@@ -723,22 +866,68 @@ class WorkspaceState extends State<Workspace> {
                                   ),
                                   const SizedBox(width: 12),
                                   effectsButton,
+                                  notesButton,
+                                  eventsButton,
+                                  aiButton,
                                   themeButton,
                                 ],
                               ),
                             ),
                           Expanded(
                             child: switch (tab) {
-                              0 => home(),
-                              1 => catalog(lib.hymns),
-                              2 => bible(),
-                              3 => catalog(lib.faith),
-                              4 => scores(),
-                              5 => projector(),
-                              6 => servicePlan(),
+                              0 => home(isLoggedIn),
+                              1 => CatalogScreen(
+                                all: lib.hymns,
+                                playback: playback,
+                                lib: lib,
+                                selected: selected,
+                                onOpenEntry: openEntry,
+                                readerBuilder: (entry, {modal = true}) =>
+                                    reader(entry, modal: modal),
+                                accentPanel: accentPanel,
+                                accentText: accentText,
+                              ),
+                              2 => BibleScreen(
+                                lib: lib,
+                                playback: playback,
+                                onPrepare: prepare,
+                                onAddPlan: addPlan,
+                                showPassageDialog: (e, {popModal = false}) =>
+                                    showPassageDialog(
+                                      context,
+                                      e,
+                                      popModal: popModal,
+                                    ),
+                                accentPanel: accentPanel,
+                                secondaryText: secondaryText,
+                                accentText: accentText,
+                              ),
+                              3 => CatalogScreen(
+                                all: lib.faith,
+                                playback: playback,
+                                lib: lib,
+                                selected: selected,
+                                onOpenEntry: openEntry,
+                                readerBuilder: (entry, {modal = true}) =>
+                                    reader(entry, modal: modal),
+                                accentPanel: accentPanel,
+                                accentText: accentText,
+                              ),
+                              4 => isLoggedIn
+                                  ? scores()
+                                  : _buildRestrictedSection('Partituras y Atril Digital'),
+                              5 => isLoggedIn
+                                  ? projector()
+                                  : _buildRestrictedSection('Cabina de Proyección'),
+                              6 => isLoggedIn
+                                  ? servicePlan()
+                                  : _buildRestrictedSection('Planificación de Cultos'),
                               7 => const LiteratureScreen(),
                               8 => about(),
-                              9 => const AdminDashboardScreen(),
+                              9 => AdminGateScreen(
+                                onPresent: prepare,
+                                onCustomizeChurch: _showChurchSettings,
+                              ),
                               _ => about(),
                             },
                           ),
@@ -760,7 +949,61 @@ class WorkspaceState extends State<Workspace> {
     );
   }
 
-  Widget home() => ListView(
+  Widget _buildRestrictedSection(String sectionName) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Card(
+            elevation: 3,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.lock_outline, size: 56, color: Colors.amber),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Sección Exclusiva para Obreros',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'La herramienta "$sectionName" está reservada para obreros y ministros autorizados.\n\nComo invitado o miembro, puedes disfrutar libremente de los Himnos, la Biblia, los Puntos de Fe y la Literatura.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
+                  const SizedBox(height: 24),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      FilledButton.icon(
+                        icon: const Icon(Icons.login),
+                        label: const Text('Iniciar Sesión Ministerial'),
+                        onPressed: () => changeTab(9),
+                      ),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.music_note),
+                        label: const Text('Ir al Himnario'),
+                        onPressed: () => changeTab(1),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget home(bool isLoggedIn) => ListView(
     padding: const EdgeInsets.all(32),
     children: [
       const LiveMeetCard(),
@@ -791,7 +1034,7 @@ class WorkspaceState extends State<Workspace> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Prepara el culto, encuentra un pasaje y comparte la alabanza con tu congregación.',
+              'Consulta libre de himnos, la palabra de Dios, puntos de fe y literatura oficial para toda la congregación.',
               style: TextStyle(height: 1.6),
             ),
             const SizedBox(height: 24),
@@ -804,10 +1047,20 @@ class WorkspaceState extends State<Workspace> {
                   icon: const Icon(Icons.music_note),
                   label: const Text('Explorar himnario'),
                 ),
+                ElevatedButton.icon(
+                  onPressed: () => changeTab(2),
+                  icon: const Icon(Icons.menu_book),
+                  label: const Text('Leer la Biblia'),
+                ),
                 OutlinedButton.icon(
-                  onPressed: () => changeTab(6),
-                  icon: const Icon(Icons.playlist_add),
-                  label: const Text('Preparar culto'),
+                  onPressed: () => changeTab(3),
+                  icon: const Icon(Icons.auto_stories),
+                  label: const Text('Puntos de fe'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => changeTab(7),
+                  icon: const Icon(Icons.library_books),
+                  label: const Text('Literatura'),
                 ),
               ],
             ),
@@ -822,30 +1075,34 @@ class WorkspaceState extends State<Workspace> {
           module('316', 'Himnos', Icons.music_note, 1),
           module('66', 'Libros de la Biblia', Icons.menu_book, 2),
           module('40', 'Puntos de fe', Icons.auto_stories, 3),
-          module(
-            '${digitalScorePages.length}',
-            'Partituras digitales',
-            Icons.library_music,
-            4,
-          ),
+          module('Oficial', 'Literatura', Icons.library_books, 7),
+          if (isLoggedIn)
+            module(
+              '${digitalScorePages.length}',
+              'Partituras digitales',
+              Icons.library_music,
+              4,
+            ),
         ],
       ),
-      const SizedBox(height: 30),
-      const Text(
-        'A mano para el próximo culto',
-        style: TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
-      ),
-      const SizedBox(height: 12),
-      ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: const Icon(Icons.playlist_play),
-        title: Text(activePlan),
-        subtitle: Text(
-          '${plan.length} elementos · Guardado en este dispositivo',
+      if (isLoggedIn) ...[
+        const SizedBox(height: 30),
+        const Text(
+          'A mano para el próximo culto',
+          style: TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
         ),
-        trailing: const Icon(Icons.arrow_forward),
-        onTap: () => changeTab(6),
-      ),
+        const SizedBox(height: 12),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.playlist_play),
+          title: Text(activePlan),
+          subtitle: Text(
+            '${plan.length} elementos · Guardado en este dispositivo',
+          ),
+          trailing: const Icon(Icons.arrow_forward),
+          onTap: () => changeTab(6),
+        ),
+      ],
       if (history.isNotEmpty) ...[
         const SizedBox(height: 20),
         const Text(
@@ -920,175 +1177,6 @@ class WorkspaceState extends State<Workspace> {
         ),
       );
     }
-  }
-
-  Widget catalog(List<Entry> all) {
-    final isHymnal = all.isNotEmpty && all.first.id.startsWith('h');
-    final categories = isHymnal
-        ? (all.map(hymnCategory).toSet().toList()..sort())
-        : const <String>[];
-    final composers = isHymnal
-        ? (all.map(hymnComposer).toSet().toList()..sort())
-        : const <String>[];
-    final results = all
-        .where(
-          (e) =>
-              (!favoritesOnly || favorites.contains(e.id)) &&
-              (!isHymnal ||
-                  hymnCategoryFilter == 'Todas' ||
-                  hymnCategory(e) == hymnCategoryFilter) &&
-              (!isHymnal ||
-                  hymnComposerFilter == 'Todos' ||
-                  hymnComposer(e) == hymnComposerFilter) &&
-              (!isHymnal ||
-                  !hymnScoresOnly ||
-                  digitalScorePages.containsKey(e.id)) &&
-              (query.isEmpty || e.searchable.contains(normalized(query))),
-        )
-        .toList();
-    final list = Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(18),
-          child: TextField(
-            controller: search,
-            decoration: const InputDecoration(
-              hintText: 'Número, título o palabras…',
-              prefixIcon: Icon(Icons.search),
-            ),
-            onChanged: (v) => setState(() => query = v),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Wrap(
-            spacing: 10,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text('${results.length} resultados'),
-              FilterChip(
-                label: const Text('Favoritos'),
-                selected: favoritesOnly,
-                onSelected: (v) => setState(() => favoritesOnly = v),
-              ),
-              if (isHymnal)
-                FilterChip(
-                  label: const Text('Con partitura digital'),
-                  selected: hymnScoresOnly,
-                  onSelected: (v) => setState(() => hymnScoresOnly = v),
-                ),
-              if (isHymnal)
-                DropdownButton<String>(
-                  isExpanded: true,
-                  value: hymnCategoryFilter,
-                  items: [
-                    const DropdownMenuItem(
-                      value: 'Todas',
-                      child: Text('Tipo: todos'),
-                    ),
-                    for (final category in categories)
-                      DropdownMenuItem(
-                        value: category,
-                        child: Text(
-                          category,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => hymnCategoryFilter = value!),
-                ),
-              if (isHymnal)
-                DropdownButton<String>(
-                  isExpanded: true,
-                  value: hymnComposerFilter,
-                  items: [
-                    const DropdownMenuItem(
-                      value: 'Todos',
-                      child: Text('Compositor: todos'),
-                    ),
-                    for (final composer in composers)
-                      DropdownMenuItem(
-                        value: composer,
-                        child: Text(
-                          composer,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => hymnComposerFilter = value!),
-                ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: results.isEmpty
-              ? const Center(child: Text('No se encontraron coincidencias.'))
-              : ListView.builder(
-                  itemCount: results.length,
-                  itemBuilder: (context, i) {
-                    final e = results[i];
-                    return ListTile(
-                      selected: selected?.id == e.id,
-                      leading: CircleAvatar(
-                        backgroundColor: accentPanel,
-                        child: Text(
-                          e.id.startsWith('hrecording')
-                              ? '?'
-                              : e.id.substring(1),
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      title: Text(e.title, maxLines: 2),
-                      subtitle: Text(
-                        e.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: IconButton(
-                        tooltip: 'Favorito',
-                        icon: Icon(
-                          favorites.contains(e.id)
-                              ? Icons.star
-                              : Icons.star_border,
-                        ),
-                        onPressed: () => favorite(e),
-                      ),
-                      onTap: () {
-                        openEntry(e);
-                      },
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-    return LayoutBuilder(
-      builder: (context, b) => Padding(
-        padding: const EdgeInsets.all(18),
-        child: b.maxWidth > 900
-            ? Row(
-                children: [
-                  SizedBox(
-                    width: 390,
-                    child: GlassSurface(radius: 20, child: list),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: GlassSurface(
-                      radius: 20,
-                      child: reader(selected ?? all.first),
-                    ),
-                  ),
-                ],
-              )
-            : GlassSurface(radius: 20, child: list),
-      ),
-    );
   }
 
   Widget reader(Entry e, {bool modal = false}) => ListView(
@@ -1236,18 +1324,8 @@ class WorkspaceState extends State<Workspace> {
             onPressed: () {
               Navigator.pop(dialogContext);
               if (popModal) Navigator.pop(sourceContext);
-              final parts = entry.id
-                  .substring(1)
-                  .split(':')
-                  .map(int.parse)
-                  .toList();
               setState(() {
                 tab = 2;
-                book = parts[0];
-                chapter = parts[1];
-                startVerse = parts[2];
-                endVerse = parts[3];
-                unlimitedVerses = false;
                 query = '';
                 search.clear();
                 playback.stop();
@@ -1265,363 +1343,6 @@ class WorkspaceState extends State<Workspace> {
           ),
         ],
       ),
-    );
-  }
-
-  Future<void> showConcordance(int verse) async {
-    final references = lib.concordance(book, chapter, verse);
-    final source = lib.passage(book, chapter, verse, verse);
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 620),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-            shrinkWrap: true,
-            children: [
-              Text(
-                'Concordancia bíblica',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 4),
-              Text(source.title, style: TextStyle(color: secondaryText)),
-              const SizedBox(height: 16),
-              if (references.isEmpty)
-                const Text('No hay citas relacionadas para este versículo.'),
-              for (final reference in references)
-                Builder(
-                  builder: (_) {
-                    final target = lib.passage(
-                      reference.book,
-                      reference.chapter,
-                      reference.start,
-                      reference.end,
-                    );
-                    return Card(
-                      elevation: 0,
-                      child: ListTile(
-                        leading: const Icon(Icons.link),
-                        title: Text(target.title),
-                        subtitle: Text(
-                          target.sections.map((s) => s.text).join(' '),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        onTap: () {
-                          showPassageDialog(
-                            sheetContext,
-                            target,
-                            popModal: true,
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              const SizedBox(height: 12),
-              Text(
-                'Concordancias: OpenBible.info · CC BY 4.0',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget bible() {
-    final books = lib.bible;
-    final chapters = books[book]['chapters'] as List;
-    final verses = chapters[chapter]['verses'] as List;
-    final effectiveEnd = unlimitedVerses
-        ? verses.last['number'] as int
-        : endVerse;
-    final entry = lib.passage(book, chapter, startVerse, effectiveEnd);
-    final matches = <Entry>[];
-    if (query.trim().length >= 3) {
-      final q = normalized(query);
-      for (var bi = 0; bi < books.length; bi++) {
-        final cs = books[bi]['chapters'] as List;
-        for (var ci = 0; ci < cs.length; ci++) {
-          for (final v in cs[ci]['verses']) {
-            if (normalized(v['text']).contains(q)) {
-              matches.add(lib.passage(bi, ci, v['number'], v['number']));
-            }
-          }
-        }
-      }
-    }
-    return ListView(
-      padding: const EdgeInsets.all(28),
-      children: [
-        AmbientSectionHeader(
-          icon: Icons.menu_book_outlined,
-          title: 'Las Sagradas Escrituras',
-          subtitle: lib.bibleEdition,
-        ),
-        const SizedBox(height: 20),
-        TextField(
-          controller: search,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.search),
-            hintText: 'Buscar en la Biblia (mínimo 3 caracteres)',
-          ),
-          onChanged: (v) => setState(() {
-            query = v;
-            bibleSearchPage = 0;
-          }),
-        ),
-        const SizedBox(height: 18),
-        if (query.isNotEmpty) ...[
-          Text(
-            query.trim().length < 3
-                ? 'Escribe al menos 3 caracteres.'
-                : '${matches.length} resultados encontrados',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          for (final e in matches.skip(bibleSearchPage * 50).take(50))
-            ListTile(
-              title: Text(e.title),
-              subtitle: highlightSearchText(
-                context,
-                e.sections.first.text,
-                query,
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.cast),
-                onPressed: () => prepare(e),
-              ),
-              onTap: () {
-                final parts = e.id
-                    .substring(1)
-                    .split(':')
-                    .map(int.parse)
-                    .toList();
-                setState(() {
-                  book = parts[0];
-                  chapter = parts[1];
-                  startVerse = parts[2];
-                  endVerse = parts[3];
-                  unlimitedVerses = false;
-                  query = '';
-                  search.clear();
-                });
-              },
-            ),
-          if (matches.length > 50)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: bibleSearchPage > 0
-                        ? () => setState(() => bibleSearchPage--)
-                        : null,
-                  ),
-                  DropdownButton<int>(
-                    value: bibleSearchPage,
-                    items: [
-                      for (
-                        var page = 0;
-                        page < (matches.length / 50).ceil();
-                        page++
-                      )
-                        DropdownMenuItem(
-                          value: page,
-                          child: Text(
-                            'Página ${page + 1} de ${(matches.length / 50).ceil()}',
-                          ),
-                        ),
-                    ],
-                    onChanged: (page) {
-                      if (page != null) setState(() => bibleSearchPage = page);
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward),
-                    onPressed: (bibleSearchPage + 1) * 50 < matches.length
-                        ? () => setState(() => bibleSearchPage++)
-                        : null,
-                  ),
-                ],
-              ),
-            ),
-        ] else ...[
-          GlassSurface(
-            radius: 20,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 14,
-                  runSpacing: 14,
-                  children: [
-                    DropdownButton<int>(
-                      value: book,
-                      items: [
-                        for (var i = 0; i < books.length; i++)
-                          DropdownMenuItem(
-                            value: i,
-                            child: Text(books[i]['name']),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() {
-                        book = v!;
-                        playback.stop();
-                        chapter = 0;
-                        startVerse = endVerse = 1;
-                        unlimitedVerses = true;
-                      }),
-                    ),
-                    DropdownButton<int>(
-                      value: chapter,
-                      items: [
-                        for (var i = 0; i < chapters.length; i++)
-                          DropdownMenuItem(
-                            value: i,
-                            child: Text('Capítulo ${i + 1}'),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() {
-                        chapter = v!;
-                        playback.stop();
-                        startVerse = endVerse = 1;
-                        unlimitedVerses = true;
-                      }),
-                    ),
-                    DropdownButton<int>(
-                      value: startVerse,
-                      items: [
-                        for (final v in verses)
-                          DropdownMenuItem(
-                            value: v['number'] as int,
-                            child: Text('Desde ${v['number']}'),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() {
-                        startVerse = v!;
-                        playback.stop();
-                        if (endVerse < startVerse) endVerse = startVerse;
-                      }),
-                    ),
-                    DropdownButton<int>(
-                      key: const ValueKey('bible-until'),
-                      value: unlimitedVerses ? 0 : endVerse,
-                      items: [
-                        const DropdownMenuItem(
-                          value: 0,
-                          child: Text('Hasta: sin límite'),
-                        ),
-                        for (final v in verses.where(
-                          (v) => v['number'] >= startVerse,
-                        ))
-                          DropdownMenuItem(
-                            value: v['number'] as int,
-                            child: Text('Hasta ${v['number']}'),
-                          ),
-                      ],
-                      onChanged: (v) => setState(() {
-                        unlimitedVerses = v == 0;
-                        playback.stop();
-                        if (v != 0) endVerse = v!;
-                      }),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 10,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: () => prepare(entry),
-                      icon: const Icon(Icons.cast),
-                      label: const Text('Proyectar selección'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () => addPlan(entry),
-                      icon: const Icon(Icons.playlist_add),
-                      label: const Text('Agregar al culto'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => LecternReaderScreen(entry: entry),
-                        ),
-                      ),
-                      icon: const Icon(Icons.auto_stories),
-                      label: const Text('Modo Atril / Lectura'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 22),
-          if (unlimitedVerses)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                'Desde el versículo $startVerse hasta el final del capítulo.',
-                style: TextStyle(color: secondaryText),
-              ),
-            ),
-          PlaybackControls(
-            controller: playback,
-            contentId: entry.id,
-            text: entry.spokenText,
-          ),
-          const SizedBox(height: 18),
-          for (final v in verses.where(
-            (v) => v['number'] >= startVerse && v['number'] <= effectiveEnd,
-          ))
-            Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              elevation: 0,
-              color: v['number'] >= startVerse && v['number'] <= effectiveEnd
-                  ? accentPanel
-                  : null,
-              child: ListTile(
-                onTap: () => setState(() {
-                  startVerse = endVerse = v['number'];
-                  playback.stop();
-                  unlimitedVerses = false;
-                }),
-                leading: Text(
-                  '${v['number']}',
-                  style: TextStyle(
-                    color: accentText,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                title: SelectableText(
-                  (v['text'] as String).isEmpty
-                      ? 'Esta edición no presenta texto independiente para este número.'
-                      : v['text'],
-                  style: const TextStyle(fontSize: 18, height: 1.65),
-                ),
-                trailing: IconButton(
-                  tooltip: 'Ver concordancias',
-                  icon: const Icon(Icons.link),
-                  onPressed:
-                      lib.concordance(book, chapter, v['number'] as int).isEmpty
-                      ? null
-                      : () => showConcordance(v['number'] as int),
-                ),
-              ),
-            ),
-        ],
-      ],
     );
   }
 
@@ -1693,562 +1414,731 @@ class WorkspaceState extends State<Workspace> {
     );
   }
 
-  Widget projector() => Focus(
-    focusNode: focus,
-    onKeyEvent: (node, event) {
-      if (!node.hasPrimaryFocus) return KeyEventResult.ignored;
-      if (event is! KeyDownEvent) return KeyEventResult.ignored;
-      if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
-          event.logicalKey == LogicalKeyboardKey.space) {
-        move(1);
-        return KeyEventResult.handled;
-      }
-      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-        move(-1);
-        return KeyEventResult.handled;
-      }
-      if (event.logicalKey == LogicalKeyboardKey.keyB) {
-        toggleBlack();
-        return KeyEventResult.handled;
-      }
-      return KeyEventResult.ignored;
-    },
-    child: ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        GlassSurface(
-          radius: 20,
-          padding: const EdgeInsets.all(14),
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 10,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              FilledButton.icon(
-                onPressed: projection.supportsOutput
-                    ? () async {
-                        try {
-                          await projection.openOutput(outputState);
-                          message(
-                            'Mueve la ventana al proyector con escritorio extendido. F11 activa pantalla completa.',
-                          );
-                          focus.requestFocus();
-                        } catch (e) {
-                          message('$e');
+  Widget projector() {
+    final orderIndex = _presentedPlanIndex;
+    return Focus(
+      focusNode: focus,
+      onKeyEvent: (node, event) {
+        if (!node.hasPrimaryFocus) return KeyEventResult.ignored;
+        if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
+            event.logicalKey == LogicalKeyboardKey.space) {
+          move(1);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+          move(-1);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown ||
+            event.logicalKey == LogicalKeyboardKey.pageDown) {
+          moveSection(1);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
+            event.logicalKey == LogicalKeyboardKey.pageUp) {
+          moveSection(-1);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyB) {
+          toggleBlack();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          GlassSurface(
+            radius: 20,
+            padding: const EdgeInsets.all(14),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                FilledButton.icon(
+                  onPressed: projection.supportsOutput
+                      ? () async {
+                          try {
+                            await projection.openOutput(outputState);
+                            message(
+                              'Mueve la ventana al proyector con escritorio extendido. F11 activa pantalla completa.',
+                            );
+                            focus.requestFocus();
+                          } catch (e) {
+                            message('$e');
+                          }
                         }
-                      }
-                    : null,
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('Abrir proyector'),
-              ),
-              FilledButton.icon(
-                onPressed: projection.supportsOutput
-                    ? () async {
-                        try {
-                          await projection.openStage(outputState);
-                          message(
-                            'Mueve la ventana al monitor de escenario. F11 activa pantalla completa.',
-                          );
-                          focus.requestFocus();
-                        } catch (e) {
-                          message('$e');
-                        }
-                      }
-                    : null,
-                icon: const Icon(Icons.monitor),
-                label: const Text('Monitor de atril'),
-              ),
-              OutlinedButton.icon(
-                onPressed: toggleBlack,
-                icon: Icon(blackout ? Icons.visibility_off : Icons.visibility),
-                label: Text(
-                  blackout ? 'Restaurar imagen' : 'Pantalla negra (B)',
+                      : null,
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Abrir proyector'),
                 ),
-              ),
-              OutlinedButton.icon(
-                onPressed: () {
-                  if (countdownEndsAt != null) {
-                    _countdownTimer?.cancel();
-                    setState(() => countdownEndsAt = null);
-                    syncOutput();
-                  } else {
-                    showDialog<int>(
-                      context: context,
-                      builder: (context) => SimpleDialog(
-                        title: const Text('Temporizador de inicio'),
-                        children: [
-                          for (final min in [1, 2, 5, 10, 15])
-                            SimpleDialogOption(
-                              onPressed: () => Navigator.pop(context, min),
-                              child: Text('$min minutos'),
-                            ),
-                        ],
-                      ),
-                    ).then((val) {
-                      if (val != null) {
-                        _countdownTimer?.cancel();
-                        _countdownTimer = Timer(Duration(minutes: val), () {
-                          if (mounted && countdownEndsAt != null) {
-                            setState(() {
-                              countdownEndsAt = null;
-                              slideIndex = 0;
-                              blackout = false;
-                            });
+                FilledButton.icon(
+                  onPressed: projection.supportsOutput
+                      ? () async {
+                          try {
+                            await projection.openStage(outputState);
+                            message(
+                              'Mueve la ventana al monitor de escenario. F11 activa pantalla completa.',
+                            );
+                            focus.requestFocus();
+                          } catch (e) {
+                            message('$e');
+                          }
+                        }
+                      : null,
+                  icon: const Icon(Icons.monitor),
+                  label: const Text('Monitor de atril'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => StreamOverlayDialog.show(context, outputState),
+                  icon: const Icon(Icons.sensors, color: Color(0xFF6366F1)),
+                  label: const Text('Salida OBS / Transmisión'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: toggleBlack,
+                  icon: Icon(
+                    blackout ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  label: Text(
+                    blackout ? 'Restaurar imagen' : 'Pantalla negra (B)',
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: orderIndex > 0 ? () => moveSection(-1) : null,
+                  icon: const Icon(Icons.skip_previous),
+                  label: const Text('Elemento anterior'),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: plan.isNotEmpty && orderIndex + 1 < plan.length
+                      ? () => moveSection(1)
+                      : null,
+                  icon: const Icon(Icons.skip_next),
+                  label: const Text('Siguiente elemento'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    if (countdownEndsAt != null) {
+                      _countdownTimer?.cancel();
+                      setState(() => countdownEndsAt = null);
+                      syncOutput();
+                    } else {
+                      showDialog<int>(
+                        context: context,
+                        builder: (context) => SimpleDialog(
+                          title: const Text('Temporizador de inicio'),
+                          children: [
+                            for (final min in [1, 2, 5, 10, 15])
+                              SimpleDialogOption(
+                                onPressed: () => Navigator.pop(context, min),
+                                child: Text('$min minutos'),
+                              ),
+                          ],
+                        ),
+                      ).then((val) {
+                        if (val != null) {
+                          _countdownTimer?.cancel();
+                          _countdownTimer = Timer(Duration(minutes: val), () {
+                            if (mounted && countdownEndsAt != null) {
+                              setState(() {
+                                countdownEndsAt = null;
+                                slideIndex = 0;
+                                blackout = false;
+                              });
+                              syncOutput();
+                            }
+                          });
+                          setState(() {
+                            countdownEndsAt = DateTime.now()
+                                .add(Duration(minutes: val))
+                                .millisecondsSinceEpoch;
+                          });
+                          syncOutput();
+                        }
+                      });
+                    }
+                  },
+                  icon: Icon(
+                    countdownEndsAt != null ? Icons.timer_off : Icons.timer,
+                  ),
+                  label: Text(
+                    countdownEndsAt != null ? 'Detener reloj' : 'Temporizador',
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    if (kIsWeb) {
+                      // Modo Cloud Remote Bridge para Web
+                      if (cloudSessionId == null) {
+                        final newCode = CloudRemoteBridge.generateSessionCode();
+                        setState(() => cloudSessionId = newCode);
+                        await CloudRemoteBridge.publishState(newCode, getRemoteState());
+                        _cloudCommandSub?.cancel();
+                        _cloudCommandSub = CloudRemoteBridge.listenCommands(newCode, (action, payload) {
+                          if (!mounted) return;
+                          if (action == 'next') {
+                            setState(() => slideIndex = (slideIndex + 1).clamp(0, slides.isEmpty ? 0 : slides.length - 1));
                             syncOutput();
+                          } else if (action == 'prev') {
+                            setState(() => slideIndex = (slideIndex - 1).clamp(0, slides.isEmpty ? 0 : slides.length - 1));
+                            syncOutput();
+                          } else if (action == 'black') {
+                            toggleBlack();
+                          } else if (action == 'next_section') {
+                            moveSection(1);
+                          } else if (action == 'prev_section') {
+                            moveSection(-1);
+                          } else if (action == 'jump' && payload != null) {
+                            final idx = payload['index'] as int?;
+                            if (idx != null && idx >= 0 && idx < plan.length) {
+                              prepare(plan[idx]);
+                            }
+                          } else if (action == 'project_verse' && payload != null) {
+                            final b = payload['b'] as int?;
+                            final c = payload['c'] as int?;
+                            final vStart = payload['vStart'] as int?;
+                            final vEnd = payload['vEnd'] as int?;
+                            if (b != null && c != null && vStart != null && vEnd != null) {
+                              final entry = lib.passage(b, c, vStart, vEnd);
+                              prepare(entry);
+                            }
                           }
                         });
-                        setState(() {
-                          countdownEndsAt = DateTime.now()
-                              .add(Duration(minutes: val))
-                              .millisecondsSinceEpoch;
-                        });
-                        syncOutput();
                       }
-                    });
-                  }
-                },
-                icon: Icon(
-                  countdownEndsAt != null ? Icons.timer_off : Icons.timer,
-                ),
-                label: Text(
-                  countdownEndsAt != null ? 'Detener reloj' : 'Temporizador',
-                ),
-              ),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  if (kIsWeb) {
-                    message(
-                      'El servidor de control remoto local no se puede iniciar en la versión web por restricciones del navegador. Por favor, descarga la app de Windows o Android para usar esta función.',
-                    );
-                    return;
-                  }
-                  if (remoteUrls.isEmpty) {
-                    final urls = await remoteServer.start();
-                    if (urls.isNotEmpty && mounted) {
-                      setState(() {
-                        remoteUrls = urls;
-                        selectedRemoteUrl = urls.first;
-                      });
-                    } else {
-                      message(
-                        'No se pudo iniciar el servidor. Verifica tu conexión de red.',
+
+                      if (!mounted) return;
+                      showDialog(
+                        context: context,
+                        builder: (context) => StatefulBuilder(
+                          builder: (context, setDialogState) => AlertDialog(
+                            title: const Row(
+                              children: [
+                                Icon(Icons.cloud_sync, color: Color(0xff0284c7)),
+                                SizedBox(width: 8),
+                                Text('Control Remoto (Puente Nube)'),
+                              ],
+                            ),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'Escanea este código con tu celular o ingresa el código de 6 caracteres:',
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xff0284c7).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: const Color(0xff0284c7)),
+                                  ),
+                                  child: Text(
+                                    cloudSessionId ?? '',
+                                    style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 4,
+                                      color: Color(0xff38bdf8),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  color: Colors.white,
+                                  padding: const EdgeInsets.all(16),
+                                  child: QrImageView(
+                                    data: 'CLOUD:$cloudSessionId',
+                                    version: QrVersions.auto,
+                                    size: 190.0,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  '☁ Funciona en cualquier celular sin importar la red Wi-Fi.',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  _cloudCommandSub?.cancel();
+                                  _cloudCommandSub = null;
+                                  if (cloudSessionId != null) {
+                                    unawaited(CloudRemoteBridge.closeSession(cloudSessionId!));
+                                  }
+                                  setState(() => cloudSessionId = null);
+                                  Navigator.pop(context);
+                                },
+                                child: const Text('Cerrar sesión nube', style: TextStyle(color: Colors.red)),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Listo'),
+                              ),
+                            ],
+                          ),
+                        ),
                       );
                       return;
                     }
-                  }
-                  if (!mounted) return;
-                  showDialog(
-                    context: context,
-                    builder: (context) => StatefulBuilder(
-                      builder: (context, setDialogState) => AlertDialog(
-                        title: const Text('Control Remoto Local'),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'Escanea este código QR con tu celular usando la app (ícono superior de cámara):',
-                            ),
-                            const SizedBox(height: 10),
-                            if (remoteUrls.length > 1)
-                              DropdownButton<String>(
-                                value: selectedRemoteUrl,
-                                isExpanded: true,
-                                items: remoteUrls
-                                    .map(
-                                      (e) => DropdownMenuItem(
-                                        value: e,
-                                        child: Text(e),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setDialogState(
-                                      () => selectedRemoteUrl = val,
-                                    );
-                                    setState(() => selectedRemoteUrl = val);
-                                  }
+
+                    // Modo Nativo (Local TCP + Opción de Nube)
+                    if (remoteUrls.isEmpty) {
+                      final urls = await remoteServer.start();
+                      if (urls.isNotEmpty && mounted) {
+                        setState(() {
+                          remoteUrls = urls;
+                          selectedRemoteUrl = urls.first;
+                        });
+                      } else {
+                        message(
+                          'No se pudo iniciar el servidor. Verifica tu conexión de red.',
+                        );
+                        return;
+                      }
+                    }
+                    if (!mounted) return;
+                    showDialog(
+                      context: context,
+                      builder: (context) => StatefulBuilder(
+                        builder: (context, setDialogState) => AlertDialog(
+                          title: const Text('Control Remoto Local'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Escanea este código QR con tu celular usando la app (ícono superior de cámara):',
+                              ),
+                              const SizedBox(height: 10),
+                              if (remoteUrls.length > 1)
+                                DropdownButton<String>(
+                                  value: selectedRemoteUrl,
+                                  isExpanded: true,
+                                  items: remoteUrls
+                                      .map(
+                                        (e) => DropdownMenuItem(
+                                          value: e,
+                                          child: Text(e),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setDialogState(
+                                        () => selectedRemoteUrl = val,
+                                      );
+                                      setState(() => selectedRemoteUrl = val);
+                                    }
+                                  },
+                                ),
+                              const SizedBox(height: 10),
+                              Container(
+                                color: Colors.white,
+                                padding: const EdgeInsets.all(16),
+                                child: QrImageView(
+                                  data: selectedRemoteUrl!,
+                                  version: QrVersions.auto,
+                                  size: 200.0,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                selectedRemoteUrl!,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Divider(),
+                              StreamBuilder<String?>(
+                                stream: remoteServer.onConnectionChanged,
+                                builder: (context, snapshot) {
+                                  final ip = snapshot.data;
+                                  return Column(
+                                    children: [
+                                      if (ip != null) ...[
+                                        Text(
+                                          '?? Dispositivo conectado: $ip',
+                                          style: const TextStyle(
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        TextButton.icon(
+                                          onPressed: () =>
+                                              remoteServer.disconnectDevice(),
+                                          icon: const Icon(
+                                            Icons.phonelink_erase,
+                                            color: Colors.red,
+                                          ),
+                                          label: const Text(
+                                            'Desconectar / Echar',
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ),
+                                      ] else
+                                        const Text(
+                                          'Esperando conexión...',
+                                          style: TextStyle(
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                    ],
+                                  );
                                 },
                               ),
-                            const SizedBox(height: 10),
-                            Container(
-                              color: Colors.white,
-                              padding: const EdgeInsets.all(16),
-                              child: QrImageView(
-                                data: selectedRemoteUrl!,
-                                version: QrVersions.auto,
-                                size: 200.0,
+                            ],
+                          ),
+                          actions: [
+                            if (Theme.of(context).platform ==
+                                TargetPlatform.windows)
+                              TextButton.icon(
+                                onPressed: () async {
+                                  try {
+                                    await Process.run('powershell', [
+                                      '-Command',
+                                      'Start-Process',
+                                      'powershell',
+                                      '-Verb',
+                                      'RunAs',
+                                      '-ArgumentList',
+                                      '"-Command Set-NetConnectionProfile -NetworkCategory Private"',
+                                    ]);
+                                  } catch (_) {}
+                                },
+                                icon: const Icon(
+                                  Icons.security,
+                                  color: Colors.blue,
+                                ),
+                                label: const Text(
+                                  'Hacer red privada',
+                                  style: TextStyle(color: Colors.blue),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              selectedRemoteUrl!,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const Divider(),
-                            StreamBuilder<String?>(
-                              stream: remoteServer.onConnectionChanged,
-                              builder: (context, snapshot) {
-                                final ip = snapshot.data;
-                                return Column(
-                                  children: [
-                                    if (ip != null) ...[
-                                      Text(
-                                        '?? Dispositivo conectado: $ip',
-                                        style: const TextStyle(
-                                          color: Colors.green,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      TextButton.icon(
-                                        onPressed: () =>
-                                            remoteServer.disconnectDevice(),
-                                        icon: const Icon(
-                                          Icons.phonelink_erase,
-                                          color: Colors.red,
-                                        ),
-                                        label: const Text(
-                                          'Desconectar / Echar',
-                                          style: TextStyle(color: Colors.red),
-                                        ),
-                                      ),
-                                    ] else
-                                      const Text(
-                                        'Esperando conexión...',
-                                        style: TextStyle(
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                      ),
-                                  ],
-                                );
+                            TextButton(
+                              onPressed: () {
+                                unawaited(remoteServer.stop());
+                                setState(() {
+                                  remoteUrls = [];
+                                  selectedRemoteUrl = null;
+                                });
+                                Navigator.pop(context);
                               },
+                              child: const Text('Apagar servidor'),
+                            ),
+                            FilledButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cerrar'),
                             ),
                           ],
                         ),
-                        actions: [
-                          if (Theme.of(context).platform ==
-                              TargetPlatform.windows)
-                            TextButton.icon(
-                              onPressed: () async {
-                                try {
-                                  await Process.run('powershell', [
-                                    '-Command',
-                                    'Start-Process',
-                                    'powershell',
-                                    '-Verb',
-                                    'RunAs',
-                                    '-ArgumentList',
-                                    '"-Command Set-NetConnectionProfile -NetworkCategory Private"',
-                                  ]);
-                                } catch (_) {}
-                              },
-                              icon: const Icon(
-                                Icons.security,
-                                color: Colors.blue,
-                              ),
-                              label: const Text(
-                                'Hacer red privada',
-                                style: TextStyle(color: Colors.blue),
-                              ),
-                            ),
-                          TextButton(
-                            onPressed: () {
-                              unawaited(remoteServer.stop());
-                              setState(() {
-                                remoteUrls = [];
-                                selectedRemoteUrl = null;
-                              });
-                              Navigator.pop(context);
-                            },
-                            child: const Text('Apagar servidor'),
-                          ),
-                          FilledButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Cerrar'),
-                          ),
-                        ],
                       ),
-                    ),
-                  );
-                },
-                icon: Icon(
-                  remoteUrls.isNotEmpty
-                      ? Icons.wifi_tethering
-                      : Icons.wifi_tethering_off,
+                    );
+                  },
+                  icon: Icon(
+                    (remoteUrls.isNotEmpty || cloudSessionId != null)
+                        ? Icons.wifi_tethering
+                        : Icons.wifi_tethering_off,
+                  ),
+                  label: Text(
+                    (remoteUrls.isNotEmpty || cloudSessionId != null)
+                        ? (cloudSessionId != null ? 'Remoto Nube ($cloudSessionId)' : 'Remoto activo')
+                        : 'Control Remoto',
+                  ),
                 ),
-                label: Text(
-                  remoteUrls.isNotEmpty ? 'Remoto activo' : 'Control Remoto',
+                Text(
+                  '${slides.isEmpty ? 0 : slideIndex + 1} / ${slides.length} diapositivas',
                 ),
-              ),
-              Text(
-                '${slides.isEmpty ? 0 : slideIndex + 1} / ${slides.length} diapositivas',
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Controles del operador · Flechas para avanzar o retroceder · B para ocultar',
-          style: TextStyle(color: Colors.blueGrey, fontSize: 12),
-        ),
-        const SizedBox(height: 18),
-        LayoutBuilder(
-          builder: (context, b) => Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'EN PANTALLA',
-                      style: TextStyle(fontSize: 10, letterSpacing: 2),
-                    ),
-                    const SizedBox(height: 8),
-                    AspectRatio(
-                      aspectRatio: aspect,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            SlideView(
-                              slide: currentSlide,
-                              blackout: blackout,
-                              theme: slideTheme,
-                              showTitle: showTitle,
-                              transparentBackground:
-                                  videoBackgroundPath != null && !blackout,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (b.maxWidth > 850) ...[
-                const SizedBox(width: 18),
+          const SizedBox(height: 12),
+          const Text(
+            '←/→ cambian diapositiva · ↑/↓ cambian elemento del orden · B oculta la salida',
+            style: TextStyle(color: Colors.blueGrey, fontSize: 12),
+          ),
+          const SizedBox(height: 18),
+          LayoutBuilder(
+            builder: (context, b) => Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'SIGUIENTE',
+                        'EN PANTALLA',
                         style: TextStyle(fontSize: 10, letterSpacing: 2),
                       ),
                       const SizedBox(height: 8),
                       AspectRatio(
                         aspectRatio: aspect,
-                        child: SlideView(
-                          slide:
-                              slides.isNotEmpty &&
-                                  slideIndex + 1 < slides.length
-                              ? slides[slideIndex + 1]
-                              : const SlideData('', 'Fin', ''),
-                          theme: slideTheme,
-                          showTitle: showTitle,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              SlideView(
+                                slide: currentSlide,
+                                blackout: blackout,
+                                theme: slideTheme,
+                                showTitle: showTitle,
+                                transparentBackground:
+                                    videoBackgroundPath != null && !blackout,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton.filledTonal(
-              onPressed: slideIndex > 0 ? () => move(-1) : null,
-              icon: const Icon(Icons.chevron_left),
-            ),
-            const SizedBox(width: 20),
-            Text(currentSlide.label),
-            const SizedBox(width: 20),
-            IconButton.filled(
-              onPressed: slideIndex + 1 < slides.length ? () => move(1) : null,
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ],
-        ),
-        const Divider(height: 30),
-        GlassSurface(
-          radius: 20,
-          padding: EdgeInsets.all(
-            MediaQuery.sizeOf(context).width < 600 ? 4 : 16,
-          ),
-          child: Column(
-            children: [
-              Wrap(
-                spacing: 16,
-                runSpacing: 10,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  DropdownButton<int>(
-                    value: slideTheme,
-                    items: const [
-                      DropdownMenuItem(value: 0, child: Text('Azul CGID')),
-                      DropdownMenuItem(value: 1, child: Text('Negro Puro')),
-                      DropdownMenuItem(value: 2, child: Text('Claro / Cálido')),
-                      DropdownMenuItem(
-                        value: 3,
-                        child: Text('Verde Esmeralda'),
-                      ),
-                      DropdownMenuItem(value: 4, child: Text('Borgoña / Vino')),
-                      DropdownMenuItem(
-                        value: 5,
-                        child: Text('Azul Noche Profundo'),
-                      ),
-                    ],
-                    onChanged: (v) {
-                      setState(() => slideTheme = v!);
-                      widget.prefs.setInt('slideTheme', slideTheme);
-                      syncOutput();
-                    },
-                  ),
-                  DropdownButton<double>(
-                    value: aspect,
-                    items: const [
-                      DropdownMenuItem(value: 16 / 9, child: Text('16:9')),
-                      DropdownMenuItem(value: 4 / 3, child: Text('4:3')),
-                    ],
-                    onChanged: (v) {
-                      setState(() => aspect = v!);
-                      if (presented != null) prepare(presented!);
-                    },
-                  ),
-                  DropdownButton<int>(
-                    value: lines,
-                    items: [
-                      for (final n in [2, 3, 4, 5, 6])
-                        DropdownMenuItem(value: n, child: Text('$n líneas')),
-                    ],
-                    onChanged: (v) {
-                      setState(() => lines = v!);
-                      if (presented != null) prepare(presented!);
-                    },
-                  ),
-                  if (videoBackgroundPath != null)
-                    ActionChip(
-                      avatar: const Icon(Icons.close, size: 16),
-                      label: const Text('Quitar Fondo de Video'),
-                      onPressed: () {
-                        setState(() => videoBackgroundPath = null);
-                        syncOutput();
-                      },
-                    )
-                  else
-                    ActionChip(
-                      avatar: const Icon(Icons.video_library, size: 16),
-                      label: const Text('Fondo de Video'),
-                      onPressed: () async {
-                        final file = await FilePicker.pickFile(
-                          type: FileType.video,
-                        );
-                        if (file != null && file.path != null) {
-                          setState(() {
-                            videoBackgroundPath = file.path;
-                          });
-                          syncOutput();
-                        }
-                      },
+                if (b.maxWidth > 850) ...[
+                  const SizedBox(width: 18),
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'SIGUIENTE',
+                          style: TextStyle(fontSize: 10, letterSpacing: 2),
+                        ),
+                        const SizedBox(height: 8),
+                        AspectRatio(
+                          aspectRatio: aspect,
+                          child: SlideView(
+                            slide:
+                                slides.isNotEmpty &&
+                                    slideIndex + 1 < slides.length
+                                ? slides[slideIndex + 1]
+                                : const SlideData('', 'Fin', ''),
+                            theme: slideTheme,
+                            showTitle: showTitle,
+                          ),
+                        ),
+                      ],
                     ),
-                  FilterChip(
-                    label: const Text('Título'),
-                    selected: showTitle,
-                    onSelected: (v) {
-                      setState(() => showTitle = v);
-                      syncOutput();
-                    },
-                  ),
-                  FilterChip(
-                    label: const Text('Repetir coro'),
-                    selected: repeatChorus,
-                    onSelected: (v) {
-                      setState(() => repeatChorus = v);
-                      if (presented != null) prepare(presented!);
-                    },
                   ),
                 ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton.filledTonal(
+                onPressed: slideIndex > 0 ? () => move(-1) : null,
+                icon: const Icon(Icons.chevron_left),
               ),
-              const SizedBox(height: 16),
-              marqueeControls(),
+              const SizedBox(width: 20),
+              Text(currentSlide.label),
+              const SizedBox(width: 20),
+              IconButton.filled(
+                onPressed: slideIndex + 1 < slides.length
+                    ? () => move(1)
+                    : null,
+                icon: const Icon(Icons.chevron_right),
+              ),
             ],
           ),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (var i = 0; i < slides.length; i++)
-              SizedBox(
-                width: 190,
-                child: Card(
-                  color: i == slideIndex ? accentPanel : cardColor,
-                  child: InkWell(
-                    onTap: () {
-                      setState(() => slideIndex = i);
-                      syncOutput();
-                      focus.requestFocus();
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${i + 1} · ${slides[i].label}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          if (slides[i].mediaId != null)
-                            AspectRatio(
-                              aspectRatio: aspect,
-                              child: SlideView(slide: slides[i]),
-                            )
-                          else
+          const Divider(height: 30),
+          GlassSurface(
+            radius: 20,
+            padding: EdgeInsets.all(
+              MediaQuery.sizeOf(context).width < 600 ? 4 : 16,
+            ),
+            child: Column(
+              children: [
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    DropdownButton<int>(
+                      value: slideTheme,
+                      items: const [
+                        DropdownMenuItem(value: 0, child: Text('Azul CGID')),
+                        DropdownMenuItem(value: 1, child: Text('Negro Puro')),
+                        DropdownMenuItem(
+                          value: 2,
+                          child: Text('Claro / Cálido'),
+                        ),
+                        DropdownMenuItem(
+                          value: 3,
+                          child: Text('Verde Esmeralda'),
+                        ),
+                        DropdownMenuItem(
+                          value: 4,
+                          child: Text('Borgoña / Vino'),
+                        ),
+                        DropdownMenuItem(
+                          value: 5,
+                          child: Text('Azul Noche Profundo'),
+                        ),
+                      ],
+                      onChanged: (v) {
+                        setState(() => slideTheme = v!);
+                        widget.prefs.setInt('slideTheme', slideTheme);
+                        syncOutput();
+                      },
+                    ),
+                    DropdownButton<double>(
+                      value: aspect,
+                      items: const [
+                        DropdownMenuItem(value: 16 / 9, child: Text('16:9')),
+                        DropdownMenuItem(value: 4 / 3, child: Text('4:3')),
+                      ],
+                      onChanged: (v) {
+                        setState(() => aspect = v!);
+                        if (presented != null) prepare(presented!);
+                      },
+                    ),
+                    DropdownButton<int>(
+                      value: lines,
+                      items: [
+                        for (final n in [2, 3, 4, 5, 6])
+                          DropdownMenuItem(value: n, child: Text('$n líneas')),
+                      ],
+                      onChanged: (v) {
+                        setState(() => lines = v!);
+                        if (presented != null) prepare(presented!);
+                      },
+                    ),
+                    if (videoBackgroundPath != null)
+                      ActionChip(
+                        avatar: const Icon(Icons.close, size: 16),
+                        label: const Text('Quitar Fondo de Video'),
+                        onPressed: () {
+                          setState(() => videoBackgroundPath = null);
+                          syncOutput();
+                        },
+                      )
+                    else
+                      ActionChip(
+                        avatar: const Icon(Icons.video_library, size: 16),
+                        label: const Text('Fondo de Video'),
+                        onPressed: () async {
+                          final file = await FilePicker.pickFile(
+                            type: FileType.video,
+                          );
+                          if (file != null && file.path != null) {
+                            setState(() {
+                              videoBackgroundPath = file.path;
+                            });
+                            syncOutput();
+                          }
+                        },
+                      ),
+                    FilterChip(
+                      label: const Text('Título'),
+                      selected: showTitle,
+                      onSelected: (v) {
+                        setState(() => showTitle = v);
+                        syncOutput();
+                      },
+                    ),
+                    FilterChip(
+                      label: const Text('Repetir coro'),
+                      selected: repeatChorus,
+                      onSelected: (v) {
+                        setState(() => repeatChorus = v);
+                        if (presented != null) prepare(presented!);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                marqueeControls(),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (var i = 0; i < slides.length; i++)
+                SizedBox(
+                  width: 190,
+                  child: Card(
+                    color: i == slideIndex ? accentPanel : cardColor,
+                    child: InkWell(
+                      onTap: () {
+                        setState(() => slideIndex = i);
+                        syncOutput();
+                        focus.requestFocus();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              slides[i].text,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12),
+                              '${i + 1} · ${slides[i].label}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
                             ),
-                        ],
+                            const SizedBox(height: 8),
+                            if (slides[i].mediaId != null)
+                              AspectRatio(
+                                aspectRatio: aspect,
+                                child: SlideView(slide: slides[i]),
+                              )
+                            else
+                              Text(
+                                slides[i].text,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
+            ],
+          ),
+          if (plan.isNotEmpty) ...[
+            const SizedBox(height: 22),
+            const Text(
+              'Orden del culto',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            ),
+            for (var i = 0; i < plan.length; i++)
+              Card(
+                color: i == orderIndex ? accentPanel : null,
+                child: ListTile(
+                  leading: CircleAvatar(child: Text('${i + 1}')),
+                  title: Text(plan[i].title),
+                  subtitle: Text(
+                    plan[i].subtitle.isEmpty
+                        ? 'Sección del culto'
+                        : plan[i].subtitle,
+                  ),
+                  trailing: i == orderIndex
+                      ? const Chip(
+                          avatar: Icon(Icons.cast, size: 18),
+                          label: Text('En pantalla'),
+                        )
+                      : const Icon(Icons.play_arrow),
+                  onTap: () => prepare(plan[i]),
+                ),
               ),
           ],
-        ),
-        if (plan.isNotEmpty) ...[
-          const SizedBox(height: 22),
-          const Text(
-            'Orden del culto',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          ),
-          for (final e in plan)
-            ListTile(
-              title: Text(e.title),
-              trailing: const Icon(Icons.play_arrow),
-              onTap: () => prepare(e),
-            ),
         ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 
   Widget marqueeControls() => LayoutBuilder(
     builder: (context, constraints) {
@@ -2542,10 +2432,11 @@ class WorkspaceState extends State<Workspace> {
         final importedName = pack['name'] as String;
         final importedEntries = pack['entries'] as List<Entry>;
         if (mounted) {
+          planName.text = importedName;
+          ref
+              .read(planProvider.notifier)
+              .saveAs(importedName, entries: importedEntries);
           setState(() {
-            plan = importedEntries;
-            planName.text = importedName;
-            savePlan();
             fileProgress =
                 'Culto "$importedName" importado con éxito (${importedEntries.length} elementos).';
           });
@@ -2652,8 +2543,16 @@ class WorkspaceState extends State<Workspace> {
     if (plan.isEmpty) return;
     try {
       setState(() => fileBusy = true);
-      final pdfBytes = await BulletinPdfGenerator.generateBulletin(planName.text.trim(), plan);
-      await Printing.sharePdf(bytes: pdfBytes, filename: 'boletin_liturgico.pdf');
+      final pdfBytes = await BulletinPdfGenerator.generateBulletin(
+        planName.text.trim(),
+        plan,
+        churchName:
+            widget.prefs.getString('tenant_church_name') ?? globalChurchName,
+      );
+      await Printing.sharePdf(
+        bytes: pdfBytes,
+        filename: 'boletin_liturgico.pdf',
+      );
     } catch (e) {
       message('Error al generar boletín: $e');
     } finally {
@@ -2700,10 +2599,9 @@ class WorkspaceState extends State<Workspace> {
       ),
     );
     if (result != null && mounted) {
-      setState(() {
-        plan[i] = plan[i].copyWith(notes: result);
-      });
-      savePlan();
+      ref
+          .read(planProvider.notifier)
+          .replaceEntry(i, plan[i].copyWith(notes: result));
       syncOutput();
     }
   }
@@ -2808,12 +2706,12 @@ class WorkspaceState extends State<Workspace> {
   }
 
   void loadServiceTemplate(ServiceTemplate template) {
-    setState(() {
-      plan = List<Entry>.of(template.entries);
-      final now = DateTime.now();
-      planName.text = '${template.title} (${now.day}/${now.month})';
-    });
-    savePlan();
+    final now = DateTime.now();
+    final name = '${template.title} (${now.day}/${now.month})';
+    planName.text = name;
+    ref
+        .read(planProvider.notifier)
+        .saveAs(name, entries: List<Entry>.of(template.entries));
     message(
       'Plantilla "${template.title}" cargada con ${template.entries.length} elementos.',
     );
@@ -2952,7 +2850,7 @@ class WorkspaceState extends State<Workspace> {
                   labelText: 'Nombre del culto',
                 ),
                 onSubmitted: (_) {
-                  setState(savePlan);
+                  savePlan();
                   message('Culto guardado.');
                 },
               ),
@@ -2963,7 +2861,7 @@ class WorkspaceState extends State<Workspace> {
                 children: [
                   FilledButton.icon(
                     onPressed: () {
-                      setState(savePlan);
+                      savePlan();
                       message('Culto guardado.');
                     },
                     icon: const Icon(Icons.save_outlined),
@@ -3031,15 +2929,7 @@ class WorkspaceState extends State<Workspace> {
                       tooltip: 'Abrir culto guardado',
                       enabled: !fileBusy,
                       onSelected: (name) {
-                        setState(() {
-                          activePlan = name;
-                          planName.text = name;
-                          plan = [
-                            for (final e in savedPlans[name])
-                              Entry.fromJson(Map<String, dynamic>.from(e)),
-                          ];
-                        });
-                        persist('activePlan', name);
+                        ref.read(planProvider.notifier).setActivePlan(name);
                       },
                       itemBuilder: (_) => [
                         for (final name in savedPlans.keys)
@@ -3054,11 +2944,9 @@ class WorkspaceState extends State<Workspace> {
                     onPressed: fileBusy
                         ? null
                         : () {
-                            setState(() {
-                              plan = [];
-                              planName.text =
-                                  'Nuevo culto ${DateTime.now().day}-${DateTime.now().month}';
-                            });
+                            final name =
+                                'Nuevo culto ${DateTime.now().day}-${DateTime.now().month}';
+                            ref.read(planProvider.notifier).createPlan(name);
                           },
                     child: const Text('Nuevo culto'),
                   ),
@@ -3093,13 +2981,8 @@ class WorkspaceState extends State<Workspace> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: plan.length,
-                onReorderItem: (a, b) {
-                  setState(() {
-                    final e = plan.removeAt(a);
-                    plan.insert(b, e);
-                  });
-                  savePlan();
-                },
+                onReorderItem: (a, b) =>
+                    ref.read(planProvider.notifier).moveEntry(a, b),
                 itemBuilder: (context, i) => Card(
                   key: ValueKey('plan-$i-${plan[i].id}'),
                   elevation: 0,
@@ -3170,10 +3053,7 @@ class WorkspaceState extends State<Workspace> {
                         IconButton(
                           tooltip: 'Quitar de esta lista',
                           icon: const Icon(Icons.remove_circle_outline),
-                          onPressed: () {
-                            setState(() => plan.removeAt(i));
-                            savePlan();
-                          },
+                          onPressed: () => removePlanEntry(i),
                         ),
                         const SizedBox(width: 25),
                       ],
@@ -3337,7 +3217,7 @@ class WorkspaceState extends State<Workspace> {
           Text(label),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: isCustom ? 'custom' : value,
+            initialValue: isCustom ? 'custom' : value,
             isExpanded: true,
             decoration: const InputDecoration(border: OutlineInputBorder()),
             items: [
@@ -3375,10 +3255,8 @@ class WorkspaceState extends State<Workspace> {
               final file = await FilePicker.pickFile(type: FileType.image);
               if (file != null) {
                 final bytes = await file.readAsBytes();
-                if (bytes != null) {
-                  onChanged('base64:' + base64Encode(bytes));
-                  setState(() {});
-                }
+                onChanged('base64:${base64Encode(bytes)}');
+                setState(() {});
               }
             },
           ),
@@ -3401,7 +3279,7 @@ class WorkspaceState extends State<Workspace> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
+        builder: (context, setDialogState) {
           return AlertDialog(
             title: const Text('Personalizar Iglesia'),
             content: SizedBox(
@@ -3425,14 +3303,14 @@ class WorkspaceState extends State<Workspace> {
                       'Logotipo habitual (domingo a viernes):',
                       selectedLogo,
                       (v) => selectedLogo = v,
-                      setState,
+                      setDialogState,
                     ),
                     const SizedBox(height: 24),
                     buildDropdown(
                       'Logotipo de sábado (incluye viernes de tarde):',
                       selectedSabbathLogo,
                       (v) => selectedSabbathLogo = v,
-                      setState,
+                      setDialogState,
                     ),
                     const SizedBox(height: 16),
                     const Text(
@@ -3451,9 +3329,10 @@ class WorkspaceState extends State<Workspace> {
               FilledButton(
                 onPressed: () {
                   globalChurchName = nameController.text.trim();
-                  if (globalChurchName.isEmpty)
+                  if (globalChurchName.isEmpty) {
                     globalChurchName =
                         'Conferencia General de la Iglesia de Dios';
+                  }
                   globalChurchLogoAsset = selectedLogo;
                   globalChurchSabbathLogoAsset = selectedSabbathLogo;
 
@@ -3467,7 +3346,7 @@ class WorkspaceState extends State<Workspace> {
                     globalChurchSabbathLogoAsset,
                   );
 
-                  this.setState(() {});
+                  setState(() {});
                   syncOutput();
                   Navigator.pop(context);
                 },

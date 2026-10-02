@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "985475660075",
+    "project_id": "cgdi-app-v2",
+    "storage_bucket": "cgdi-app-v2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:985475660075:android:633694321377a793e76d6e",
+        "android_client_info": {
+          "package_name": "org.cgid.cgid"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "985475660075-be3i4adnd5uec2869t7rssd0aoughs0a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2TCNo6i6I81D5iCzc-NE_aklL2qYBvFg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "985475660075-be3i4adnd5uec2869t7rssd0aoughs0a.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

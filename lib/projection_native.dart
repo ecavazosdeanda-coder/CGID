@@ -16,6 +16,7 @@ Map<String, dynamic>? initialOutput;
 String _currentMode = 'main';
 Process? _outputProcess;
 Process? _stageProcess;
+Process? _overlayProcess;
 Future<void> _pendingWrite = Future.value();
 Future<void> _pendingProcessChange = Future.value();
 String? _lastPayload;
@@ -48,11 +49,19 @@ Future<void> _queuePayload(String payload, Iterable<String> targets) {
 }
 
 Future<void> _replaceProcess({
-  required bool stage,
+  required String mode,
   required List<String> arguments,
 }) async {
   Future<void> replace() async {
-    final previous = stage ? _stageProcess : _outputProcess;
+    Process? previous;
+    if (mode == 'stage') {
+      previous = _stageProcess;
+    } else if (mode == 'overlay') {
+      previous = _overlayProcess;
+    } else {
+      previous = _outputProcess;
+    }
+
     if (previous != null) {
       try {
         previous.kill();
@@ -61,16 +70,20 @@ Future<void> _replaceProcess({
     }
 
     final process = await Process.start(Platform.resolvedExecutable, arguments);
-    if (stage) {
+    if (mode == 'stage') {
       _stageProcess = process;
+    } else if (mode == 'overlay') {
+      _overlayProcess = process;
     } else {
       _outputProcess = process;
     }
     unawaited(
       process.exitCode.then((_) {
-        if (stage && identical(_stageProcess, process)) {
+        if (mode == 'stage' && identical(_stageProcess, process)) {
           _stageProcess = null;
-        } else if (!stage && identical(_outputProcess, process)) {
+        } else if (mode == 'overlay' && identical(_overlayProcess, process)) {
+          _overlayProcess = null;
+        } else if (mode == 'projection' && identical(_outputProcess, process)) {
           _outputProcess = null;
         }
       }),
@@ -114,6 +127,30 @@ Future<String> initializeProjection(List<String> args) async {
     }
     await windowManager.setTitle('CGID · Monitor de Escenario — F11 completa');
     return 'stage';
+  }
+
+  if (args.contains('--overlay')) {
+    _currentMode = 'overlay';
+    final file = await _getFile('overlay');
+    if (await file.exists()) {
+      try {
+        initialOutput = jsonDecode(await file.readAsString());
+      } catch (_) {}
+    }
+    await windowManager.setTitle('CGID · Salida OBS / Transmisión');
+    return 'overlay';
+  }
+
+  if (args.contains('--dock')) {
+    _currentMode = 'dock';
+    final file = await _getFile('projection');
+    if (await file.exists()) {
+      try {
+        initialOutput = jsonDecode(await file.readAsString());
+      } catch (_) {}
+    }
+    await windowManager.setTitle('CGID · Panel OBS');
+    return 'dock';
   }
 
   await windowManager.setTitle('CGID · Biblioteca y proyección');
@@ -171,7 +208,7 @@ Future<void> openOutput(Map<String, dynamic> state) async {
   final payload = jsonEncode(state);
   await _queuePayload(payload, const ['projection']);
   _lastPayload = payload;
-  await _replaceProcess(stage: false, arguments: const ['--projection']);
+  await _replaceProcess(mode: 'projection', arguments: const ['--projection']);
 }
 
 Future<void> openStage(Map<String, dynamic> state) async {
@@ -179,7 +216,22 @@ Future<void> openStage(Map<String, dynamic> state) async {
   final payload = jsonEncode(state);
   await _queuePayload(payload, const ['stage']);
   _lastPayload = payload;
-  await _replaceProcess(stage: true, arguments: const ['--stage']);
+  await _replaceProcess(mode: 'stage', arguments: const ['--stage']);
+}
+
+Future<void> openOverlay(
+  Map<String, dynamic> state, {
+  String bg = 'transparent',
+  String mode = 'lowerthird',
+}) async {
+  if (!supportsOutput) return;
+  final payload = jsonEncode(state);
+  await _queuePayload(payload, const ['overlay']);
+  _lastPayload = payload;
+  await _replaceProcess(
+    mode: 'overlay',
+    arguments: ['--overlay', '--bg=$bg', '--mode=$mode'],
+  );
 }
 
 Future<void> sendOutput(Map<String, dynamic> state) async {
@@ -187,7 +239,7 @@ Future<void> sendOutput(Map<String, dynamic> state) async {
   final payload = jsonEncode(state);
   if (payload == _lastPayload) return;
 
-  await _queuePayload(payload, const ['projection', 'stage']);
+  await _queuePayload(payload, const ['projection', 'stage', 'overlay']);
   _lastPayload = payload;
 }
 

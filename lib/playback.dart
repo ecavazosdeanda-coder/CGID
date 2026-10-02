@@ -234,12 +234,12 @@ class PlaybackController extends ChangeNotifier {
           final engines = await tts.getEngines;
           final preferredEngine = engines?.firstWhere(
             (e) =>
-                (e as String).toLowerCase().contains('google') &&
-                (e as String).toLowerCase().contains('tts'),
+                e.toString().toLowerCase().contains('google') &&
+                e.toString().toLowerCase().contains('tts'),
             orElse: () => null,
           );
           if (preferredEngine != null) {
-            await tts.setEngine(preferredEngine as String);
+            await tts.setEngine(preferredEngine.toString());
           }
         } catch (_) {}
         await configureAndroidSpeech(tts).timeout(const Duration(seconds: 15));

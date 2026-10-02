@@ -1,16 +1,28 @@
-import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+
 import '../../../content.dart';
 
 class BulletinPdfGenerator {
-  static Future<Uint8List> generateBulletin(String title, List<Entry> plan) async {
-    final pdf = pw.Document();
+  static Future<Uint8List> generateBulletin(
+    String title,
+    List<Entry> plan, {
+    String churchName = 'Conferencia General de la Iglesia de Dios',
+    bool compress = true,
+  }) async {
+    final pdf = pw.Document(compress: compress);
 
+    final regularFont = pw.Font.ttf(
+      await rootBundle.load('assets/fonts/roboto-regular.ttf'),
+    );
+    final boldFont = pw.Font.ttf(
+      await rootBundle.load('assets/fonts/roboto-bold.ttf'),
+    );
     final theme = pw.ThemeData.withFont(
-      base: pw.Font.helvetica(),
-      bold: pw.Font.helveticaBold(),
-      italic: pw.Font.helveticaOblique(),
+      base: regularFont,
+      bold: boldFont,
+      italic: regularFont,
     );
 
     pdf.addPage(
@@ -21,8 +33,22 @@ class BulletinPdfGenerator {
         header: (context) {
           return pw.Column(
             children: [
-              pw.Text('Iglesia de Dios', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
-              pw.Text('Columna y Apoyo de la Verdad', style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
+              pw.Text(
+                churchName,
+                style: pw.TextStyle(
+                  fontSize: 16,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.blue900,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+              pw.Text(
+                'Columna y Apoyo de la Verdad',
+                style: const pw.TextStyle(
+                  fontSize: 12,
+                  color: PdfColors.grey700,
+                ),
+              ),
               pw.Divider(color: PdfColors.grey400),
               pw.SizedBox(height: 10),
             ],
@@ -33,7 +59,11 @@ class BulletinPdfGenerator {
             pw.Center(
               child: pw.Text(
                 title.isEmpty ? 'Boletín Litúrgico' : title,
-                style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.black,
+                ),
                 textAlign: pw.TextAlign.center,
               ),
             ),
@@ -47,7 +77,11 @@ class BulletinPdfGenerator {
             pw.Center(
               child: pw.Text(
                 '"Dios es Espíritu; y los que le adoran, en espíritu y en verdad es necesario que adoren." Juan 4:24',
-                style: pw.TextStyle(fontStyle: pw.FontStyle.italic, fontSize: 10, color: PdfColors.grey600),
+                style: pw.TextStyle(
+                  fontStyle: pw.FontStyle.italic,
+                  fontSize: 10,
+                  color: PdfColors.grey600,
+                ),
                 textAlign: pw.TextAlign.center,
               ),
             ),
@@ -70,30 +104,30 @@ class BulletinPdfGenerator {
   }
 
   static pw.Widget _buildEntryItem(int index, Entry entry) {
-    String firstSectionText = '';
-    if (entry.sections.isNotEmpty) {
-      firstSectionText = entry.sections.first.text;
-    }
-    
+    final publicData = publicEntryData(entry);
+    final firstSectionText = publicData['firstSectionText']!;
+
     return pw.Container(
       margin: const pw.EdgeInsets.only(bottom: 12),
       padding: const pw.EdgeInsets.all(10),
       decoration: pw.BoxDecoration(
-        border: pw.Border(left: pw.BorderSide(color: PdfColors.blue800, width: 3)),
+        border: pw.Border(
+          left: pw.BorderSide(color: PdfColors.blue800, width: 3),
+        ),
         color: PdfColors.grey50,
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            '$index. ${entry.title}',
+            '$index. ${publicData['title']}',
             style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
           ),
-          if (entry.subtitle.isNotEmpty)
+          if (publicData['subtitle']!.isNotEmpty)
             pw.Padding(
               padding: const pw.EdgeInsets.only(top: 2),
               child: pw.Text(
-                entry.subtitle,
+                publicData['subtitle']!,
                 style: pw.TextStyle(fontSize: 11, color: PdfColors.grey700),
               ),
             ),
@@ -102,21 +136,25 @@ class BulletinPdfGenerator {
               padding: const pw.EdgeInsets.only(top: 8),
               child: pw.Text(
                 _truncateHymn(firstSectionText),
-                style: pw.TextStyle(fontSize: 10, fontStyle: pw.FontStyle.italic, color: PdfColors.grey800),
-              ),
-            ),
-          if (entry.notes.isNotEmpty)
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(top: 8),
-              child: pw.Text(
-                'Nota: ${entry.notes}',
-                style: pw.TextStyle(fontSize: 10, color: PdfColors.blue900),
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontStyle: pw.FontStyle.italic,
+                  color: PdfColors.grey800,
+                ),
               ),
             ),
         ],
       ),
     );
   }
+
+  /// Public fields allowed to leave the device in a shared bulletin.
+  /// Private plan notes are deliberately excluded here.
+  static Map<String, String> publicEntryData(Entry entry) => {
+    'title': entry.title,
+    'subtitle': entry.subtitle,
+    'firstSectionText': entry.sections.isEmpty ? '' : entry.sections.first.text,
+  };
 
   static String _truncateHymn(String content) {
     final blocks = content.split('\n');
