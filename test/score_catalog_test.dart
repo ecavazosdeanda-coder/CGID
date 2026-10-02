@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cgid/content.dart';
+import 'package:cgid/features/hymnal/presentation/chord_lyrics_view.dart';
 import 'package:cgid/features/hymnal/services/hymn_customization_service.dart';
 import 'package:cgid/features/hymnal/services/score_catalog.dart';
 
@@ -70,5 +71,35 @@ void main() {
     await hymnCustomizationService.clearCustomChords('h1');
     final cleared = await hymnCustomizationService.getCustomChords('h1');
     expect(cleared, isNull);
+  });
+
+  test('parseTokenSlices correctly separates multiple chords within words', () {
+    final slices = parseTokenSlices('per[G]d[D]ón.');
+    expect(slices.length, 3);
+    expect(slices[0].chord, isNull);
+    expect(slices[0].text, 'per');
+    expect(slices[1].chord, 'G');
+    expect(slices[1].text, 'd');
+    expect(slices[2].chord, 'D');
+    expect(slices[2].text, 'ón.');
+
+    final prefix = parseTokenSlices('[G]Quiero');
+    expect(prefix.length, 1);
+    expect(prefix[0].chord, 'G');
+    expect(prefix[0].text, 'Quiero');
+
+    final mid = parseTokenSlices('a[C]fecto');
+    expect(mid.length, 2);
+    expect(mid[0].chord, isNull);
+    expect(mid[0].text, 'a');
+    expect(mid[1].chord, 'C');
+    expect(mid[1].text, 'fecto');
+
+    final consecutive = parseTokenSlices('[G][D]');
+    expect(consecutive.length, 2);
+    expect(consecutive[0].chord, 'G');
+    expect(consecutive[0].text, '');
+    expect(consecutive[1].chord, 'D');
+    expect(consecutive[1].text, '');
   });
 }

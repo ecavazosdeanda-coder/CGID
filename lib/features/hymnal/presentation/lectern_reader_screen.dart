@@ -9,6 +9,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../content.dart';
 import '../services/hymn_customization_service.dart';
 import '../services/score_catalog.dart';
+import 'chord_lyrics_view.dart';
 import 'hymn_chord_editor_dialog.dart';
 
 class LecternReaderScreen extends StatefulWidget {
@@ -174,116 +175,15 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
     }
   }
 
-  String _transposeText(String text) {
-    // Si los acordes están desactivados, eliminamos los corchetes de acordes [G], [Am], etc.
-    if (!showChords) {
-      return text.replaceAll(RegExp(r'\[[CDEFGAB][#b]?[^\]]*\]'), '');
-    }
-
-    return ChordTransposer.transposeText(
-      text,
-      transposeAmount,
-      useSolfeo: useSolfeo,
-    );
-  }
-
   Widget _buildRichText(String text, Color textCol, Color chordCol) {
-    final processed = _transposeText(text);
-
-    // Si los acordes no están activados o no hay acordes en el texto, renderizado simple
-    if (!showChords || !processed.contains('[')) {
-      final cleanText = processed.replaceAll(RegExp(r'\[[^\]]+\]'), '');
-      return Text(
-        cleanText,
-        style: TextStyle(
-          color: textCol,
-          fontSize: fontSize,
-          height: 1.5,
-          fontWeight: FontWeight.w500,
-        ),
-      );
-    }
-
-    final lines = processed.split('\n');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < lines.length; i++) ...[
-          _buildLyricLineWithChords(lines[i], textCol, chordCol),
-          if (i < lines.length - 1) const SizedBox(height: 14),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildLyricLineWithChords(String line, Color textCol, Color chordCol) {
-    if (line.trim().isEmpty) return const SizedBox(height: 10);
-
-    // Tokenizamos la línea palabra por palabra preservando acordes asociados
-    final tokens = line.trim().split(RegExp(r'\s+'));
-    return Wrap(
-      spacing: 6.0,
-      runSpacing: 10.0,
-      crossAxisAlignment: WrapCrossAlignment.end,
-      children: [
-        for (final token in tokens)
-          _buildWordWithChord(token, textCol, chordCol),
-      ],
-    );
-  }
-
-  Widget _buildWordWithChord(String token, Color textCol, Color chordCol) {
-    final chordRegex = RegExp(r'\[([^\]]+)\]');
-    final chordMatches = chordRegex.allMatches(token);
-
-    if (chordMatches.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 22.0),
-        child: Text(
-          token,
-          style: TextStyle(
-            color: textCol,
-            fontSize: fontSize,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      );
-    }
-
-    final chordText = chordMatches.map((m) => m.group(1)!).join(' ');
-    final cleanWord = token.replaceAll(chordRegex, '');
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          margin: const EdgeInsets.only(bottom: 3),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-          decoration: BoxDecoration(
-            color: chordCol.withAlpha(28),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: chordCol.withAlpha(100), width: 0.8),
-          ),
-          child: Text(
-            chordText,
-            style: TextStyle(
-              color: chordCol,
-              fontSize: (fontSize * 0.72).clamp(11.0, 24.0),
-              fontWeight: FontWeight.w800,
-              fontFamily: 'monospace',
-            ),
-          ),
-        ),
-        Text(
-          cleanWord.isEmpty ? ' ' : cleanWord,
-          style: TextStyle(
-            color: textCol,
-            fontSize: fontSize,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+    return ChordLyricsBlock(
+      text: text,
+      fontSize: fontSize,
+      textCol: textCol,
+      chordCol: chordCol,
+      showChords: showChords,
+      transposeAmount: transposeAmount,
+      useSolfeo: useSolfeo,
     );
   }
 

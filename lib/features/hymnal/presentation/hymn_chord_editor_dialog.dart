@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../content.dart';
 import '../services/hymn_customization_service.dart';
+import 'chord_lyrics_view.dart';
 
 class HymnChordEditorDialog extends StatefulWidget {
   final Entry hymn;
@@ -152,6 +153,26 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
     setState(() {});
   }
 
+  void _insertText(String snippet) {
+    final text = _controller.text;
+    final selection = _controller.selection;
+
+    int start = selection.start;
+    int end = selection.end;
+    if (start < 0 || end < 0) {
+      start = text.length;
+      end = text.length;
+    }
+
+    final newText = text.replaceRange(start, end, snippet);
+    _controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: start + snippet.length),
+    );
+    _focusNode.requestFocus();
+    setState(() {});
+  }
+
   Future<void> _save() async {
     if (!HymnCustomizationService.isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -247,7 +268,7 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
                         ),
                         const SizedBox(height: 2),
                         const Text(
-                          'Escribe los acordes entre corchetes ej: [G#] antes de la palabra deseada.',
+                          'Escribe acordes entre corchetes ej: [G]. Puedes colocarlos antes de palabras ([G]Dios) o en sílabas ([G]per[D]dón).',
                           style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ],
@@ -278,6 +299,24 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
                         ),
                       ),
                       const Spacer(),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        onPressed: () => _insertText(' '),
+                        child: const Text('+ Espacio', style: TextStyle(fontSize: 11)),
+                      ),
+                      const SizedBox(width: 4),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        onPressed: () => _insertText('-'),
+                        child: const Text('- Guion', style: TextStyle(fontSize: 11)),
+                      ),
+                      const SizedBox(width: 8),
                       FilledButton.tonal(
                         style: FilledButton.styleFrom(
                           visualDensity: VisualDensity.compact,
@@ -401,10 +440,12 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
                                         ),
                                       ),
                                     ),
-                                  _buildPreviewLines(
-                                    section.text,
-                                    textCol,
-                                    chordCol,
+                                  ChordLyricsBlock(
+                                    text: section.text,
+                                    fontSize: 15,
+                                    textCol: textCol,
+                                    chordCol: chordCol,
+                                    showChords: true,
                                   ),
                                 ],
                               ),
@@ -452,77 +493,6 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildPreviewLines(String text, Color textCol, Color chordCol) {
-    final lines = text.split('\n');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < lines.length; i++) ...[
-          _buildPreviewLine(lines[i], textCol, chordCol),
-          if (i < lines.length - 1) const SizedBox(height: 12),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildPreviewLine(String line, Color textCol, Color chordCol) {
-    if (line.trim().isEmpty) return const SizedBox(height: 10);
-    final tokens = line.trim().split(RegExp(r'\s+'));
-    final chordRegex = RegExp(r'\[([^\]]+)\]');
-
-    return Wrap(
-      spacing: 6.0,
-      runSpacing: 10.0,
-      crossAxisAlignment: WrapCrossAlignment.end,
-      children: [
-        for (final token in tokens) ...[
-          () {
-            final matches = chordRegex.allMatches(token);
-            if (matches.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Text(
-                  token,
-                  style: TextStyle(color: textCol, fontSize: 14),
-                ),
-              );
-            }
-            final chord = matches.map((m) => m.group(1)!).join(' ');
-            final cleanWord = token.replaceAll(chordRegex, '');
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(bottom: 2),
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: chordCol.withAlpha(30),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: chordCol.withAlpha(120), width: 0.8),
-                  ),
-                  child: Text(
-                    chord,
-                    style: TextStyle(
-                      color: chordCol,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ),
-                Text(
-                  cleanWord.isEmpty ? ' ' : cleanWord,
-                  style: TextStyle(color: textCol, fontSize: 14),
-                ),
-              ],
-            );
-          }(),
-        ],
-      ],
     );
   }
 }
