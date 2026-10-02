@@ -45,10 +45,18 @@
     setInterval(updateBrandingIcon, 60000);
     document.addEventListener('visibilitychange', updateBrandingIcon);
 
-    // Registro de PWA Service Worker para funcionamiento 100% Offline
+    // Registro de PWA Service Worker para funcionamiento 100% Offline con auto-actualización
     if ('serviceWorker' in navigator) {
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      });
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('sw.js').then(function (registration) {
+        navigator.serviceWorker.register('sw.js?v=2.0.0-18').then(function (registration) {
+          registration.update();
           console.log('[CGDI PWA] ServiceWorker registrado con alcance:', registration.scope);
         }, function (err) {
           console.warn('[CGDI PWA] Fallo en registro de ServiceWorker:', err);

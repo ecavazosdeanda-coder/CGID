@@ -441,7 +441,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                     ? 'Editar acordes personalizados'
                     : 'Editar o corregir acordes manualmente',
                 icon: Icon(
-                  hasCustomChords ? Icons.edit_note : Icons.tune,
+                  hasCustomChords ? Icons.edit_note : Icons.edit,
                   color: hasCustomChords ? Colors.amberAccent : null,
                 ),
                 onPressed: () async {
@@ -544,17 +544,27 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                     vertical: 8,
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(Icons.check_circle, color: Colors.white, size: 16),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Acordes corregidos manualmente por el ministerio de alabanza.',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      const Expanded(
+                        child: Text(
+                          'Acordes corregidos manualmente por el ministerio de alabanza.',
+                          style: TextStyle(color: Colors.white, fontSize: 12),
+                        ),
                       ),
-                      const SizedBox(width: 12),
-                      InkWell(
-                        onTap: () async {
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.teal.shade900,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('Editar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        onPressed: () async {
                           final result = await HymnChordEditorDialog.show(
                             context,
                             hymn: currentEntry,
@@ -564,15 +574,6 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                             await _loadChordChart(keepShowChords: true);
                           }
                         },
-                        child: const Text(
-                          'Editar',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
                       ),
                     ],
                   ),
@@ -586,17 +587,28 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                     vertical: 8,
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Expanded(
                         child: Text(
                           'Acordes extraídos de la partitura MusicXML${chordChart?.keyLabel.isNotEmpty == true ? ' · Tono: ${chordChart!.keyLabel}' : ''}. Requieren revisión.',
                           style: const TextStyle(color: Colors.white, fontSize: 12),
-                          textAlign: TextAlign.center,
                         ),
                       ),
-                      InkWell(
-                        onTap: () async {
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.amber.shade900,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.edit_note, size: 18),
+                        label: const Text(
+                          'Corregir acordes',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                        onPressed: () async {
                           final result = await HymnChordEditorDialog.show(
                             context,
                             hymn: currentEntry,
@@ -606,18 +618,6 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                             await _loadChordChart(keepShowChords: true);
                           }
                         },
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text(
-                            'Corregir acordes',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
                       ),
                     ],
                   ),
