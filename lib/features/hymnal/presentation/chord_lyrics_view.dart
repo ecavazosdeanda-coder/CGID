@@ -103,7 +103,7 @@ class ChordLyricsLine extends StatelessWidget {
 
     return Wrap(
       spacing: 6.0,
-      runSpacing: 10.0,
+      runSpacing: 6.0,
       crossAxisAlignment: WrapCrossAlignment.end,
       children: [
         for (final token in tokens)
@@ -152,8 +152,8 @@ class ChordLyricsLine extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          margin: const EdgeInsets.only(bottom: 3, right: 3),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+          margin: const EdgeInsets.only(bottom: 2, right: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.0),
           decoration: BoxDecoration(
             color: chordCol.withAlpha(28),
             borderRadius: BorderRadius.circular(4),
@@ -222,7 +222,7 @@ class ChordLyricsBlock extends StatelessWidget {
           ),
           if (i < lines.length - 1)
             SizedBox(
-              height: (showChords && lines[i].contains('[')) ? 14.0 : 6.0,
+              height: (showChords && lines[i].contains('[')) ? 8.0 : 4.0,
             ),
         ],
       ],

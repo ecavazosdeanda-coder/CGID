@@ -228,6 +228,85 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
     Navigator.of(context).pop(<Section>[]);
   }
 
+  Widget _buildEditorField() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        maxLines: null,
+        expands: true,
+        style: const TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 14,
+          height: 1.5,
+        ),
+        decoration: const InputDecoration(
+          border: OutlineInputBorder(),
+          hintText: '[ESTROFA 1]\n[G]Quiero cantar a mi Señor...',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewPane({
+    required bool dark,
+    required Color textCol,
+    required Color chordCol,
+  }) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final sections = parseTextToSections(_controller.text);
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            for (final section in sections)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: dark
+                      ? const Color(0xff182229)
+                      : const Color(0xfff1ece1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: dark
+                        ? const Color(0xff233138)
+                        : const Color(0xffe2d9c8),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (section.label.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          section.label.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.teal,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ChordLyricsBlock(
+                      text: section.text,
+                      fontSize: 15,
+                      textCol: textCol,
+                      chordCol: chordCol,
+                      showChords: true,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -237,7 +316,7 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 820, maxHeight: 720),
+        constraints: const BoxConstraints(maxWidth: 1040, maxHeight: 780),
         child: Column(
           children: [
             // AppBar / Header
@@ -373,88 +452,102 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
               ),
             ),
 
-            // Pestañas (Editar / Previsualizar)
-            TabBar(
-              controller: _tabController,
-              tabs: const [
-                Tab(icon: Icon(Icons.edit, size: 18), text: 'Editar Texto'),
-                Tab(icon: Icon(Icons.visibility, size: 18), text: 'Vista Previa en Vivo'),
-              ],
-            ),
-
-            // Contenido de las pestañas
+            // Contenido con soporte responsivo: Pantalla ancha (Split 2 columnas) vs Móvil (Pestañas)
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  // Tab 1: Editor de texto
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      maxLines: null,
-                      expands: true,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 14,
-                        height: 1.5,
-                      ),
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: '[ESTROFA 1]\n[G]Quiero cantar a mi Señor...',
-                      ),
-                    ),
-                  ),
-
-                  // Tab 2: Previsualización en vivo
-                  AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, _) {
-                      final sections = parseTextToSections(_controller.text);
-                      return ListView(
-                        padding: const EdgeInsets.all(20),
-                        children: [
-                          for (final section in sections)
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: dark
-                                    ? const Color(0xff182229)
-                                    : const Color(0xfff1ece1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (section.label.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: Text(
-                                        section.label.toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Colors.teal,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 680;
+                  if (isWide) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                color: Theme.of(context).dividerColor.withAlpha(20),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.edit_note, size: 16, color: Colors.teal),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'Texto con acordes [G]',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                     ),
-                                  ChordLyricsBlock(
-                                    text: section.text,
-                                    fontSize: 15,
-                                    textCol: textCol,
-                                    chordCol: chordCol,
-                                    showChords: true,
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
+                              Expanded(child: _buildEditorField()),
+                            ],
+                          ),
+                        ),
+                        VerticalDivider(
+                          width: 1,
+                          thickness: 1,
+                          color: Theme.of(context).dividerColor.withAlpha(60),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                color: Theme.of(context).dividerColor.withAlpha(20),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.visibility, size: 16, color: Colors.teal),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'Vista Previa en Vivo',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildPreviewPane(
+                                  dark: dark,
+                                  textCol: textCol,
+                                  chordCol: chordCol,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+
+                  // Modo móvil estrecho con pestañas
+                  return Column(
+                    children: [
+                      TabBar(
+                        controller: _tabController,
+                        tabs: const [
+                          Tab(icon: Icon(Icons.edit, size: 18), text: 'Editar Texto'),
+                          Tab(icon: Icon(Icons.visibility, size: 18), text: 'Vista Previa en Vivo'),
                         ],
-                      );
-                    },
-                  ),
-                ],
+                      ),
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildEditorField(),
+                            _buildPreviewPane(
+                              dark: dark,
+                              textCol: textCol,
+                              chordCol: chordCol,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
 

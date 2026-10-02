@@ -35,6 +35,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
   bool showChords = false;
   bool useSolfeo = false;
   bool showPedalHelper = false;
+  int? userColumnsPreference;
   late int currentIndex;
   late Entry currentEntry;
   ChordChart? chordChart;
@@ -184,6 +185,119 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
       showChords: showChords,
       transposeAmount: transposeAmount,
       useSolfeo: useSolfeo,
+    );
+  }
+
+  int _determineColumnCount(double width, int sectionCount) {
+    if (userColumnsPreference != null && userColumnsPreference! > 0) {
+      return userColumnsPreference!.clamp(1, sectionCount > 0 ? sectionCount : 1);
+    }
+    if (sectionCount <= 1) return 1;
+    if (width >= 1200 && sectionCount >= 3) return 3;
+    if (width >= 720 && sectionCount >= 2) return 2;
+    return 1;
+  }
+
+  List<List<Section>> _partitionSections(List<Section> sections, int numCols) {
+    if (sections.isEmpty || numCols <= 1) {
+      return [sections];
+    }
+    final cols = List.generate(numCols, (_) => <Section>[]);
+    if (sections.length <= numCols) {
+      for (var i = 0; i < sections.length; i++) {
+        cols[i].add(sections[i]);
+      }
+      return cols;
+    }
+
+    int sectionWeight(Section s) {
+      final lineCount = s.text.split('\n').where((l) => l.trim().isNotEmpty).length;
+      return lineCount + (s.label.isNotEmpty ? 2 : 0);
+    }
+
+    if (numCols == 2) {
+      final totalWeight = sections.fold<int>(0, (sum, s) => sum + sectionWeight(s));
+      var currentWeight = 0;
+      var splitIdx = 1;
+      var bestDiff = double.infinity;
+
+      for (var i = 1; i < sections.length; i++) {
+        currentWeight += sectionWeight(sections[i - 1]);
+        final col2Weight = totalWeight - currentWeight;
+        final diff = (currentWeight - col2Weight).abs().toDouble();
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          splitIdx = i;
+        }
+      }
+      cols[0].addAll(sections.sublist(0, splitIdx));
+      cols[1].addAll(sections.sublist(splitIdx));
+      return cols;
+    }
+
+    // 3 columnas
+    final totalWeight = sections.fold<int>(0, (sum, s) => sum + sectionWeight(s));
+    final targetColWeight = totalWeight / 3.0;
+    var currentWeight = 0;
+    var colIdx = 0;
+
+    for (var i = 0; i < sections.length; i++) {
+      final s = sections[i];
+      final w = sectionWeight(s);
+      final remainingSections = sections.length - i;
+      final remainingCols = numCols - colIdx;
+
+      if (remainingSections <= remainingCols && colIdx < numCols - 1) {
+        colIdx++;
+        currentWeight = 0;
+      } else if (colIdx < numCols - 1 &&
+          currentWeight + (w / 2) > targetColWeight &&
+          cols[colIdx].isNotEmpty) {
+        colIdx++;
+        currentWeight = 0;
+      }
+      cols[colIdx].add(s);
+      currentWeight += w;
+    }
+    return cols;
+  }
+
+  Widget _buildSectionCard(
+    Section section, {
+    required Color cardBg,
+    required Color labelCol,
+    required Color textCol,
+    required Color chordCol,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: dark ? const Color(0xff233138) : const Color(0xffe2d9c8),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (section.label.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                section.label.toUpperCase(),
+                style: TextStyle(
+                  color: labelCol,
+                  fontWeight: FontWeight.bold,
+                  fontSize: fontSize * 0.55,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ),
+          _buildRichText(section.text, textCol, chordCol),
+        ],
+      ),
     );
   }
 
@@ -368,6 +482,47 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                   : null,
             ),
 
+            // Selector de Columnas (Atril apaisado / vertical)
+            PopupMenuButton<int>(
+              tooltip: 'Distribución de columnas (Atril)',
+              icon: Icon(
+                userColumnsPreference == 1
+                    ? Icons.view_agenda_outlined
+                    : (userColumnsPreference == 2
+                        ? Icons.view_column_outlined
+                        : (userColumnsPreference == 3
+                            ? Icons.view_week_outlined
+                            : Icons.auto_awesome_mosaic_outlined)),
+              ),
+              onSelected: (val) {
+                setState(() {
+                  userColumnsPreference = val == 0 ? null : val;
+                });
+              },
+              itemBuilder: (context) => [
+                CheckedPopupMenuItem<int>(
+                  value: 0,
+                  checked: userColumnsPreference == null,
+                  child: const Text('Auto (adaptar a pantalla)'),
+                ),
+                CheckedPopupMenuItem<int>(
+                  value: 1,
+                  checked: userColumnsPreference == 1,
+                  child: const Text('1 Columna (Vertical)'),
+                ),
+                CheckedPopupMenuItem<int>(
+                  value: 2,
+                  checked: userColumnsPreference == 2,
+                  child: const Text('2 Columnas (Atril apaisado)'),
+                ),
+                CheckedPopupMenuItem<int>(
+                  value: 3,
+                  checked: userColumnsPreference == 3,
+                  child: const Text('3 Columnas (Panorámico)'),
+                ),
+              ],
+            ),
+
             // Bluetooth Pedal Helper Info
             IconButton(
               tooltip: 'Pedales Bluetooth (PageFlip/AirTurn)',
@@ -529,62 +684,84 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                   ),
               ],
               Expanded(
-                child: ListView(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 24,
-                  ),
-                  children: [
-                    if (currentEntry.subtitle.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Text(
-                          currentEntry.subtitle,
-                          style: TextStyle(
-                            color: dark
-                                ? const Color(0xff94a3b8)
-                                : const Color(0xff64748b),
-                            fontSize: fontSize * 0.7,
-                            fontStyle: FontStyle.italic,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final numCols = _determineColumnCount(
+                      constraints.maxWidth,
+                      displayedSections.length,
+                    );
+                    final partitioned = _partitionSections(displayedSections, numCols);
+
+                    return SingleChildScrollView(
+                      controller: _scrollController,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: constraints.maxWidth > 900 ? 32 : 16,
+                        vertical: 20,
                       ),
-                    for (final section in displayedSections)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 20),
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: dark
-                                ? const Color(0xff233138)
-                                : const Color(0xffe2d9c8),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: numCols == 1
+                                ? 850
+                                : (numCols == 2 ? 1440 : 1880),
                           ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (section.label.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Text(
-                                  section.label.toUpperCase(),
-                                  style: TextStyle(
-                                    color: labelCol,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: fontSize * 0.55,
-                                    letterSpacing: 1.0,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (currentEntry.subtitle.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: Text(
+                                    currentEntry.subtitle,
+                                    style: TextStyle(
+                                      color: dark
+                                          ? const Color(0xff94a3b8)
+                                          : const Color(0xff64748b),
+                                      fontSize: fontSize * 0.7,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
-                              ),
-                            _buildRichText(section.text, textCol, chordCol),
-                          ],
+                              if (numCols == 1)
+                                for (final section in displayedSections)
+                                  _buildSectionCard(
+                                    section,
+                                    cardBg: cardBg,
+                                    labelCol: labelCol,
+                                    textCol: textCol,
+                                    chordCol: chordCol,
+                                  )
+                              else
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    for (var c = 0; c < partitioned.length; c++) ...[
+                                      if (c > 0) const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          children: [
+                                            for (final section in partitioned[c])
+                                              _buildSectionCard(
+                                                section,
+                                                cardBg: cardBg,
+                                                labelCol: labelCol,
+                                                textCol: textCol,
+                                                chordCol: chordCol,
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                            ],
+                          ),
                         ),
                       ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ],
