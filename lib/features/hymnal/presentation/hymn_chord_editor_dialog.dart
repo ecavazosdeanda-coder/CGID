@@ -183,9 +183,9 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Restablecer acordes oficiales'),
+        title: const Text('Borrar acordes del canto'),
         content: const Text(
-          '¿Deseas descartar las modificaciones manuales y volver a los acordes extraídos de la partitura?',
+          '¿Deseas eliminar todos los acordes guardados de este canto y dejar únicamente la letra limpia?',
         ),
         actions: [
           TextButton(
@@ -193,8 +193,9 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
             child: const Text('Cancelar'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Restablecer'),
+            child: const Text('Borrar acordes'),
           ),
         ],
       ),
@@ -431,8 +432,8 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade400),
                     onPressed: _resetToOriginal,
-                    icon: const Icon(Icons.restore, size: 18),
-                    label: const Text('Restablecer oficial'),
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    label: const Text('Borrar acordes'),
                   ),
                   const Spacer(),
                   TextButton(

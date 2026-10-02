@@ -78,32 +78,25 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
       }
     });
 
-    // 1. Primero verificar si hay acordes personalizados guardados manualmente
+    // 1. Cargar únicamente si el Administrador ha guardado y publicado acordes para este himno
     final custom = await hymnCustomizationService.getCustomChords(hymnId);
+    if (!mounted || currentEntry.id != hymnId) return;
+
     if (custom != null && custom.isNotEmpty) {
-      if (!mounted || currentEntry.id != hymnId) return;
       setState(() {
         customSections = custom;
         chordChart = null;
         chordLoading = false;
         showChords = true;
       });
-      return;
+    } else {
+      setState(() {
+        customSections = null;
+        chordChart = null;
+        chordLoading = false;
+        showChords = false;
+      });
     }
-
-    // 2. Si no hay acordes manuales, cargarlos de la partitura MusicXML
-    ChordChart? chart;
-    try {
-      chart = await scoreCatalog.chordChartFor(hymnId);
-    } catch (_) {
-      chart = null;
-    }
-    if (!mounted || currentEntry.id != hymnId) return;
-    setState(() {
-      customSections = null;
-      chordChart = chart;
-      chordLoading = false;
-    });
   }
 
   @override
@@ -306,14 +299,9 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
         widget.repertoireList != null && widget.repertoireList!.isNotEmpty;
     final hasCustomChords =
         customSections != null && customSections!.isNotEmpty;
-    final displayedSections = showChords
-        ? (customSections ??
-            (chordChart != null
-                ? chordChart!.applyToSections(currentEntry.sections)
-                : currentEntry.sections))
+    final displayedSections = (showChords && hasCustomChords)
+        ? customSections!
         : currentEntry.sections;
-    final hasChordChart =
-        hasCustomChords || (chordChart != null && chordChart!.isEmpty == false);
 
     return KeyboardListener(
       focusNode: _focusNode,
@@ -365,113 +353,104 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
               const VerticalDivider(width: 12, indent: 12, endIndent: 12),
             ],
 
-            // Transpose
-            IconButton(
-              tooltip: 'Transportar Tono (-1 semitono)',
-              icon: const Icon(Icons.exposure_minus_1),
-              onPressed: showChords
-                  ? () => setState(() => transposeAmount--)
-                  : null,
-            ),
-            InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => setState(() => transposeAmount = 0),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                child: Center(
-                  child: Text(
-                    transposeAmount > 0
-                        ? '+$transposeAmount'
-                        : '$transposeAmount',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: transposeAmount != 0 ? Colors.amber : null,
+            // Controles de Acordes y Transporte (Solo si este himno tiene acordes)
+            if (hasCustomChords) ...[
+              // Transpose -1
+              IconButton(
+                tooltip: 'Transportar Tono (-1 semitono)',
+                icon: const Icon(Icons.exposure_minus_1),
+                onPressed: showChords
+                    ? () => setState(() => transposeAmount--)
+                    : null,
+              ),
+              InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => setState(() => transposeAmount = 0),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  child: Center(
+                    child: Text(
+                      transposeAmount > 0
+                          ? '+$transposeAmount'
+                          : '$transposeAmount',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: transposeAmount != 0 ? Colors.amber : null,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            IconButton(
-              tooltip: 'Transportar Tono (+1 semitono)',
-              icon: const Icon(Icons.exposure_plus_1),
-              onPressed: showChords
-                  ? () => setState(() => transposeAmount++)
-                  : null,
-            ),
-
-            // Toggle Chords
-            IconButton(
-              tooltip: showChords ? 'Ocultar Acordes' : 'Mostrar Acordes',
-              icon: Icon(
-                showChords ? Icons.music_note : Icons.music_off,
-                color: showChords ? chordCol : Colors.grey,
+              // Transpose +1
+              IconButton(
+                tooltip: 'Transportar Tono (+1 semitono)',
+                icon: const Icon(Icons.exposure_plus_1),
+                onPressed: showChords
+                    ? () => setState(() => transposeAmount++)
+                    : null,
               ),
-              onPressed: chordLoading
-                  ? null
-                  : () {
-                      if (!hasChordChart) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Esta partitura todavía no contiene acordes reconocibles.',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-                      setState(() {
-                        showChords = !showChords;
-                        if (!showChords) transposeAmount = 0;
-                      });
-                    },
-            ),
 
-            // Toggle Notation (C, D, E vs Do, Re, Mi)
-            if (showChords) ...[
-              Tooltip(
-                message: useSolfeo
-                    ? 'Cambiar a cifrado americano (C, D, E)'
-                    : 'Cambiar a solfeo latino (Do, Re, Mi)',
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                  ),
-                  onPressed: () => setState(() => useSolfeo = !useSolfeo),
-                  child: Text(
-                    useSolfeo ? 'Do' : 'C',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: chordCol,
-                      fontSize: 14,
+              // Toggle Chords
+              IconButton(
+                tooltip: showChords ? 'Ocultar Acordes' : 'Mostrar Acordes',
+                icon: Icon(
+                  showChords ? Icons.music_note : Icons.music_off,
+                  color: showChords ? chordCol : Colors.grey,
+                ),
+                onPressed: () {
+                  setState(() {
+                    showChords = !showChords;
+                    if (!showChords) transposeAmount = 0;
+                  });
+                },
+              ),
+
+              // Toggle Notation (C, D, E vs Do, Re, Mi)
+              if (showChords)
+                Tooltip(
+                  message: useSolfeo
+                      ? 'Cambiar a cifrado americano (C, D, E)'
+                      : 'Cambiar a solfeo latino (Do, Re, Mi)',
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                    ),
+                    onPressed: () => setState(() => useSolfeo = !useSolfeo),
+                    child: Text(
+                      useSolfeo ? 'Do' : 'C',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: chordCol,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                ),
-              ),
-
-              // Editar Acordes Manualmente (Exclusivo Administrador Maestro)
-              if (HymnCustomizationService.isMasterAdmin)
-                IconButton(
-                  tooltip: hasCustomChords
-                      ? 'Editar acordes personalizados (Admin)'
-                      : 'Editar o corregir acordes (Admin)',
-                  icon: Icon(
-                    hasCustomChords ? Icons.edit_note : Icons.edit,
-                    color: hasCustomChords ? Colors.amberAccent : null,
-                  ),
-                  onPressed: () async {
-                    final result = await HymnChordEditorDialog.show(
-                      context,
-                      hymn: currentEntry,
-                      initialSections: displayedSections,
-                    );
-                    if (result != null) {
-                      await _loadChordChart(keepShowChords: true);
-                    }
-                  },
                 ),
             ],
+
+            // Editar o Agregar Acordes (Exclusivo Administrador)
+            if (HymnCustomizationService.isAdmin)
+              IconButton(
+                tooltip: hasCustomChords
+                    ? 'Editar acordes (Admin)'
+                    : 'Agregar acordes a este canto (Admin)',
+                icon: Icon(
+                  hasCustomChords ? Icons.edit_note : Icons.playlist_add,
+                  color: hasCustomChords ? Colors.amberAccent : Colors.tealAccent,
+                ),
+                onPressed: () async {
+                  final result = await HymnChordEditorDialog.show(
+                    context,
+                    hymn: currentEntry,
+                    initialSections: hasCustomChords ? customSections! : currentEntry.sections,
+                  );
+                  if (result != null) {
+                    await _loadChordChart(keepShowChords: true);
+                  }
+                },
+              ),
 
             // Font Sizing
             IconButton(
@@ -551,7 +530,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                   ),
                 ),
               if (chordLoading) const LinearProgressIndicator(minHeight: 3),
-              if (showChords && HymnCustomizationService.isAdmin) ...[
+              if (HymnCustomizationService.isAdmin) ...[
                 if (hasCustomChords)
                   Container(
                     width: double.infinity,
@@ -580,12 +559,12 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                             visualDensity: VisualDensity.compact,
                           ),
                           icon: const Icon(Icons.edit, size: 16),
-                          label: const Text('Editar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          label: const Text('Editar acordes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                           onPressed: () async {
                             final result = await HymnChordEditorDialog.show(
                               context,
                               hymn: currentEntry,
-                              initialSections: displayedSections,
+                              initialSections: customSections ?? currentEntry.sections,
                             );
                             if (result != null) {
                               await _loadChordChart(keepShowChords: true);
@@ -595,43 +574,50 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                       ],
                     ),
                   )
-                else if (hasChordChart)
+                else
                   Container(
                     width: double.infinity,
-                    color: Colors.amber.shade900,
+                    color: dark ? const Color(0xff152e35) : const Color(0xffe6f4ea),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 8,
+                      vertical: 6,
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.admin_panel_settings, color: Colors.white, size: 16),
+                        Icon(
+                          Icons.admin_panel_settings,
+                          color: dark ? Colors.tealAccent : Colors.teal.shade800,
+                          size: 16,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Modo Administrador · Acordes extraídos de MusicXML${chordChart?.keyLabel.isNotEmpty == true ? ' · Tono: ${chordChart!.keyLabel}' : ''}.',
-                            style: const TextStyle(color: Colors.white, fontSize: 12),
+                            'Modo Administrador · Este canto aún no tiene acordes.',
+                            style: TextStyle(
+                              color: dark ? Colors.tealAccent : Colors.teal.shade900,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.amber.shade900,
+                            backgroundColor: Colors.teal.shade700,
+                            foregroundColor: Colors.white,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             visualDensity: VisualDensity.compact,
                           ),
-                          icon: const Icon(Icons.edit_note, size: 18),
+                          icon: const Icon(Icons.add_circle_outline, size: 15),
                           label: const Text(
-                            'Corregir acordes',
+                            'Agregar acordes',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                           ),
                           onPressed: () async {
                             final result = await HymnChordEditorDialog.show(
                               context,
                               hymn: currentEntry,
-                              initialSections: displayedSections,
+                              initialSections: currentEntry.sections,
                             );
                             if (result != null) {
                               await _loadChordChart(keepShowChords: true);

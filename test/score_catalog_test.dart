@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cgid/content.dart';
+import 'package:cgid/features/hymnal/services/hymn_customization_service.dart';
 import 'package:cgid/features/hymnal/services/score_catalog.dart';
 
 void main() {
@@ -9,6 +10,11 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    HymnCustomizationService.setAdminForTesting(true);
+  });
+
+  tearDown(() {
+    HymnCustomizationService.setAdminForTesting(false);
   });
 
   test(
@@ -47,5 +53,22 @@ void main() {
       ChordTransposer.transposeText('[Am]Canto', 0, useSolfeo: true),
       '[Lam]Canto',
     );
+  });
+
+  test('hymns start clean and support custom chords saving and clearing', () async {
+    final custom = await hymnCustomizationService.getCustomChords('h1');
+    expect(custom, isNull);
+
+    await hymnCustomizationService.saveCustomChords('h1', const [
+      Section('Estrofa 1', '[G]Santo [C]Dios'),
+    ]);
+
+    final saved = await hymnCustomizationService.getCustomChords('h1');
+    expect(saved, isNotNull);
+    expect(saved!.first.text, '[G]Santo [C]Dios');
+
+    await hymnCustomizationService.clearCustomChords('h1');
+    final cleared = await hymnCustomizationService.getCustomChords('h1');
+    expect(cleared, isNull);
   });
 }

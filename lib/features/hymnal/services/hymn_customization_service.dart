@@ -13,22 +13,25 @@ import 'web_score_storage.dart';
 
 class HymnCustomizationService {
   static const masterAdminEmail = 'ecavazosdeanda@gmail.com';
-  static const _chordsPrefix = 'cgdi_custom_chords_';
+  static const _chordsPrefix = 'cgdi_chords_v2_';
   static const _scorePrefix = 'cgdi_custom_score_';
 
   static bool _cachedRoleIsAdmin = false;
 
+  @visibleForTesting
+  static void setAdminForTesting(bool value) => _cachedRoleIsAdmin = value;
+
   /// Determina si el usuario actualmente autenticado tiene rol de Administrador
   static bool get isAdmin {
     try {
-      if (Firebase.apps.isEmpty) return false;
+      if (Firebase.apps.isEmpty) return _cachedRoleIsAdmin;
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return false;
+      if (user == null) return _cachedRoleIsAdmin;
       final email = user.email?.trim().toLowerCase();
       if (email == masterAdminEmail) return true;
       return _cachedRoleIsAdmin;
     } catch (_) {
-      return false;
+      return _cachedRoleIsAdmin;
     }
   }
 
