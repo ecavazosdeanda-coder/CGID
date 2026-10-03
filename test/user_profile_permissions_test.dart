@@ -17,6 +17,8 @@ void main() {
     expect(profile.canManageTeam, isFalse);
     expect(profile.canEditNotices, isFalse);
     expect(profile.canRestoreDatabase, isFalse);
+    expect(profile.canDownloadScores, isFalse);
+    expect(profile.canEditScores, isFalse);
   });
 
   test('missing role never defaults to pastor', () {
@@ -26,5 +28,25 @@ void main() {
 
     expect(profile.role, 'sin_rol');
     expect(profile.canEditPlans, isFalse);
+    expect(profile.canDownloadScores, isFalse);
+    expect(profile.canEditScores, isFalse);
+  });
+
+  test('only administrators can download and edit scores', () {
+    const admin = UserProfile(
+      uid: 'admin-1',
+      email: 'admin@example.org',
+      role: 'admin',
+    );
+    const musician = UserProfile(
+      uid: 'musician-1',
+      email: 'musico@example.org',
+      role: 'musico',
+    );
+
+    expect(admin.canDownloadScores, isTrue);
+    expect(admin.canEditScores, isTrue);
+    expect(musician.canDownloadScores, isFalse);
+    expect(musician.canEditScores, isFalse);
   });
 }

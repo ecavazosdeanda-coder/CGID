@@ -109,6 +109,19 @@ void main() {
     expect(reopened.verified, isFalse);
   });
 
+  test('MusicXML download is restricted to administrators', () async {
+    await scoreCatalog.load();
+
+    HymnCustomizationService.setAdminForTesting(false);
+    expect(await hymnCustomizationService.getOfficialScoreBytes('h1'), isNull);
+
+    HymnCustomizationService.setAdminForTesting(true);
+    expect(
+      await hymnCustomizationService.getOfficialScoreBytes('h1'),
+      isNotNull,
+    );
+  });
+
   test('parseTokenSlices correctly separates multiple chords within words', () {
     final slices = parseTokenSlices('per[G]d[D]ón.');
     expect(slices.length, 3);

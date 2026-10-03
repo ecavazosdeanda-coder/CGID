@@ -276,6 +276,19 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
   }
 
   Future<void> _downloadOfficialScore() async {
+    if (!HymnCustomizationService.isAdmin) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(
+              'Acceso restringido: solo el administrador puede descargar partituras.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
     final bytes = await hymnCustomizationService.getOfficialScoreBytes(
       widget.hymn.id,
     );
@@ -469,34 +482,36 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
             : AppBar(
                 title: Text(widget.hymn.title),
                 actions: [
-                  PopupMenuButton<String>(
-                    tooltip: 'Opciones y corrección de partitura',
-                    icon: Icon(
-                      hasCustomScore ? Icons.check_circle : Icons.tune,
-                      color: hasCustomScore ? Colors.tealAccent : null,
-                    ),
-                    onSelected: (value) {
-                      if (value == 'download') _downloadOfficialScore();
-                      if (value == 'upload') _uploadCustomScore();
-                      if (value == 'restore') _restoreOfficialScore();
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'download',
-                        child: ListTile(
-                          leading: Icon(Icons.download),
-                          title: Text('Descargar MusicXML (.mxl)'),
-                          subtitle: Text('Para abrir y afinar en MuseScore'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
+                  if (HymnCustomizationService.isAdmin)
+                    PopupMenuButton<String>(
+                      tooltip: 'Administrar partitura',
+                      icon: Icon(
+                        hasCustomScore
+                            ? Icons.check_circle
+                            : Icons.admin_panel_settings,
+                        color: hasCustomScore ? Colors.tealAccent : null,
                       ),
-                      if (HymnCustomizationService.isAdmin) ...[
+                      onSelected: (value) {
+                        if (value == 'download') _downloadOfficialScore();
+                        if (value == 'upload') _uploadCustomScore();
+                        if (value == 'restore') _restoreOfficialScore();
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'download',
+                          child: ListTile(
+                            leading: Icon(Icons.download),
+                            title: Text('Descargar MusicXML (.mxl)'),
+                            subtitle: Text('Sólo para administración'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
                         const PopupMenuItem(
                           value: 'upload',
                           child: ListTile(
                             leading: Icon(Icons.upload_file),
-                            title: Text('Subir partitura corregida'),
-                            subtitle: Text('.mxl o .musicxml corregido'),
+                            title: Text('Editar / reemplazar partitura'),
+                            subtitle: Text('Subir .mxl o .musicxml corregido'),
                             contentPadding: EdgeInsets.zero,
                           ),
                         ),
@@ -513,8 +528,7 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                             ),
                           ),
                       ],
-                    ],
-                  ),
+                    ),
                   IconButton(
                     tooltip: 'Pedales Bluetooth (PageFlip/AirTurn)',
                     icon: const Icon(Icons.settings_remote_outlined),

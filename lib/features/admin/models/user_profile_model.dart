@@ -31,6 +31,8 @@ class UserProfile {
   bool get canRestoreDatabase => isAdmin || isPastor;
   bool get canAccessProjection => true;
   bool get canAccessMusic => true;
+  bool get canDownloadScores => isAdmin;
+  bool get canEditScores => isAdmin;
 
   bool canAssignRole(String targetRole) {
     if (isAdmin) return true;

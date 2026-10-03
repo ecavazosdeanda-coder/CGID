@@ -48,19 +48,23 @@ class HymnCustomizationService {
   static const _scoreReviewPrefix = 'cgdi_score_review_v1_';
 
   static bool _cachedRoleIsAdmin = false;
+  static String? _cachedAdminUid;
 
   @visibleForTesting
-  static void setAdminForTesting(bool value) => _cachedRoleIsAdmin = value;
+  static void setAdminForTesting(bool value) {
+    _cachedRoleIsAdmin = value;
+    if (!value) _cachedAdminUid = null;
+  }
 
   /// Determina si el usuario actualmente autenticado tiene rol de Administrador
   static bool get isAdmin {
     try {
       if (Firebase.apps.isEmpty) return _cachedRoleIsAdmin;
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return _cachedRoleIsAdmin;
+      if (user == null) return false;
       final email = user.email?.trim().toLowerCase();
       if (email == masterAdminEmail) return true;
-      return _cachedRoleIsAdmin;
+      return _cachedRoleIsAdmin && _cachedAdminUid == user.uid;
     } catch (_) {
       return _cachedRoleIsAdmin;
     }
@@ -76,11 +80,13 @@ class HymnCustomizationService {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         _cachedRoleIsAdmin = false;
+        _cachedAdminUid = null;
         return false;
       }
       final email = user.email?.trim().toLowerCase();
       if (email == masterAdminEmail) {
         _cachedRoleIsAdmin = true;
+        _cachedAdminUid = user.uid;
         return true;
       }
       final doc = await FirebaseFirestore.instance
@@ -89,12 +95,15 @@ class HymnCustomizationService {
           .get();
       if (doc.exists && doc.data()?['role'] == 'admin') {
         _cachedRoleIsAdmin = true;
+        _cachedAdminUid = user.uid;
         return true;
       }
       _cachedRoleIsAdmin = false;
+      _cachedAdminUid = null;
       return false;
     } catch (_) {
       _cachedRoleIsAdmin = false;
+      _cachedAdminUid = null;
       return false;
     }
   }
@@ -394,9 +403,17 @@ class HymnCustomizationService {
     );
   }
 
-  /// Descarga el archivo de partitura MusicXML (.mxl) oficial para que el músico
-  /// pueda abrirlo y corregirlo en MuseScore u otro editor de partituras.
+  /// Obtiene la partitura MusicXML oficial únicamente para administradores.
+  ///
+  /// Esta validación complementa el control de interfaz para impedir que otra
+  /// ruta interna invoque la exportación sin autorización.
   Future<Uint8List?> getOfficialScoreBytes(String hymnId) async {
+    if (!isAdmin) {
+      debugPrint(
+        'Descarga de partitura denegada: solo administradores pueden exportar MusicXML.',
+      );
+      return null;
+    }
     final info = scoreCatalog[hymnId];
     if (info == null || info.files.isEmpty) return null;
     try {
@@ -414,6 +431,12 @@ class HymnCustomizationService {
 
   /// Descarga un archivo a la computadora o dispositivo del usuario.
   void downloadFile(Uint8List bytes, String filename) {
+    if (!isAdmin) {
+      debugPrint(
+        'Exportación de partitura denegada: el usuario no es administrador.',
+      );
+      return;
+    }
     if (kIsWeb) {
       triggerWebDownload(bytes, filename);
     }
