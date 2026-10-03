@@ -442,3 +442,23 @@ flutter run -d web-server --web-port 8080 --web-hostname 0.0.0.0
 
 ---
 *Documento aprobado y validado. Sirve como fuente de verdad absoluta para el desarrollo de CGID v2.0.*
+
+## 11. CONTROL DE CALIDAD DE PARTITURAS MUSICXML
+
+Las 316 partituras se procesan mediante una normalización OMR reproducible. El
+archivo Audiveris bruto nunca se sobrescribe: la aplicación consume la copia de
+`assets/scores/auto_corrected/` y conserva la fuente original para auditoría.
+
+La automatización puede corregir metadatos, créditos, texto OCR, separación de
+estrofas, capas de cifrado confundidas con letra y artefactos inequívocos de
+pedal, dinámica u ornamento. También genera un reporte de incoherencias
+métricas. No debe inventar ni aprobar notas, ritmos, ligaduras, armaduras, tempo
+o acordes cuando el escaneo no permita una decisión determinista.
+
+Toda partitura automática inicia con estado
+`auto_corrected_needs_review`. Para declararla verificada, un administrador debe
+abrir la comparación MusicXML/escaneo, revisar la partitura completa y confirmar
+explícitamente el dictamen. Subir o restablecer un MusicXML reabre siempre la
+verificación. El reporte técnico se conserva en
+`assets/scores/review_report.json` y las excepciones comprobadas visualmente en
+`assets/scores/manual_overrides.json`.

@@ -25,7 +25,13 @@ void main() {
 
       expect(scoreCatalog.entries.length, greaterThanOrEqualTo(300));
       expect(scoreCatalog['h1']?.files, isNotEmpty);
-      expect(scoreCatalog['h1']?.assetKeyFor(0), 'assets/scores/page-002.mxl');
+      expect(
+        scoreCatalog['h1']?.assetKeyFor(0),
+        'assets/scores/auto_corrected/page-002.mxl',
+      );
+      expect(scoreCatalog['h1']?.originalFiles, isNotEmpty);
+      expect(scoreCatalog['h1']?.requiresVerification, isTrue);
+      expect(scoreCatalog['h1']?.metricIssueCount, greaterThan(0));
     },
   );
 
@@ -56,21 +62,51 @@ void main() {
     );
   });
 
-  test('hymns start clean and support custom chords saving and clearing', () async {
-    final custom = await hymnCustomizationService.getCustomChords('h1');
-    expect(custom, isNull);
+  test(
+    'hymns start clean and support custom chords saving and clearing',
+    () async {
+      final custom = await hymnCustomizationService.getCustomChords('h1');
+      expect(custom, isNull);
 
-    await hymnCustomizationService.saveCustomChords('h1', const [
-      Section('Estrofa 1', '[G]Santo [C]Dios'),
-    ]);
+      await hymnCustomizationService.saveCustomChords('h1', const [
+        Section('Estrofa 1', '[G]Santo [C]Dios'),
+      ]);
 
-    final saved = await hymnCustomizationService.getCustomChords('h1');
-    expect(saved, isNotNull);
-    expect(saved!.first.text, '[G]Santo [C]Dios');
+      final saved = await hymnCustomizationService.getCustomChords('h1');
+      expect(saved, isNotNull);
+      expect(saved!.first.text, '[G]Santo [C]Dios');
 
-    await hymnCustomizationService.clearCustomChords('h1');
-    final cleared = await hymnCustomizationService.getCustomChords('h1');
-    expect(cleared, isNull);
+      await hymnCustomizationService.clearCustomChords('h1');
+      final cleared = await hymnCustomizationService.getCustomChords('h1');
+      expect(cleared, isNull);
+    },
+  );
+
+  test('score verification is explicit and can be reopened', () async {
+    final initial = await hymnCustomizationService.getScoreVerification('h1');
+    expect(initial.verified, isFalse);
+
+    expect(
+      await hymnCustomizationService.saveScoreVerification(
+        'h1',
+        verified: true,
+        notes: 'Comparada con el original.',
+      ),
+      isTrue,
+    );
+    final verified = await hymnCustomizationService.getScoreVerification('h1');
+    expect(verified.verified, isTrue);
+    expect(verified.notes, contains('original'));
+
+    expect(
+      await hymnCustomizationService.saveScoreVerification(
+        'h1',
+        verified: false,
+      ),
+      isTrue,
+    );
+    final reopened = await hymnCustomizationService.getScoreVerification('h1');
+    expect(reopened.verified, isFalse);
   });
 
   test('parseTokenSlices correctly separates multiple chords within words', () {

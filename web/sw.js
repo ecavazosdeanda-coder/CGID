@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cgdi-v2-cache-2.0.0-19-scores';
+const CACHE_NAME = 'cgdi-v2-cache-2.0.0-20-omr-review';
 
 // Recursos estáticos iniciales a cachear para asegurar funcionamiento offline
 const PRECACHE_ASSETS = [

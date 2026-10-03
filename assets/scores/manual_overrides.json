@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "entries": {
+    "h1": {
+      "source": "Revisión visual de la página 2 del PDF original",
+      "tempo": {
+        "beatUnit": "quarter",
+        "dotted": true,
+        "perMinute": 58
+      }
+    }
+  }
+}

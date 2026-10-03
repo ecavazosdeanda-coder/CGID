@@ -69,3 +69,13 @@ La inspección visual de v2 confirmó que la portada carga correctamente y la co
 ## Criterio de salida para v2 estable
 
 No promover `dev-v2` a producción principal hasta que: las reglas desplegadas pasen pruebas de emulador, dos cuentas de iglesias distintas no puedan cruzar datos, un pastor pueda invitar y activar una cuenta desde cero, el orden creado en un equipo llegue y se proyecte desde otro, y exista una prueba completa con OBS y pérdida temporal de red.
+
+## Anexo 3 de octubre de 2026: saneamiento OMR del himnario
+
+- Se procesaron las 316 partituras y no hubo archivos MXL inválidos o fallidos.
+- Los MusicXML brutos permanecen intactos; las copias normalizadas se guardan en `assets/scores/auto_corrected/`.
+- La pasada automática reconstruyó 507 regiones de letra (12,522 palabras) y dejó 202 regiones ambiguas sin alterar, marcadas para revisión.
+- Se eliminaron 730 créditos parásitos, 68 pedales falsos, 181 dinámicas sospechosas y 99 ornamentos OMR; se normalizaron 38 indicaciones de tempo textuales.
+- Se detectaron 2,468 incoherencias métricas. Son alertas de revisión: no se rellenaron ni recortaron compases automáticamente.
+- El himno 1 fue contrastado visualmente con la página 2 del original; se corrigió a negra con puntillo = 58 y se retiraron los artefactos `Ped.`, `sf` y mordente.
+- La interfaz exige comparar digital/original antes de permitir al administrador marcar una partitura como verificada. El dictamen se sincroniza en `hymn_customizations.scoreReview`.

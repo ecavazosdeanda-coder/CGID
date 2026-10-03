@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -30,7 +31,11 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
   bool fullScreen = false;
   bool showPedalNotice = false;
   bool showOriginal = false;
+  bool compareOriginal = false;
+  bool hasComparedWithOriginal = false;
   bool hasCustomScore = false;
+  bool loadingVerification = true;
+  ScoreVerification verification = const ScoreVerification();
   final FocusNode _focusNode = FocusNode();
   StreamSubscription<User?>? _authSubscription;
 
@@ -47,26 +52,188 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
     super.initState();
     try {
       if (Firebase.apps.isNotEmpty) {
-        unawaited(HymnCustomizationService.refreshAdminStatus().then((_) {
-          if (mounted) setState(() {});
-        }));
-        _authSubscription = FirebaseAuth.instance.authStateChanges().listen((_) async {
+        unawaited(
+          HymnCustomizationService.refreshAdminStatus().then((_) {
+            if (mounted) setState(() {});
+          }),
+        );
+        _authSubscription = FirebaseAuth.instance.authStateChanges().listen((
+          _,
+        ) async {
           await HymnCustomizationService.refreshAdminStatus();
           if (mounted) setState(() {});
         });
       }
     } catch (_) {}
     _checkCustomScore();
+    _loadVerification();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
     });
   }
 
   Future<void> _checkCustomScore() async {
-    final hasCustom = await hymnCustomizationService.hasCustomScore(widget.hymn.id);
+    final hasCustom = await hymnCustomizationService.hasCustomScore(
+      widget.hymn.id,
+    );
     if (mounted && hasCustom != hasCustomScore) {
       setState(() => hasCustomScore = hasCustom);
     }
+  }
+
+  Future<void> _loadVerification() async {
+    final result = await hymnCustomizationService.getScoreVerification(
+      widget.hymn.id,
+    );
+    if (mounted) {
+      setState(() {
+        verification = result;
+        loadingVerification = false;
+      });
+    }
+  }
+
+  void _showReviewDetails() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Estado de revisión musical'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                verification.verified
+                    ? 'Verificada contra el escaneo original'
+                    : 'Corrección automática pendiente de verificación',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'El proceso automático corrigió metadatos, texto OCR y artefactos inequívocos. '
+                'No aprobó notas ni ritmos dudosos.',
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Alertas métricas detectadas: ${widget.score.metricIssueCount}',
+              ),
+              Text('Advertencias automáticas: ${widget.score.warningCount}'),
+              if (verification.notes.trim().isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Notas del revisor:',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                Text(verification.notes),
+              ],
+              if (verification.verifiedAt.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Dictamen: ${verification.verifiedBy} · ${verification.verifiedAt}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _verifyScore() async {
+    if (!HymnCustomizationService.isAdmin) return;
+    if (!hasComparedWithOriginal) {
+      setState(() {
+        showOriginal = false;
+        compareOriginal = true;
+        hasComparedWithOriginal = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Compara primero toda la partitura digital con el original. Después vuelve a pulsar “Verificar”.',
+          ),
+        ),
+      );
+      return;
+    }
+    final notesController = TextEditingController(text: verification.notes);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar verificación musical'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Confirma únicamente si revisaste notas, ritmos, compás, armadura, tempo, letra y acordes contra el escaneo original.',
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: notesController,
+              minLines: 2,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                labelText: 'Notas de verificación (opcional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.verified),
+            label: const Text('Confirmo que está correcta'),
+          ),
+        ],
+      ),
+    );
+    final notes = notesController.text;
+    notesController.dispose();
+    if (confirmed != true) return;
+    final saved = await hymnCustomizationService.saveScoreVerification(
+      widget.hymn.id,
+      verified: true,
+      notes: notes,
+    );
+    if (!mounted) return;
+    if (saved) {
+      await _loadVerification();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.teal,
+          content: Text('Partitura marcada como verificada.'),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo publicar la verificación.')),
+      );
+    }
+  }
+
+  Future<void> _reopenReview() async {
+    if (!HymnCustomizationService.isAdmin) return;
+    final saved = await hymnCustomizationService.saveScoreVerification(
+      widget.hymn.id,
+      verified: false,
+      notes: 'Verificación reabierta para una nueva revisión musical.',
+    );
+    if (saved) await _loadVerification();
   }
 
   @override
@@ -109,20 +276,29 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
   }
 
   Future<void> _downloadOfficialScore() async {
-    final bytes = await hymnCustomizationService.getOfficialScoreBytes(widget.hymn.id);
+    final bytes = await hymnCustomizationService.getOfficialScoreBytes(
+      widget.hymn.id,
+    );
     if (bytes == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo encontrar el archivo oficial.')),
+          const SnackBar(
+            content: Text('No se pudo encontrar el archivo oficial.'),
+          ),
         );
       }
       return;
     }
-    hymnCustomizationService.downloadFile(bytes, '${widget.hymn.id}_partitura.mxl');
+    hymnCustomizationService.downloadFile(
+      bytes,
+      '${widget.hymn.id}_partitura.mxl',
+    );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Archivo descargado (.mxl). Ábrelo en MuseScore para afinar notas y compases.'),
+          content: Text(
+            'Archivo descargado (.mxl). Ábrelo en MuseScore para afinar notas y compases.',
+          ),
         ),
       );
     }
@@ -161,7 +337,9 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               backgroundColor: Colors.teal,
-              content: Text('¡Partitura corregida guardada y renderizada con éxito!'),
+              content: Text(
+                '¡Partitura corregida guardada y renderizada con éxito!',
+              ),
             ),
           );
         }
@@ -177,9 +355,9 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al subir archivo: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al subir archivo: $e')));
       }
     }
   }
@@ -226,6 +404,56 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
         const SnackBar(content: Text('Partitura restablecida a la oficial.')),
       );
     }
+  }
+
+  Widget _digitalView(bool dark) => buildDigitalScoreView(
+    widget.score.files[index],
+    dark: dark,
+    customKey: hasCustomScore ? widget.hymn.id : null,
+  );
+
+  Widget _originalView() => PdfViewer.asset(
+    'assets/pdfs/partituras_app.pdf',
+    key: ValueKey('original-$index-$_originalPage-$compareOriginal'),
+    initialPageNumber: _originalPage,
+    params: PdfViewerParams(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+    ),
+  );
+
+  Widget _scoreBody(bool dark) {
+    if (showOriginal) return _originalView();
+    if (!compareOriginal) return _digitalView(dark);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontal = constraints.maxWidth >= 900;
+        Widget panel(String label, Widget child) => Expanded(
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              Expanded(child: child),
+            ],
+          ),
+        );
+        final panels = [
+          panel('MusicXML corregido automáticamente', _digitalView(dark)),
+          panel('Escaneo original · referencia absoluta', _originalView()),
+        ];
+        return horizontal ? Row(children: panels) : Column(children: panels);
+      },
+    );
   }
 
   @override
@@ -277,7 +505,10 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                             value: 'restore',
                             child: ListTile(
                               leading: Icon(Icons.restore, color: Colors.red),
-                              title: Text('Restablecer oficial', style: TextStyle(color: Colors.red)),
+                              title: Text(
+                                'Restablecer oficial',
+                                style: TextStyle(color: Colors.red),
+                              ),
                               contentPadding: EdgeInsets.zero,
                             ),
                           ),
@@ -338,9 +569,9 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
               Material(
                 color: showOriginal
                     ? Theme.of(context).colorScheme.errorContainer
-                    : (hasCustomScore
-                        ? Colors.teal.shade800
-                        : Theme.of(context).colorScheme.tertiaryContainer),
+                    : (verification.verified
+                          ? Colors.teal.shade800
+                          : Theme.of(context).colorScheme.tertiaryContainer),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -351,10 +582,10 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                       Icon(
                         showOriginal
                             ? Icons.picture_as_pdf_outlined
-                            : (hasCustomScore
-                                ? Icons.check_circle
-                                : Icons.auto_awesome),
-                        color: hasCustomScore ? Colors.white : null,
+                            : (verification.verified
+                                  ? Icons.verified
+                                  : Icons.auto_awesome),
+                        color: verification.verified ? Colors.white : null,
                         size: 18,
                       ),
                       const SizedBox(width: 9),
@@ -362,25 +593,42 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                         child: Text(
                           showOriginal
                               ? 'Original escaneado: se muestra únicamente como referencia.'
-                              : (hasCustomScore
-                                  ? 'Partitura personalizada activa (corregida manualmente). Mostrando tu archivo.'
-                                  : 'Partitura limpia reconstruida desde MusicXML. Verifica notas y ritmo antes de uso oficial.'),
+                              : (verification.verified
+                                    ? 'Partitura verificada contra el original${hasCustomScore ? ' · versión personalizada' : ''}.'
+                                    : 'Corrección automática aplicada · pendiente de verificar notas, ritmo, tempo y acordes.'),
                           style: TextStyle(
                             fontSize: 13,
-                            color: hasCustomScore ? Colors.white : null,
+                            color: verification.verified ? Colors.white : null,
                           ),
                         ),
+                      ),
+                      IconButton(
+                        tooltip: 'Detalles de revisión',
+                        onPressed: loadingVerification
+                            ? null
+                            : _showReviewDetails,
+                        icon: const Icon(Icons.info_outline, size: 19),
+                        color: verification.verified ? Colors.white : null,
                       ),
                       if (!showOriginal && HymnCustomizationService.isAdmin)
                         TextButton.icon(
                           style: TextButton.styleFrom(
-                            foregroundColor: hasCustomScore ? Colors.white : null,
+                            foregroundColor: verification.verified
+                                ? Colors.white
+                                : null,
                             visualDensity: VisualDensity.compact,
                           ),
-                          onPressed: _uploadCustomScore,
-                          icon: const Icon(Icons.upload_file, size: 16),
+                          onPressed: verification.verified
+                              ? _reopenReview
+                              : _verifyScore,
+                          icon: Icon(
+                            verification.verified
+                                ? Icons.restart_alt
+                                : Icons.fact_check_outlined,
+                            size: 16,
+                          ),
                           label: Text(
-                            hasCustomScore ? 'Reemplazar' : 'Subir corregida',
+                            verification.verified ? 'Reabrir' : 'Verificar',
                             style: const TextStyle(fontSize: 12),
                           ),
                         ),
@@ -413,22 +661,7 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                   ],
                 ),
               ),
-            Expanded(
-              child: showOriginal
-                  ? PdfViewer.asset(
-                      'assets/pdfs/partituras_app.pdf',
-                      key: ValueKey('original-$index-$_originalPage'),
-                      initialPageNumber: _originalPage,
-                      params: PdfViewerParams(
-                        backgroundColor: Theme.of(context).colorScheme.surface,
-                      ),
-                    )
-                  : buildDigitalScoreView(
-                      widget.score.files[index],
-                      dark: dark,
-                      customKey: hasCustomScore ? widget.hymn.id : null,
-                    ),
-            ),
+            Expanded(child: _scoreBody(dark)),
           ],
         ),
         bottomNavigationBar: fullScreen
@@ -439,19 +672,46 @@ class _DigitalScoreScreenState extends State<DigitalScoreScreen> {
                     horizontal: 16,
                     vertical: 8,
                   ),
-                  child: OutlinedButton.icon(
-                    onPressed: () =>
-                        setState(() => showOriginal = !showOriginal),
-                    icon: Icon(
-                      showOriginal
-                          ? Icons.music_note
-                          : Icons.picture_as_pdf_outlined,
-                    ),
-                    label: Text(
-                      showOriginal
-                          ? 'Volver a la partitura digital'
-                          : 'Ver partitura original',
-                    ),
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 10,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () => setState(() {
+                          showOriginal = false;
+                          compareOriginal = !compareOriginal;
+                          if (compareOriginal) hasComparedWithOriginal = true;
+                        }),
+                        icon: Icon(
+                          compareOriginal
+                              ? Icons.close_fullscreen
+                              : Icons.compare,
+                        ),
+                        label: Text(
+                          compareOriginal
+                              ? 'Cerrar comparación'
+                              : 'Comparar con el original',
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => setState(() {
+                          showOriginal = !showOriginal;
+                          compareOriginal = false;
+                          if (showOriginal) hasComparedWithOriginal = true;
+                        }),
+                        icon: Icon(
+                          showOriginal
+                              ? Icons.music_note
+                              : Icons.picture_as_pdf_outlined,
+                        ),
+                        label: Text(
+                          showOriginal
+                              ? 'Volver a la partitura digital'
+                              : 'Ver sólo el original',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -491,9 +751,7 @@ class OriginalScoreBookScreen extends StatelessWidget {
             ),
           ),
         ),
-        Expanded(
-          child: PdfViewer.asset('assets/pdfs/partituras_app.pdf'),
-        ),
+        Expanded(child: PdfViewer.asset('assets/pdfs/partituras_app.pdf')),
       ],
     ),
   );

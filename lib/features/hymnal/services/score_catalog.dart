@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:archive/archive.dart';
 import 'package:flutter/services.dart';
 import 'package:xml/xml.dart';
@@ -10,22 +11,48 @@ class DigitalScoreInfo {
   final String id;
   final List<int> sourcePages;
   final List<String> files;
+  final List<String> originalFiles;
   final String status;
+  final int automationVersion;
+  final int metricIssueCount;
+  final int warningCount;
 
   const DigitalScoreInfo({
     required this.id,
     required this.sourcePages,
     required this.files,
+    this.originalFiles = const [],
     required this.status,
+    this.automationVersion = 0,
+    this.metricIssueCount = 0,
+    this.warningCount = 0,
   });
 
-  factory DigitalScoreInfo.fromJson(Map<String, dynamic> json) =>
-      DigitalScoreInfo(
-        id: json['id'] as String,
-        sourcePages: List<int>.from(json['sourcePages'] as List? ?? const []),
-        files: List<String>.from(json['files'] as List? ?? const []),
-        status: json['status'] as String? ?? 'needs_review',
-      );
+  factory DigitalScoreInfo.fromJson(
+    Map<String, dynamic> json,
+  ) => DigitalScoreInfo(
+    id: json['id'] as String,
+    sourcePages: List<int>.from(json['sourcePages'] as List? ?? const []),
+    files: List<String>.from(json['files'] as List? ?? const []),
+    originalFiles: List<String>.from(
+      json['originalFiles'] as List? ?? const [],
+    ),
+    status: json['status'] as String? ?? 'needs_review',
+    automationVersion:
+        ((json['review'] as Map?)?['automationVersion'] as num?)?.toInt() ?? 0,
+    metricIssueCount:
+        ((json['review'] as Map?)?['metricIssueCount'] as num?)?.toInt() ?? 0,
+    warningCount:
+        ((json['review'] as Map?)?['warningCount'] as num?)?.toInt() ?? 0,
+  );
+
+  bool get requiresVerification => status != 'verified';
+
+  String get statusLabel => switch (status) {
+    'verified' => 'Verificada',
+    'auto_corrected_needs_review' => 'Corregida automáticamente · pendiente',
+    _ => 'Pendiente de revisión',
+  };
 
   String assetKeyFor(int index) =>
       files[index].replaceFirst(RegExp(r'^assets/assets/'), 'assets/');

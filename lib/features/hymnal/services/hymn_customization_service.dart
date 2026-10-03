@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:archive/archive.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,10 +12,40 @@ import '../../../content.dart';
 import 'score_catalog.dart';
 import 'web_score_storage.dart';
 
+class ScoreVerification {
+  final bool verified;
+  final String notes;
+  final String verifiedBy;
+  final String verifiedAt;
+
+  const ScoreVerification({
+    this.verified = false,
+    this.notes = '',
+    this.verifiedBy = '',
+    this.verifiedAt = '',
+  });
+
+  factory ScoreVerification.fromJson(Map<String, dynamic> json) =>
+      ScoreVerification(
+        verified: json['verified'] as bool? ?? false,
+        notes: json['notes'] as String? ?? '',
+        verifiedBy: json['verifiedBy'] as String? ?? '',
+        verifiedAt: json['verifiedAt'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {
+    'verified': verified,
+    'notes': notes,
+    'verifiedBy': verifiedBy,
+    'verifiedAt': verifiedAt,
+  };
+}
+
 class HymnCustomizationService {
   static const masterAdminEmail = 'ecavazosdeanda@gmail.com';
   static const _chordsPrefix = 'cgdi_chords_v2_';
   static const _scorePrefix = 'cgdi_custom_score_';
+  static const _scoreReviewPrefix = 'cgdi_score_review_v1_';
 
   static bool _cachedRoleIsAdmin = false;
 
@@ -52,7 +83,10 @@ class HymnCustomizationService {
         _cachedRoleIsAdmin = true;
         return true;
       }
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       if (doc.exists && doc.data()?['role'] == 'admin') {
         _cachedRoleIsAdmin = true;
         return true;
@@ -119,7 +153,9 @@ class HymnCustomizationService {
   /// Guarda una versión editada de los acordes y texto para un himno (solo Administrador Maestro).
   Future<bool> saveCustomChords(String hymnId, List<Section> sections) async {
     if (!isMasterAdmin) {
-      debugPrint('Guardado rechazado: solo el Administrador Maestro puede guardar acordes.');
+      debugPrint(
+        'Guardado rechazado: solo el Administrador Maestro puede guardar acordes.',
+      );
       return false;
     }
 
@@ -134,11 +170,11 @@ class HymnCustomizationService {
             .collection('hymn_customizations')
             .doc(hymnId)
             .set({
-          'hymnId': hymnId,
-          'sections': [for (final s in sections) s.toJson()],
-          'updatedAt': FieldValue.serverTimestamp(),
-          'updatedBy': masterAdminEmail,
-        }, SetOptions(merge: true));
+              'hymnId': hymnId,
+              'sections': [for (final s in sections) s.toJson()],
+              'updatedAt': FieldValue.serverTimestamp(),
+              'updatedBy': masterAdminEmail,
+            }, SetOptions(merge: true));
       }
     } catch (e) {
       debugPrint('Error sincronizando acordes a Firestore: $e');
@@ -203,6 +239,89 @@ class HymnCustomizationService {
     }
   }
 
+  /// Lee el dictamen musical publicado para una partitura. La corrección
+  /// automática nunca equivale a una verificación humana.
+  Future<ScoreVerification> getScoreVerification(String hymnId) async {
+    var local = const ScoreVerification();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('$_scoreReviewPrefix$hymnId');
+      if (raw != null && raw.trim().isNotEmpty) {
+        local = ScoreVerification.fromJson(
+          Map<String, dynamic>.from(jsonDecode(raw) as Map),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error leyendo verificación local de $hymnId: $e');
+    }
+
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        final document = await FirebaseFirestore.instance
+            .collection('hymn_customizations')
+            .doc(hymnId)
+            .get();
+        final rawReview = document.data()?['scoreReview'];
+        if (rawReview is Map) {
+          final cloud = ScoreVerification.fromJson(
+            Map<String, dynamic>.from(rawReview),
+          );
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(
+            '$_scoreReviewPrefix$hymnId',
+            jsonEncode(cloud.toJson()),
+          );
+          return cloud;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error consultando verificación de $hymnId: $e');
+    }
+    return local;
+  }
+
+  /// Publica el dictamen después de comparar MusicXML y escaneo original.
+  Future<bool> saveScoreVerification(
+    String hymnId, {
+    required bool verified,
+    String notes = '',
+  }) async {
+    if (!isMasterAdmin) return false;
+    final now = DateTime.now().toUtc().toIso8601String();
+    String email = masterAdminEmail;
+    try {
+      email = FirebaseAuth.instance.currentUser?.email ?? masterAdminEmail;
+    } catch (_) {}
+    final review = ScoreVerification(
+      verified: verified,
+      notes: notes.trim(),
+      verifiedBy: email,
+      verifiedAt: now,
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      '$_scoreReviewPrefix$hymnId',
+      jsonEncode(review.toJson()),
+    );
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        await FirebaseFirestore.instance
+            .collection('hymn_customizations')
+            .doc(hymnId)
+            .set({
+              'hymnId': hymnId,
+              'scoreReview': review.toJson(),
+              'updatedAt': FieldValue.serverTimestamp(),
+              'updatedBy': email,
+            }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      debugPrint('Error publicando verificación de $hymnId: $e');
+      return false;
+    }
+    return true;
+  }
+
   /// Guarda una partitura MusicXML corregida (.mxl, .musicxml o .xml) subida por el usuario (solo Administrador Maestro).
   Future<bool> saveCustomScore({
     required String hymnId,
@@ -210,7 +329,9 @@ class HymnCustomizationService {
     required String fileName,
   }) async {
     if (!isMasterAdmin) {
-      debugPrint('Subida de partitura denegada: solo el Administrador Maestro puede subir partituras.');
+      debugPrint(
+        'Subida de partitura denegada: solo el Administrador Maestro puede subir partituras.',
+      );
       return false;
     }
 
@@ -248,6 +369,11 @@ class HymnCustomizationService {
 
     // Invalida la caché de acordes para que se recalculen desde la nueva partitura
     scoreCatalog.invalidate(hymnId);
+    await saveScoreVerification(
+      hymnId,
+      verified: false,
+      notes: 'Partitura reemplazada; requiere una nueva comparación con el original.',
+    );
     return true;
   }
 
@@ -261,6 +387,11 @@ class HymnCustomizationService {
       removeCustomScoreWeb(hymnId);
     }
     scoreCatalog.invalidate(hymnId);
+    await saveScoreVerification(
+      hymnId,
+      verified: false,
+      notes: 'Se restableció la versión automática; requiere verificación.',
+    );
   }
 
   /// Descarga el archivo de partitura MusicXML (.mxl) oficial para que el músico
