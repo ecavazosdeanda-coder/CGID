@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../tenant/providers/tenant_provider.dart';
 
-class NoticesEditorScreen extends StatefulWidget {
+class NoticesEditorScreen extends ConsumerStatefulWidget {
   const NoticesEditorScreen({super.key});
 
   @override
-  State<NoticesEditorScreen> createState() => _NoticesEditorScreenState();
+  ConsumerState<NoticesEditorScreen> createState() => _NoticesEditorScreenState();
 }
 
-class _NoticesEditorScreenState extends State<NoticesEditorScreen> {
+class _NoticesEditorScreenState extends ConsumerState<NoticesEditorScreen> {
   final TextEditingController _controller = TextEditingController();
-  List<String> _notices = [];
+  List<DocumentSnapshot> _noticeDocs = [];
   String _selectedPriority = 'General';
-  String _storageKey = 'local_notices_unassigned';
 
   final List<String> _priorities = [
     'General',
@@ -28,38 +30,63 @@ class _NoticesEditorScreenState extends State<NoticesEditorScreen> {
   }
 
   Future<void> _loadNotices() async {
-    final prefs = await SharedPreferences.getInstance();
-    final churchId = prefs.getString('selected_church_id') ?? 'unassigned';
-    _storageKey = 'local_notices_$churchId';
-    final scoped = prefs.getStringList(_storageKey);
-    final legacy = prefs.getStringList('local_notices');
-    if (scoped == null && legacy != null) {
-      await prefs.setStringList(_storageKey, legacy);
-    }
-    if (!mounted) return;
-    setState(() {
-      _notices = scoped ?? legacy ?? [];
+    final church = await ref.read(tenantProvider.future);
+    if (church == null) return;
+    
+    FirebaseFirestore.instance
+        .collection('churches')
+        .doc(church.id)
+        .collection('notices')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .listen((snap) {
+      if (!mounted) return;
+      setState(() {
+        _noticeDocs = snap.docs;
+      });
     });
   }
 
-  Future<void> _saveNotices() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_storageKey, _notices);
+  Future<void> _addNotice() async {
+    if (_controller.text.trim().isEmpty) return;
+    
+    final church = await ref.read(tenantProvider.future);
+    if (church == null) return;
+
+    final title = '[$_selectedPriority] ${_controller.text.trim()}';
+
+    await FirebaseFirestore.instance
+        .collection('churches')
+        .doc(church.id)
+        .collection('notices')
+        .add({
+      'title': title,
+      'body': '',
+      'startsAt': Timestamp.now(),
+      'endsAt': Timestamp.fromDate(DateTime.now().add(const Duration(days: 7))),
+      'createdBy': FirebaseAuth.instance.currentUser?.uid ?? 'unknown',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    _controller.clear();
+    
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Avisos guardados en este dispositivo.')),
+        const SnackBar(content: Text('Aviso guardado en la nube.')),
       );
     }
   }
+  
+  Future<void> _deleteNotice(String id) async {
+    final church = await ref.read(tenantProvider.future);
+    if (church == null) return;
 
-  void _addNotice() {
-    if (_controller.text.trim().isNotEmpty) {
-      setState(() {
-        _notices.add('[$_selectedPriority] ${_controller.text.trim()}');
-        _controller.clear();
-      });
-      _saveNotices();
-    }
+    await FirebaseFirestore.instance
+        .collection('churches')
+        .doc(church.id)
+        .collection('notices')
+        .doc(id)
+        .delete();
   }
 
   Color _getColorForPriority(String notice) {
@@ -99,44 +126,27 @@ class _NoticesEditorScreenState extends State<NoticesEditorScreen> {
                   children: [
                     DropdownButton<String>(
                       value: _selectedPriority,
-                      items: _priorities.map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged: (newValue) {
-                        if (newValue != null) {
-                          setState(() {
-                            _selectedPriority = newValue;
-                          });
-                        }
+                      onChanged: (val) {
+                        if (val != null) setState(() => _selectedPriority = val);
                       },
+                      items: _priorities.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: TextField(
                         controller: _controller,
                         decoration: const InputDecoration(
-                          hintText:
-                              'Ej. Reunión de jóvenes este domingo a las 10am',
+                          hintText: 'Escribe el nuevo aviso (Ej: "Ensayo general el sábado a las 5 PM")',
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16),
                         ),
                         onSubmitted: (_) => _addNotice(),
                       ),
                     ),
                     const SizedBox(width: 16),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
-                      ),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Publicar Aviso'),
+                    FilledButton.icon(
                       onPressed: _addNotice,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Agregar'),
                     ),
                   ],
                 ),
@@ -144,78 +154,32 @@ class _NoticesEditorScreenState extends State<NoticesEditorScreen> {
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: _notices.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.speaker_notes_off,
-                            size: 64,
-                            color: Colors.grey.withValues(alpha: 0.5),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'No hay avisos registrados para esta semana.',
-                            style: TextStyle(fontSize: 18, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ReorderableListView.builder(
-                      itemCount: _notices.length,
-                      onReorderItem: (oldIndex, newIndex) {
-                        setState(() {
-                          final item = _notices.removeAt(oldIndex);
-                          _notices.insert(newIndex, item);
-                        });
-                        _saveNotices();
-                      },
+              child: _noticeDocs.isEmpty
+                  ? const Center(child: Text('No hay avisos guardados en la nube.'))
+                  : ListView.builder(
+                      itemCount: _noticeDocs.length,
                       itemBuilder: (context, index) {
-                        final notice = _notices[index];
+                        final doc = _noticeDocs[index];
+                        final data = doc.data() as Map<String, dynamic>;
+                        final noticeText = data['title'] as String? ?? '';
+
                         return Card(
-                          key: ValueKey('$index-$notice'),
-                          elevation: 1,
-                          margin: const EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 8,
-                          ),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundColor: _getColorForPriority(notice)
-                                  .withValues(alpha: 0.1),
+                              backgroundColor: _getColorForPriority(noticeText).withValues(alpha: 0.2),
                               child: Icon(
-                                _getIconForPriority(notice),
-                                color: _getColorForPriority(notice),
+                                _getIconForPriority(noticeText),
+                                color: _getColorForPriority(noticeText),
                               ),
                             ),
                             title: Text(
-                              _cleanNoticeText(notice),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
+                              _cleanNoticeText(noticeText),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.drag_handle,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _notices.removeAt(index);
-                                    });
-                                    _saveNotices();
-                                  },
-                                ),
-                              ],
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.redAccent),
+                              onPressed: () => _deleteNotice(doc.id),
                             ),
                           ),
                         );

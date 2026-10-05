@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../admin/providers/user_profile_provider.dart';
 
 import '../../tenant/models/church_model.dart';
 import '../../tenant/providers/tenant_provider.dart';
@@ -58,6 +59,8 @@ class _AudioStreamPlayerModalState extends ConsumerState<AudioStreamPlayerModal>
     final streamState = ref.watch(lowBandwidthAudioProvider);
     final streamNotifier = ref.read(lowBandwidthAudioProvider.notifier);
     final effectiveStreamUrl = widget.church.audioStreamUrl.trim();
+    final userProfile = ref.watch(userProfileProvider).value;
+    final canEdit = userProfile != null && (userProfile.role == 'admin' || (userProfile.role == 'pastor' && userProfile.churchId == widget.church.id));
 
     return Container(
       decoration: BoxDecoration(
@@ -306,72 +309,74 @@ class _AudioStreamPlayerModalState extends ConsumerState<AudioStreamPlayerModal>
             const Divider(),
 
             // Custom Stream URL Option
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
+            if (canEdit) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Enlace de la señal:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() => _isEditingUrl = !_isEditingUrl);
+                    },
+                    icon: Icon(_isEditingUrl ? Icons.check : Icons.edit, size: 14),
+                    label: Text(_isEditingUrl ? 'Cerrar' : 'Personalizar URL', style: const TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+              if (_isEditingUrl) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _urlController,
+                  style: const TextStyle(fontSize: 13),
+                  decoration: InputDecoration(
+                    labelText: 'URL de transmisión (Icecast, Shoutcast, Radio)',
+                    hintText: 'https://stream.zeno.fm/xyz o http://radio.cgdi.org/live',
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.save, size: 18),
+                      tooltip: 'Guardar para esta iglesia',
+                      onPressed: () async {
+                        try {
+                          await FirebaseFirestore.instance.collection('churches').doc(widget.church.id).update({
+                            'audioStreamUrl': _urlController.text.trim(),
+                          });
+                          ref.invalidate(tenantProvider);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                backgroundColor: Colors.teal,
+                                content: Text('URL de transmisión guardada para esta iglesia.'),
+                              ),
+                            );
+                            setState(() => _isEditingUrl = false);
+                          }
+                        } catch (e) { /* ignored */ }
+                      },
+                    ),
+                  ),
+                ),
+              ] else ...[
                 Text(
-                  'Enlace de la señal:',
+                  effectiveStreamUrl.isNotEmpty
+                      ? effectiveStreamUrl
+                      : 'Sin URL configurada (Usa el botón Personalizar)',
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    fontFamily: 'monospace',
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                ),
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() => _isEditingUrl = !_isEditingUrl);
-                  },
-                  icon: Icon(_isEditingUrl ? Icons.check : Icons.edit, size: 14),
-                  label: Text(_isEditingUrl ? 'Cerrar' : 'Personalizar URL', style: const TextStyle(fontSize: 12)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
-            ),
-            if (_isEditingUrl) ...[
-              const SizedBox(height: 8),
-              TextField(
-                controller: _urlController,
-                style: const TextStyle(fontSize: 13),
-                decoration: InputDecoration(
-                  labelText: 'URL de transmisión (Icecast, Shoutcast, Radio)',
-                  hintText: 'https://stream.zeno.fm/xyz o http://radio.cgdi.org/live',
-                  border: const OutlineInputBorder(),
-                  isDense: true,
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.save, size: 18),
-                    tooltip: 'Guardar para esta iglesia',
-                    onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString(
-                        'custom_audio_stream_${widget.church.id}',
-                        _urlController.text.trim(),
-                      );
-                      ref.invalidate(tenantProvider);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            backgroundColor: Colors.teal,
-                            content: Text('URL de transmisión guardada para esta iglesia.'),
-                          ),
-                        );
-                        setState(() => _isEditingUrl = false);
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ] else ...[
-              Text(
-                effectiveStreamUrl.isNotEmpty
-                    ? effectiveStreamUrl
-                    : 'Sin URL configurada (Usa el botón Personalizar)',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
             ],
           ],
         ),

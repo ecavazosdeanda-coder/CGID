@@ -226,6 +226,21 @@ service cloud.firestore {
              isValidRemoteCommand(data);
     }
 
+    function isValidNoticeData(data) {
+      return data.keys().hasAll(['title']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             (!('body' in data) || (data.body is string && data.body.size() <= 5000)) &&
+             (!('startsAt' in data) || data.startsAt is timestamp) &&
+             (!('endsAt' in data) || data.endsAt is timestamp) &&
+             (!('createdBy' in data) || (data.createdBy is string && data.createdBy.size() <= 100));
+    }
+
+    function isValidEventData(data) {
+      return (!('scope' in data) || data.scope in ['nacional', 'regional', 'local']) &&
+             (!('regionId' in data) || (data.regionId is string && data.regionId.size() <= 100)) &&
+             (!('churchId' in data) || (data.churchId is string && data.churchId.size() <= 100));
+    }
+
     // Default deny: start by denying all read and write operations across the database
     match /{document=**} {
       allow read, write: if false;
@@ -371,11 +386,76 @@ service cloud.firestore {
                        );
     }
 
+    // Regions Collection
+    match /regions/{regionId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(regionId);
+    }
+
+    // Events Collection
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isValidId(eventId) && isValidEventData(request.resource.data) && (
+        isAdmin() ||
+        (
+          (isPastor() || isCollaborator()) &&
+          request.resource.data.scope == 'local' &&
+          'churchId' in request.resource.data &&
+          isAssignedToChurch(request.resource.data.churchId)
+        )
+      );
+      allow update: if isValidId(eventId) && isValidEventData(request.resource.data) && (
+        isAdmin() ||
+        (
+          (isPastor() || isCollaborator()) &&
+          resource.data.scope == 'local' &&
+          request.resource.data.scope == 'local' &&
+          'churchId' in resource.data &&
+          isAssignedToChurch(resource.data.churchId) &&
+          'churchId' in request.resource.data &&
+          request.resource.data.churchId == resource.data.churchId
+        )
+      );
+      allow delete: if isValidId(eventId) && (
+        isAdmin() ||
+        (
+          isPastor() &&
+          resource.data.scope == 'local' &&
+          'churchId' in resource.data &&
+          isAssignedToChurch(resource.data.churchId)
+        )
+      );
+    }
+
     // Church documents and subcollections
     match /churches/{churchId} {
       // Allow reading church metadata if the ID is valid
       allow read: if isValidId(churchId);
-      allow write: if isAdmin() && isValidId(churchId);
+      allow create, delete: if isAdmin() && isValidId(churchId);
+      allow update: if isValidId(churchId) && (
+        isAdmin() ||
+        (
+          isPastor() &&
+          isAssignedToChurch(churchId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['weeklyServices', 'defaultMeetUrl', 'audioStreamUrl'])
+        )
+      );
+
+      // Notices subcollection
+      match /notices/{noticeId} {
+        allow read: if true;
+        allow create: if canWriteChurchPlans(churchId) &&
+                         isValidId(churchId) &&
+                         isValidId(noticeId) &&
+                         isValidNoticeData(request.resource.data);
+        allow update: if canWriteChurchPlans(churchId) &&
+                         isValidId(churchId) &&
+                         isValidId(noticeId) &&
+                         isValidNoticeData(request.resource.data);
+        allow delete: if canWriteChurchPlans(churchId) &&
+                         isValidId(churchId) &&
+                         isValidId(noticeId);
+      }
 
       // Service plans subcollection (e.g. /churches/{churchId}/plans/weekly_plans)
       match /plans/{planId} {
