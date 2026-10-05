@@ -4153,79 +4153,88 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
           return SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.tune, size: 20, color: dark ? Colors.tealAccent : Colors.teal),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Ajustes de lectura',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: sheetTextCol,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.tune, size: 20, color: dark ? Colors.tealAccent : Colors.teal),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Ajustes de lectura',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: sheetTextCol,
+                            ),
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: Icon(Icons.close, color: sheetTextCol),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 20),
-                  // Tamaño de letra
-                  Row(
-                    children: [
-                      Text(
-                        'Tamaño de letra:',
-                        style: TextStyle(fontWeight: FontWeight.w600, color: sheetTextCol),
-                      ),
-                      const Spacer(),
-                      IconButton.filledTonal(
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.text_decrease),
-                        tooltip: 'Reducir letra',
-                        onPressed: fontSize > 14
-                            ? () {
-                                setState(() => fontSize -= 2);
-                                setModalState(() {});
-                              }
-                            : null,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Text(
-                          '${fontSize.toInt()} pt',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: sheetTextCol),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          icon: Icon(Icons.close, color: sheetTextCol),
+                          onPressed: () => Navigator.pop(ctx),
                         ),
-                      ),
-                      IconButton.filledTonal(
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.text_increase),
-                        tooltip: 'Aumentar letra',
-                        onPressed: fontSize < 42
-                            ? () {
-                                setState(() => fontSize += 2);
-                                setModalState(() {});
-                              }
-                            : null,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Tema Claro / Oscuro
-                  Row(
-                    children: [
-                      Text(
-                        'Tema visual:',
-                        style: TextStyle(fontWeight: FontWeight.w600, color: sheetTextCol),
-                      ),
-                      const Spacer(),
-                      SegmentedButton<bool>(
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    // Tamaño de letra
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Tamaño de letra:',
+                            style: TextStyle(fontWeight: FontWeight.w600, color: sheetTextCol),
+                          ),
+                        ),
+                        IconButton.filledTonal(
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.text_decrease),
+                          tooltip: 'Reducir letra',
+                          onPressed: fontSize > 14
+                              ? () {
+                                  setState(() => fontSize -= 2);
+                                  setModalState(() {});
+                                }
+                              : null,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            '${fontSize.toInt()} pt',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: sheetTextCol),
+                          ),
+                        ),
+                        IconButton.filledTonal(
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.text_increase),
+                          tooltip: 'Aumentar letra',
+                          onPressed: fontSize < 42
+                              ? () {
+                                  setState(() => fontSize += 2);
+                                  setModalState(() {});
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    // Tema Claro / Oscuro
+                    Text(
+                      'Tema visual:',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: sheetTextCol),
+                    ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: double.infinity,
+                      child: SegmentedButton<bool>(
+                        showSelectedIcon: false,
+                        style: const ButtonStyle(
+                          visualDensity: VisualDensity.compact,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
                         segments: const [
                           ButtonSegment(value: false, icon: Icon(Icons.light_mode, size: 16), label: Text('Claro')),
                           ButtonSegment(value: true, icon: Icon(Icons.dark_mode, size: 16), label: Text('Oscuro')),
@@ -4236,23 +4245,27 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                           setModalState(() {});
                         },
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Columnas
-                  Row(
-                    children: [
-                      Text(
-                        'Columnas:',
-                        style: TextStyle(fontWeight: FontWeight.w600, color: sheetTextCol),
-                      ),
-                      const Spacer(),
-                      SegmentedButton<int?>(
+                    ),
+                    const SizedBox(height: 14),
+                    // Columnas
+                    Text(
+                      'Columnas:',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: sheetTextCol),
+                    ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: double.infinity,
+                      child: SegmentedButton<int?>(
+                        showSelectedIcon: false,
+                        style: const ButtonStyle(
+                          visualDensity: VisualDensity.compact,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
                         segments: const [
                           ButtonSegment(value: null, label: Text('Auto')),
-                          ButtonSegment(value: 1, label: Text('1')),
-                          ButtonSegment(value: 2, label: Text('2')),
-                          ButtonSegment(value: 3, label: Text('3')),
+                          ButtonSegment(value: 1, label: Text('1 col')),
+                          ButtonSegment(value: 2, label: Text('2 col')),
+                          ButtonSegment(value: 3, label: Text('3 col')),
                         ],
                         selected: {userColumnsPreference},
                         onSelectionChanged: (set) {
@@ -4260,26 +4273,26 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                           setModalState(() {});
                         },
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Pedales Bluetooth
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.keyboard_outlined, color: sheetTextCol),
-                    title: Text(
-                      'Pedales Bluetooth (PageFlip/AirTurn)',
-                      style: TextStyle(fontSize: 14, color: sheetTextCol),
                     ),
-                    trailing: Switch(
-                      value: showPedalHelper,
-                      onChanged: (val) {
-                        setState(() => showPedalHelper = val);
-                        setModalState(() {});
-                      },
+                    const SizedBox(height: 12),
+                    // Pedales Bluetooth
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.keyboard_outlined, color: sheetTextCol),
+                      title: Text(
+                        'Pedales Bluetooth (PageFlip/AirTurn)',
+                        style: TextStyle(fontSize: 14, color: sheetTextCol),
+                      ),
+                      trailing: Switch(
+                        value: showPedalHelper,
+                        onChanged: (val) {
+                          setState(() => showPedalHelper = val);
+                          setModalState(() {});
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
