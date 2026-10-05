@@ -4140,6 +4140,154 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
     );
   }
 
+  void _showSettingsModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: dark ? const Color(0xff182229) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final sheetTextCol = dark ? Colors.white : Colors.black87;
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.tune, size: 20, color: dark ? Colors.tealAccent : Colors.teal),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Ajustes de lectura',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: sheetTextCol,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: Icon(Icons.close, color: sheetTextCol),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 20),
+                  // Tamaño de letra
+                  Row(
+                    children: [
+                      Text(
+                        'Tamaño de letra:',
+                        style: TextStyle(fontWeight: FontWeight.w600, color: sheetTextCol),
+                      ),
+                      const Spacer(),
+                      IconButton.filledTonal(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.text_decrease),
+                        tooltip: 'Reducir letra',
+                        onPressed: fontSize > 14
+                            ? () {
+                                setState(() => fontSize -= 2);
+                                setModalState(() {});
+                              }
+                            : null,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          '${fontSize.toInt()} pt',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: sheetTextCol),
+                        ),
+                      ),
+                      IconButton.filledTonal(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.text_increase),
+                        tooltip: 'Aumentar letra',
+                        onPressed: fontSize < 42
+                            ? () {
+                                setState(() => fontSize += 2);
+                                setModalState(() {});
+                              }
+                            : null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Tema Claro / Oscuro
+                  Row(
+                    children: [
+                      Text(
+                        'Tema visual:',
+                        style: TextStyle(fontWeight: FontWeight.w600, color: sheetTextCol),
+                      ),
+                      const Spacer(),
+                      SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment(value: false, icon: Icon(Icons.light_mode, size: 16), label: Text('Claro')),
+                          ButtonSegment(value: true, icon: Icon(Icons.dark_mode, size: 16), label: Text('Oscuro')),
+                        ],
+                        selected: {dark},
+                        onSelectionChanged: (set) {
+                          setState(() => dark = set.first);
+                          setModalState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Columnas
+                  Row(
+                    children: [
+                      Text(
+                        'Columnas:',
+                        style: TextStyle(fontWeight: FontWeight.w600, color: sheetTextCol),
+                      ),
+                      const Spacer(),
+                      SegmentedButton<int?>(
+                        segments: const [
+                          ButtonSegment(value: null, label: Text('Auto')),
+                          ButtonSegment(value: 1, label: Text('1')),
+                          ButtonSegment(value: 2, label: Text('2')),
+                          ButtonSegment(value: 3, label: Text('3')),
+                        ],
+                        selected: {userColumnsPreference},
+                        onSelectionChanged: (set) {
+                          setState(() => userColumnsPreference = set.first);
+                          setModalState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Pedales Bluetooth
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.keyboard_outlined, color: sheetTextCol),
+                    title: Text(
+                      'Pedales Bluetooth (PageFlip/AirTurn)',
+                      style: TextStyle(fontSize: 14, color: sheetTextCol),
+                    ),
+                    trailing: Switch(
+                      value: showPedalHelper,
+                      onChanged: (val) {
+                        setState(() => showPedalHelper = val);
+                        setModalState(() {});
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bg = dark ? const Color(0xff0b141a) : const Color(0xfffdfbf7);
@@ -4167,13 +4315,14 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
               ? const Color(0xff121d24)
               : const Color(0xffe8e2d5),
           foregroundColor: textCol,
+          leading: const BackButton(),
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 currentEntry.title,
                 style: const TextStyle(
-                  fontSize: 17,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -4192,61 +4341,47 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
             // Repertoire Navigation
             if (hasRepertoire) ...[
               IconButton(
+                visualDensity: VisualDensity.compact,
                 tooltip: 'Canto anterior del repertorio',
                 icon: const Icon(Icons.skip_previous),
                 onPressed: currentIndex > 0 ? _previousHymn : null,
               ),
               IconButton(
+                visualDensity: VisualDensity.compact,
                 tooltip: 'Siguiente canto del repertorio',
                 icon: const Icon(Icons.skip_next),
                 onPressed: currentIndex < widget.repertoireList!.length - 1
                     ? _nextHymn
                     : null,
               ),
-              const VerticalDivider(width: 12, indent: 12, endIndent: 12),
             ],
 
-            // Controles de Acordes y Transporte (Solo si este himno tiene acordes)
-            if (hasCustomChords) ...[
-              // Transpose -1
+            // Partitura digital
+            if (scoreCatalog.contains(currentEntry.id))
               IconButton(
-                tooltip: 'Transportar Tono (-1 semitono)',
-                icon: const Icon(Icons.exposure_minus_1),
-                onPressed: showChords
-                    ? () => setState(() => transposeAmount--)
-                    : null,
-              ),
-              InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () => setState(() => transposeAmount = 0),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  child: Center(
-                    child: Text(
-                      transposeAmount > 0
-                          ? '+$transposeAmount'
-                          : '$transposeAmount',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: transposeAmount != 0 ? Colors.amber : null,
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Ver partitura digital',
+                icon: const Icon(Icons.queue_music),
+                onPressed: () {
+                  final score = scoreCatalog[currentEntry.id];
+                  if (score != null) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DigitalScoreScreen(
+                          hymn: currentEntry,
+                          score: score,
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-              ),
-              // Transpose +1
-              IconButton(
-                tooltip: 'Transportar Tono (+1 semitono)',
-                icon: const Icon(Icons.exposure_plus_1),
-                onPressed: showChords
-                    ? () => setState(() => transposeAmount++)
-                    : null,
+                    );
+                  }
+                },
               ),
 
-              // Toggle Chords
+            // Mostrar/Ocultar Acordes
+            if (hasCustomChords)
               IconButton(
-                tooltip: showChords ? 'Ocultar Acordes' : 'Mostrar Acordes',
+                visualDensity: VisualDensity.compact,
+                tooltip: showChords ? 'Ocultar acordes' : 'Ver acordes',
                 icon: Icon(
                   showChords ? Icons.music_note : Icons.music_off,
                   color: showChords ? chordCol : Colors.grey,
@@ -4259,141 +4394,12 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                 },
               ),
 
-              // Toggle Notation (C, D, E vs Do, Re, Mi)
-              if (showChords)
-                Tooltip(
-                  message: useSolfeo
-                      ? 'Cambiar a cifrado americano (C, D, E)'
-                      : 'Cambiar a solfeo latino (Do, Re, Mi)',
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                    ),
-                    onPressed: () => setState(() => useSolfeo = !useSolfeo),
-                    child: Text(
-                      useSolfeo ? 'Do' : 'C',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: chordCol,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-
-              // Toggle Accidental notation (# sostenidos vs b bemoles)
-              if (showChords)
-                Tooltip(
-                  message: preferFlats
-                      ? 'Cambiar a sostenidos (#)'
-                      : 'Cambiar a bemoles (b)',
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                    ),
-                    onPressed: () => setState(() => preferFlats = !preferFlats),
-                    child: Text(
-                      preferFlats ? 'b' : '#',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: chordCol,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-
-            // Editar o Agregar Acordes (Exclusivo Administrador)
-            if (false)
-              IconButton(
-                tooltip: hasCustomChords
-                    ? 'Editar acordes (Admin)'
-                    : 'Agregar acordes a este canto (Admin)',
-                icon: Icon(
-                  hasCustomChords ? Icons.edit_note : Icons.playlist_add,
-                  color: hasCustomChords ? Colors.amberAccent : Colors.tealAccent,
-                ),
-                onPressed: () async {
-                  final result = await Future.value(null);
-                  if (result != null) {
-                    await _loadChordChart(keepShowChords: true);
-                  }
-                },
-              ),
-
-            // Font Sizing
+            // Ajustes de lectura (Letra, Tema, Columnas, Pedales)
             IconButton(
-              tooltip: 'Reducir letra',
-              icon: const Icon(Icons.text_decrease),
-              onPressed: fontSize > 14
-                  ? () => setState(() => fontSize -= 2)
-                  : null,
-            ),
-            IconButton(
-              tooltip: 'Aumentar letra',
-              icon: const Icon(Icons.text_increase),
-              onPressed: fontSize < 42
-                  ? () => setState(() => fontSize += 2)
-                  : null,
-            ),
-
-            // Selector de Columnas (Atril apaisado / vertical)
-            PopupMenuButton<int>(
-              tooltip: 'Distribución de columnas (Atril)',
-              icon: Icon(
-                userColumnsPreference == 1
-                    ? Icons.view_agenda_outlined
-                    : (userColumnsPreference == 2
-                        ? Icons.view_column_outlined
-                        : (userColumnsPreference == 3
-                            ? Icons.view_week_outlined
-                            : Icons.auto_awesome_mosaic_outlined)),
-              ),
-              onSelected: (val) {
-                setState(() {
-                  userColumnsPreference = val == 0 ? null : val;
-                });
-              },
-              itemBuilder: (context) => [
-                CheckedPopupMenuItem<int>(
-                  value: 0,
-                  checked: userColumnsPreference == null,
-                  child: const Text('Auto (adaptar a pantalla)'),
-                ),
-                CheckedPopupMenuItem<int>(
-                  value: 1,
-                  checked: userColumnsPreference == 1,
-                  child: const Text('1 Columna (Vertical)'),
-                ),
-                CheckedPopupMenuItem<int>(
-                  value: 2,
-                  checked: userColumnsPreference == 2,
-                  child: const Text('2 Columnas (Atril apaisado)'),
-                ),
-                CheckedPopupMenuItem<int>(
-                  value: 3,
-                  checked: userColumnsPreference == 3,
-                  child: const Text('3 Columnas (Panorámico)'),
-                ),
-              ],
-            ),
-
-            // Bluetooth Pedal Helper Info
-            IconButton(
-              tooltip: 'Pedales Bluetooth (PageFlip/AirTurn)',
-              icon: const Icon(Icons.keyboard_outlined),
-              onPressed: () =>
-                  setState(() => showPedalHelper = !showPedalHelper),
-            ),
-
-            // Light/Dark
-            IconButton(
-              tooltip: dark ? 'Modo claro' : 'Modo oscuro',
-              icon: Icon(dark ? Icons.light_mode : Icons.dark_mode),
-              onPressed: () => setState(() => dark = !dark),
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Ajustes de lectura',
+              icon: const Icon(Icons.tune),
+              onPressed: () => _showSettingsModal(context),
             ),
           ],
         ),
@@ -4443,6 +4449,179 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                   ),
                 ),
               if (chordLoading) const LinearProgressIndicator(minHeight: 3),
+              // Barra compacta de controles de Acordes (Transporte, Cifrado, Armadura)
+              if (showChords && hasCustomChords)
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: dark ? const Color(0xff142831) : const Color(0xffe1ece8),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: dark ? Colors.white12 : Colors.black12,
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.music_note, size: 16, color: chordCol),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Tono:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: textCol,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          tooltip: 'Bajar medio tono (-1 semitono)',
+                          icon: const Icon(Icons.remove_circle_outline, size: 20),
+                          onPressed: () => setState(() => transposeAmount--),
+                        ),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(6),
+                          onTap: () => setState(() => transposeAmount = 0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: transposeAmount != 0
+                                  ? Colors.amber.withAlpha(40)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: transposeAmount != 0
+                                    ? Colors.amber
+                                    : Colors.grey.withAlpha(80),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              transposeAmount == 0
+                                  ? 'Original (0)'
+                                  : (transposeAmount > 0
+                                      ? '+$transposeAmount'
+                                      : '$transposeAmount'),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                color: transposeAmount != 0 ? Colors.amber : textCol,
+                              ),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          tooltip: 'Subir medio tono (+1 semitono)',
+                          icon: const Icon(Icons.add_circle_outline, size: 20),
+                          onPressed: () => setState(() => transposeAmount++),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          height: 18,
+                          child: VerticalDivider(
+                            width: 1,
+                            color: dark ? Colors.white24 : Colors.black26,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Cifrado Americano / Solfeo
+                        Tooltip(
+                          message: useSolfeo
+                              ? 'Cambiar a cifrado americano (C, D, E)'
+                              : 'Cambiar a solfeo latino (Do, Re, Mi)',
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(6),
+                            onTap: () => setState(() => useSolfeo = !useSolfeo),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: chordCol.withAlpha(140),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    useSolfeo ? 'Do' : 'C',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: chordCol,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    useSolfeo ? 'Solfeo' : 'Cifrado',
+                                    style: TextStyle(fontSize: 11, color: textCol),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          height: 18,
+                          child: VerticalDivider(
+                            width: 1,
+                            color: dark ? Colors.white24 : Colors.black26,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Armadura: Sostenidos / Bemoles
+                        Tooltip(
+                          message: preferFlats
+                              ? 'Cambiar a sostenidos (#)'
+                              : 'Cambiar a bemoles (b)',
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(6),
+                            onTap: () => setState(() => preferFlats = !preferFlats),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: chordCol.withAlpha(140),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    preferFlats ? 'b' : '#',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: chordCol,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    preferFlats ? 'Bemoles' : 'Sostenidos',
+                                    style: TextStyle(fontSize: 11, color: textCol),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               if (false) ...[
                 if (hasCustomChords)
                   Container(
