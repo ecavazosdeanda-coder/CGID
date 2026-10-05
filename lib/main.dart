@@ -3871,6 +3871,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
   int transposeAmount = 0;
   bool showChords = false;
   bool useSolfeo = false;
+  bool preferFlats = false;
   bool showPedalHelper = false;
   int? userColumnsPreference;
   late int currentIndex;
@@ -4022,6 +4023,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
       showChords: showChords,
       transposeAmount: transposeAmount,
       useSolfeo: useSolfeo,
+      preferFlats: preferFlats,
     );
   }
 
@@ -4275,6 +4277,29 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                         fontWeight: FontWeight.bold,
                         color: chordCol,
                         fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Toggle Accidental notation (# sostenidos vs b bemoles)
+              if (showChords)
+                Tooltip(
+                  message: preferFlats
+                      ? 'Cambiar a sostenidos (#)'
+                      : 'Cambiar a bemoles (b)',
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                    ),
+                    onPressed: () => setState(() => preferFlats = !preferFlats),
+                    child: Text(
+                      preferFlats ? 'b' : '#',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: chordCol,
+                        fontSize: 16,
                       ),
                     ),
                   ),

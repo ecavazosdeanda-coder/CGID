@@ -61,6 +61,7 @@ class ChordLyricsLine extends StatelessWidget {
   final bool showChords;
   final int transposeAmount;
   final bool useSolfeo;
+  final bool preferFlats;
 
   const ChordLyricsLine({
     super.key,
@@ -71,6 +72,7 @@ class ChordLyricsLine extends StatelessWidget {
     this.showChords = true,
     this.transposeAmount = 0,
     this.useSolfeo = false,
+    this.preferFlats = false,
   });
 
   @override
@@ -93,10 +95,13 @@ class ChordLyricsLine extends StatelessWidget {
       );
     }
 
-    // 2. Transponer acordes si el usuario cambió tono o cifrado (Do/C)
-    final processedLine = (transposeAmount != 0 || useSolfeo)
-        ? ChordTransposer.transposeText(line, transposeAmount, useSolfeo: useSolfeo)
-        : line;
+    // 2. Transponer y formatear acordes según tono, cifrado (Do/C) y alteración (#/b)
+    final processedLine = ChordTransposer.transposeText(
+      line,
+      transposeAmount,
+      useSolfeo: useSolfeo,
+      preferFlats: preferFlats,
+    );
 
     // 3. Separar por palabras preservando estructura
     final tokens = processedLine.trim().split(RegExp(r'\s+'));
@@ -192,6 +197,7 @@ class ChordLyricsBlock extends StatelessWidget {
   final bool showChords;
   final int transposeAmount;
   final bool useSolfeo;
+  final bool preferFlats;
 
   const ChordLyricsBlock({
     super.key,
@@ -202,6 +208,7 @@ class ChordLyricsBlock extends StatelessWidget {
     this.showChords = true,
     this.transposeAmount = 0,
     this.useSolfeo = false,
+    this.preferFlats = false,
   });
 
   @override
@@ -219,6 +226,7 @@ class ChordLyricsBlock extends StatelessWidget {
             showChords: showChords,
             transposeAmount: transposeAmount,
             useSolfeo: useSolfeo,
+            preferFlats: preferFlats,
           ),
           if (i < lines.length - 1)
             SizedBox(
