@@ -26,11 +26,11 @@ class UserProfile {
   bool get canEditPlans => isAdmin || isPastor || isCollaborator;
   bool get canSyncPlansToCloud => isAdmin || isPastor || isCollaborator;
   bool get canDownloadPlansFromCloud => true;
-  bool get canEditNotices => isAdmin || isPastor;
+  bool get canEditNotices => isAdmin || isPastor || isCollaborator;
   bool get canResetDatabase => isAdmin;
   bool get canRestoreDatabase => isAdmin || isPastor;
-  bool get canAccessProjection => true;
-  bool get canAccessMusic => true;
+  bool get canAccessProjection => isAdmin || isPastor || isCollaborator || isProyeccionista;
+  bool get canAccessMusic => isAdmin || isPastor || isCollaborator || isMusico;
   bool get canDownloadScores => isAdmin;
   bool get canEditScores => isAdmin;
 

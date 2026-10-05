@@ -188,7 +188,7 @@ class _PastorAssignmentDialogState
                             ),
                           ),
                         )
-                      else
+                      else if (selectedRole != 'admin')
                         DropdownButtonFormField<ChurchModel>(
                           initialValue: selectedChurch,
                           decoration: const InputDecoration(
@@ -248,12 +248,16 @@ class _PastorAssignmentDialogState
                     final password = passwordController.text.trim();
                     final churchId = isPastor
                         ? (currentProfile?.churchId ?? '')
-                        : (selectedChurch?.id ?? '');
+                        : (selectedRole == 'admin' ? '' : (selectedChurch?.id ?? ''));
                     final churchName = isPastor
                         ? (currentProfile?.churchName ?? 'Iglesia Local')
-                        : (selectedChurch?.name ?? '');
+                        : (selectedRole == 'admin' ? '' : (selectedChurch?.name ?? ''));
 
-                    if (email.isEmpty || churchId.isEmpty) return;
+                    if (email.isEmpty) return;
+                    if (selectedRole != 'admin' && churchId.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Debe seleccionar una iglesia para roles locales.')));
+                      return;
+                    }
                     if (password.isNotEmpty && password.length < 6) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(

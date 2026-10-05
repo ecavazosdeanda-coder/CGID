@@ -15,6 +15,7 @@ import 'package:go_router/go_router.dart';
 import 'providers/plan_provider.dart';
 import 'providers/tab_provider.dart';
 import '../projection/providers/projection_provider.dart';
+import '../admin/providers/user_profile_provider.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
@@ -610,6 +611,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
     });
     final authUser = ref.watch(authStateProvider).value;
     final isLoggedIn = authUser != null;
+    final profile = ref.watch(userProfileProvider).value;
 
     const labels = [
       'Inicio',
@@ -630,9 +632,12 @@ class WorkspaceState extends ConsumerState<Workspace> {
       (tabIndex: 2, label: 'Biblia', icon: Icons.menu_book_outlined),
       (tabIndex: 3, label: 'Puntos de fe', icon: Icons.auto_stories_outlined),
       if (isLoggedIn) ...[
-        (tabIndex: 4, label: 'Partituras', icon: Icons.library_music_outlined),
-        (tabIndex: 5, label: 'Proyección', icon: Icons.cast),
-        (tabIndex: 6, label: 'Cultos', icon: Icons.playlist_play),
+        if (profile?.canAccessMusic == true)
+          (tabIndex: 4, label: 'Partituras', icon: Icons.library_music_outlined),
+        if (profile?.canAccessProjection == true)
+          (tabIndex: 5, label: 'Proyección', icon: Icons.cast),
+        if (profile?.canDownloadPlansFromCloud == true)
+          (tabIndex: 6, label: 'Cultos', icon: Icons.playlist_play),
       ],
       (tabIndex: 7, label: 'Literatura', icon: Icons.library_books_outlined),
       (tabIndex: 8, label: 'Acerca de', icon: Icons.info_outline),
