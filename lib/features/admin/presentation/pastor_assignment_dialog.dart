@@ -743,21 +743,28 @@ class _PastorAssignmentDialogState
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Icon(
-                isPastor ? Icons.groups : Icons.admin_panel_settings,
-                color: Colors.indigo,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                isPastor
-                    ? 'Equipo de ${currentProfile?.churchName ?? "la Iglesia"}'
-                    : 'Gestión de Roles y Pastores',
-              ),
-            ],
+          Expanded(
+            child: Row(
+              children: [
+                Icon(
+                  isPastor ? Icons.groups : Icons.admin_panel_settings,
+                  color: Colors.indigo,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isPastor
+                        ? 'Equipo de ${currentProfile?.churchName ?? "la Iglesia"}'
+                        : 'Gestión de Roles y Pastores',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
                 icon: const Icon(Icons.refresh),
@@ -781,9 +788,7 @@ class _PastorAssignmentDialogState
       content: SizedBox(
         width: 680,
         height: 490,
-        child: _loadingChurches
-            ? const Center(child: CircularProgressIndicator())
-            : usersAsync.when(
+        child: usersAsync.when(
                 data: (users) {
                   final displayedUsers = isPastor
                       ? users
@@ -877,7 +882,7 @@ class _PastorAssignmentDialogState
                               Padding(
                                 padding: const EdgeInsets.only(right: 8.0),
                                 child: Chip(
-                                  label: const Text('InvitaciÃ³n Pendiente', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                  label: const Text('Invitación Pendiente', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                                   backgroundColor: Colors.amber.withAlpha(50),
                                   visualDensity: VisualDensity.compact,
                                 ),
@@ -899,7 +904,7 @@ class _PastorAssignmentDialogState
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Text(
                             hasChurch
-                                ? 'Iglesia Asignada: ${churchName ?? ''} (${churchId ?? ''})'
+                                ? 'Iglesia Asignada: ${churchName ?? churchId} ($churchId)'
                                 : '⚠️ Sin iglesia asignada',
                             style: TextStyle(
                               color: hasChurch

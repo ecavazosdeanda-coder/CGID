@@ -50,3 +50,39 @@ jobs:
           path: build/web/
           if-no-files-found: error
           retention-days: 14
+
+  backend-and-rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'functions/package-lock.json'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Instalar Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Instalar dependencias de backend
+        working-directory: functions
+        run: npm ci
+
+      - name: Compilar Cloud Functions
+        working-directory: functions
+        run: npm run build
+
+      - name: Pruebas unitarias de Cloud Functions
+        working-directory: functions
+        run: npm run test:functions
+
+      - name: Pruebas de reglas en emulador Firestore
+        run: firebase emulators:exec --only firestore "npm --prefix functions run test:rules"
+

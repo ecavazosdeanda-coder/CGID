@@ -26,7 +26,7 @@ class UserProfile {
   bool get canEditPlans => isAdmin || isPastor || isCollaborator;
   bool get canSyncPlansToCloud => isAdmin || isPastor || isCollaborator;
   bool get canDownloadPlansFromCloud => true;
-  bool get canEditNotices => isAdmin || isPastor || isCollaborator;
+  bool get canEditNotices => isAdmin || isPastor;
   bool get canResetDatabase => isAdmin;
   bool get canRestoreDatabase => isAdmin || isPastor;
   bool get canAccessProjection => isAdmin || isPastor || isCollaborator || isProyeccionista;

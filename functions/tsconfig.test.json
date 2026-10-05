@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "noImplicitReturns": true,
+    "outDir": "lib-test",
+    "sourceMap": true,
+    "strict": false,
+    "target": "es2022",
+    "esModuleInterop": true,
+    "types": ["node", "mocha"]
+  },
+  "include": [
+    "src",
+    "test"
+  ]
+}

@@ -1,23 +1,31 @@
 {
-    "name":  "functions",
-    "version":  "1.0.0",
-    "description":  "",
-    "main":  "lib/index.js",
-    "scripts":  {
-                    "test":  "echo \"Error: no test specified\" \u0026\u0026 exit 1",
-                    "build":  "tsc"
-                },
-    "keywords":  [
-
-                 ],
-    "author":  "",
-    "license":  "ISC",
-    "dependencies":  {
-                         "firebase-admin":  "^14.5.0",
-                         "firebase-functions":  "^7.4.0"
-                     },
-    "devDependencies":  {
-                            "@types/node":  "^26.6.4",
-                            "typescript":  "^7.0.2"
-                        }
+    "name": "functions",
+    "version": "1.0.0",
+    "description": "",
+    "main": "lib/index.js",
+    "scripts": {
+        "build": "tsc",
+        "build:test": "tsc -p tsconfig.test.json",
+        "test:functions": "npm run build:test && mocha lib-test/test/cloud_functions.spec.js --timeout 10000",
+        "test:rules": "npm run build:test && mocha lib-test/test/firestore_rules.spec.js --timeout 25000",
+        "test": "npm run build:test && mocha lib-test/test/**/*.spec.js --timeout 25000"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "firebase-admin": "^14.5.0",
+        "firebase-functions": "^7.4.0"
+    },
+    "devDependencies": {
+        "@firebase/rules-unit-testing": "^5.0.2",
+        "@types/chai": "^5.2.3",
+        "@types/mocha": "^10.0.10",
+        "@types/node": "^26.6.4",
+        "chai": "^6.3.0",
+        "mocha": "^12.0.3",
+        "ts-node": "^10.9.2",
+        "tsx": "^4.23.15",
+        "typescript": "^7.0.2"
+    }
 }

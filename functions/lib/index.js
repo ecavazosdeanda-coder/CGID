@@ -177,6 +177,10 @@ exports.adminDeleteUser = functions.https.onCall(async (request) => {
         if (callerData.role !== 'admin') {
             throw new functions.https.HttpsError('permission-denied', 'No tienes permiso para borrar a un administrador.');
         }
+        const adminCountSnap = await db.collection('users').where('role', '==', 'admin').get();
+        if (adminCountSnap.size <= 1) {
+            throw new functions.https.HttpsError('failed-precondition', 'No es posible eliminar al único administrador del sistema.');
+        }
     }
     else {
         // Validate permission for the target church
@@ -224,6 +228,13 @@ exports.adminUpdateRole = functions.https.onCall(async (request) => {
         }
         if (churchId && churchId !== callerData.churchId) {
             throw new functions.https.HttpsError('permission-denied', 'Los pastores no pueden transferir usuarios a otras iglesias.');
+        }
+    }
+    // Prevent demoting the last administrator
+    if (targetData.role === 'admin' && role !== 'admin') {
+        const adminCountSnap = await db.collection('users').where('role', '==', 'admin').get();
+        if (adminCountSnap.size <= 1) {
+            throw new functions.https.HttpsError('failed-precondition', 'No es posible cambiar el rol del único administrador del sistema.');
         }
     }
     await targetProfileRef.update({

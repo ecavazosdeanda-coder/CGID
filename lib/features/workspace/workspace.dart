@@ -16,6 +16,7 @@ import 'providers/plan_provider.dart';
 import 'providers/tab_provider.dart';
 import '../projection/providers/projection_provider.dart';
 import '../admin/providers/user_profile_provider.dart';
+import '../remote/services/remote_command_handler.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
@@ -114,7 +115,8 @@ class Workspace extends ConsumerStatefulWidget {
   ConsumerState<Workspace> createState() => WorkspaceState();
 }
 
-class WorkspaceState extends ConsumerState<Workspace> {
+class WorkspaceState extends ConsumerState<Workspace>
+    implements RemoteCommandReceiver {
   int get tab => ref.watch(tabProvider);
   set tab(int value) {
     ref.read(tabProvider.notifier).setTab(value);
@@ -178,36 +180,45 @@ class WorkspaceState extends ConsumerState<Workspace> {
   String? selectedRemoteUrl;
   String? cloudSessionId;
   StreamSubscription? _cloudCommandSub;
+  late final RemoteCommandHandler _remoteCommandHandler = RemoteCommandHandler(this);
+
+  @override
+  void onNext() {
+    setState(() => slideIndex = (slideIndex + 1).clamp(0, slides.isEmpty ? 0 : slides.length - 1));
+    syncOutput();
+  }
+
+  @override
+  void onPrev() {
+    setState(() => slideIndex = (slideIndex - 1).clamp(0, slides.isEmpty ? 0 : slides.length - 1));
+    syncOutput();
+  }
+
+  @override
+  void onToggleBlack() => toggleBlack();
+
+  @override
+  void onNextSection() => moveSection(1);
+
+  @override
+  void onPrevSection() => moveSection(-1);
+
+  @override
+  void onJumpToPlan(int index) {
+    if (index >= 0 && index < plan.length) {
+      prepare(plan[index]);
+    }
+  }
+
+  @override
+  void onProjectVerse(int book, int chapter, int verseStart, int verseEnd) {
+    final entry = lib.passage(book, chapter, verseStart, verseEnd);
+    prepare(entry);
+  }
   
   void _handleCommand(String action, Map<String, dynamic>? payload) {
     if (!mounted) return;
-    if (action == 'next') {
-      setState(() => slideIndex = (slideIndex + 1).clamp(0, slides.isEmpty ? 0 : slides.length - 1));
-      syncOutput();
-    } else if (action == 'prev') {
-      setState(() => slideIndex = (slideIndex - 1).clamp(0, slides.isEmpty ? 0 : slides.length - 1));
-      syncOutput();
-    } else if (action == 'black') {
-      toggleBlack();
-    } else if (action == 'next_section') {
-      moveSection(1);
-    } else if (action == 'prev_section') {
-      moveSection(-1);
-    } else if (action == 'jump' && payload != null) {
-      final idx = payload['index'] as int?;
-      if (idx != null && idx >= 0 && idx < plan.length) {
-        prepare(plan[idx]);
-      }
-    } else if (action == 'project_verse' && payload != null) {
-      final b = payload['b'] as int?;
-      final c = payload['c'] as int?;
-      final vStart = payload['vStart'] as int?;
-      final vEnd = payload['vEnd'] as int?;
-      if (b != null && c != null && vStart != null && vEnd != null) {
-        final entry = lib.passage(b, c, vStart, vEnd);
-        prepare(entry);
-      }
-    }
+    _remoteCommandHandler.handle(action, payload);
   }
 
   late final remoteServer = RemoteServer(
