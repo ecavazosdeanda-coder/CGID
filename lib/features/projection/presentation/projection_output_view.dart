@@ -1,33 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:marquee/marquee.dart';
 
-import '../../../appearance.dart';
 import '../../../slide_view.dart';
 import '../../../motion_background_view.dart';
-import '../../../content.dart';
 import '../../../countdown.dart';
 import '../../../glass.dart';
+import '../providers/projection_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ProjectionOutputView extends StatelessWidget {
-  final Map<String, dynamic> state;
+class ProjectionOutputView extends ConsumerWidget {
+  final ProjectionState state;
 
   const ProjectionOutputView({super.key, required this.state});
 
   @override
-  Widget build(BuildContext context) {
-    final blackout = state['blackout'] == true;
-    final videoPath = state['videoBackgroundPath'] as String?;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final blackout = state.blackout;
+    final videoPath = state.videoBackgroundPath;
     final hasVideo = !blackout && videoPath != null && videoPath.isNotEmpty;
-    final marqueeText = state['marqueeText'] as String?;
-    final showMarquee =
-        !blackout && marqueeText != null && marqueeText.trim().isNotEmpty;
-    final slideState = state['slide'];
-    final slide = slideState is Map
-        ? SlideData.fromJson(Map<String, dynamic>.from(slideState))
-        : SlideData(globalChurchName, '', 'Esperando contenido');
+    final marqueeText = state.marqueeText;
+    final showMarquee = !blackout && marqueeText.trim().isNotEmpty;
+    final slide = ref.read(projectionProvider.notifier).currentSlide;
 
     return CountdownOverlay(
-      endsAt: state['countdownEndsAt'] as int?,
+      endsAt: state.countdownEndsAt,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -35,8 +31,8 @@ class ProjectionOutputView extends StatelessWidget {
           SlideView(
             slide: slide,
             blackout: blackout,
-            theme: state['theme'] as int? ?? 0,
-            showTitle: state['showTitle'] != false,
+            theme: state.slideTheme,
+            showTitle: state.showTitle,
             transparentBackground: hasVideo,
           ),
           if (showMarquee)

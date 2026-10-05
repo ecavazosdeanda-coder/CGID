@@ -126,20 +126,28 @@ service cloud.firestore {
 
     // Domain Validator for Service Plans
     function isValidPlanData(data) {
-      return data.keys().hasAll(['plans']) &&
-             data.keys().hasOnly(['plans', 'planMetadata', 'updatedAt']) &&
-             data.plans is map &&
-             data.plans.size() <= 100 &&
-             (!('planMetadata' in data) || (data.planMetadata is map && data.planMetadata.size() <= 100)) &&
-             (!('updatedAt' in data) || data.updatedAt is timestamp || (data.updatedAt is string && data.updatedAt.size() <= 100));
+      // The new schema for individual service plans
+      return data.keys().hasAll(['title', 'entries', 'revision']) &&
+             data.title is string &&
+             data.title.size() > 0 &&
+             data.title.size() <= 200 &&
+             data.entries is list &&
+             data.entries.size() <= 200 &&
+             data.revision is number &&
+             (!('date' in data) || data.date is string) &&
+             (!('metadata' in data) || data.metadata is map) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp) &&
+             (!('updatedBy' in data) || data.updatedBy is string);
     }
 
     function isValidPrivatePlanData(data) {
+      // The new schema for private notes mapped by entryId
       return data.keys().hasAll(['notes']) &&
-             data.keys().hasOnly(['notes', 'updatedAt']) &&
              data.notes is map &&
-             data.notes.size() <= 100 &&
-             (!('updatedAt' in data) || data.updatedAt is timestamp || (data.updatedAt is string && data.updatedAt.size() <= 100));
+             data.notes.size() <= 200 &&
+             (!('revision' in data) || data.revision is number) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp) &&
+             (!('updatedBy' in data) || data.updatedBy is string);
     }
 
     function isValidInvitationData(data) {
@@ -374,11 +382,19 @@ service cloud.firestore {
         // Reads: Open for sanctuary projectionists, musicians, congregation devices, and temple displays
         allow read: if true;
 
-        // Writes (create, update): Enforce strict role validation (admin or assigned pastor only) and schema validation
-        allow create, update: if canWriteChurchPlans(churchId) &&
-                                 isValidId(churchId) &&
-                                 isValidId(planId) &&
-                                 isValidPlanData(request.resource.data);
+        // Writes: Enforce strict role validation (admin or assigned pastor only) and schema validation
+        allow create: if canWriteChurchPlans(churchId) &&
+                         isValidId(churchId) &&
+                         isValidId(planId) &&
+                         isValidPlanData(request.resource.data) &&
+                         (!('updatedBy' in request.resource.data) || request.resource.data.updatedBy == request.auth.uid);
+
+        allow update: if canWriteChurchPlans(churchId) &&
+                         isValidId(churchId) &&
+                         isValidId(planId) &&
+                         isValidPlanData(request.resource.data) &&
+                         (!('updatedBy' in request.resource.data) || request.resource.data.updatedBy == request.auth.uid) &&
+                         request.resource.data.revision == resource.data.revision + 1;
 
         // Deletions: Restricted to admins or pastors assigned to this churchId
         allow delete: if canWriteChurchPlans(churchId) &&
@@ -391,9 +407,16 @@ service cloud.firestore {
       match /private_plans/{planId} {
         allow read: if isAdmin() ||
                        (isAuthenticated() && isAssignedToChurch(churchId));
-        allow create, update: if canWriteChurchPlans(churchId) &&
-                                 isValidId(planId) &&
-                                 isValidPrivatePlanData(request.resource.data);
+        allow create: if canWriteChurchPlans(churchId) &&
+                         isValidId(planId) &&
+                         isValidPrivatePlanData(request.resource.data) &&
+                         (!('updatedBy' in request.resource.data) || request.resource.data.updatedBy == request.auth.uid);
+
+        allow update: if canWriteChurchPlans(churchId) &&
+                         isValidId(planId) &&
+                         isValidPrivatePlanData(request.resource.data) &&
+                         (!('updatedBy' in request.resource.data) || request.resource.data.updatedBy == request.auth.uid) &&
+                         request.resource.data.revision == resource.data.revision + 1;
         allow delete: if canWriteChurchPlans(churchId) && isValidId(planId);
       }
     }

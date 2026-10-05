@@ -35,7 +35,7 @@ class ProjectorScreen extends ConsumerWidget {
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.keyB) {
-          notifier.toggleBlackout();
+          notifier.toggleBlack();
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
@@ -79,7 +79,7 @@ class ProjectorScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 12),
                         OutlinedButton.icon(
-                          onPressed: () => notifier.toggleBlackout(),
+                          onPressed: () => notifier.toggleBlack(),
                           icon: Icon(
                             state.blackout
                                 ? Icons.visibility

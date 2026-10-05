@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 
 import 'providers/plan_provider.dart';
 import 'providers/tab_provider.dart';
+import '../projection/providers/projection_provider.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
@@ -133,52 +134,93 @@ class WorkspaceState extends ConsumerState<Workspace> {
     }
   }
 
-  int slideIndex = 0, slideTheme = 0, lines = 4;
-  bool blackout = false, showTitle = true, repeatChorus = true;
-  int? countdownEndsAt;
+  ProjectionState get proj => ref.read(projectionProvider);
+  ProjectionNotifier get projCtrl => ref.read(projectionProvider.notifier);
+
+  int get slideIndex => proj.slideIndex;
+  set slideIndex(int v) => projCtrl.setSlideIndex(v);
+
+  int get slideTheme => proj.slideTheme;
+  set slideTheme(int v) => projCtrl.setSlideTheme(v);
+
+  int get lines => proj.maxLines;
+  set lines(int v) => projCtrl.setMaxLines(v);
+
+  bool get blackout => proj.blackout;
+  set blackout(bool v) { if (v != proj.blackout) projCtrl.toggleBlack(); }
+
+  bool get showTitle => proj.showTitle;
+  set showTitle(bool v) { if (v != proj.showTitle) projCtrl.toggleShowTitle(); }
+
+  bool get repeatChorus => proj.repeatChorus;
+  set repeatChorus(bool v) => projCtrl.setRepeatChorus(v);
+
+  int? get countdownEndsAt => proj.countdownEndsAt;
+  set countdownEndsAt(int? v) => projCtrl.setCountdown(v);
+
+  String? get marqueeText => proj.marqueeText;
+  set marqueeText(String? v) => projCtrl.setMarquee(v ?? '');
+
+  String? get videoBackgroundPath => proj.videoBackgroundPath;
+  set videoBackgroundPath(String? v) => projCtrl.setVideoBackground(v);
+
+  double get aspect => proj.aspect;
+  set aspect(double v) => projCtrl.setAspect(v);
+
+  SlideData get currentSlide => projCtrl.currentSlide;
+
   Timer? _countdownTimer;
   Timer? _brandingTimer;
-  String? marqueeText;
-  String? videoBackgroundPath;
   final marqueeController = TextEditingController();
   final playback = PlaybackController();
-  double aspect = 16 / 9;
   List<String> remoteUrls = [];
   String? selectedRemoteUrl;
   String? cloudSessionId;
   StreamSubscription? _cloudCommandSub;
-  late final remoteServer = RemoteServer(
-    onMove: (delta) {
-      if (mounted) {
-        setState(
-          () => slideIndex = (slideIndex + delta).clamp(
-            0,
-            slides.isEmpty ? 0 : slides.length - 1,
-          ),
-        );
-      }
+  
+  void _handleCommand(String action, Map<String, dynamic>? payload) {
+    if (!mounted) return;
+    if (action == 'next') {
+      setState(() => slideIndex = (slideIndex + 1).clamp(0, slides.isEmpty ? 0 : slides.length - 1));
       syncOutput();
-    },
-    onToggleBlack: () {
-      if (mounted) toggleBlack();
-    },
-    onNextSection: () {
-      if (mounted) moveSection(1);
-    },
-    onPrevSection: () {
-      if (mounted) moveSection(-1);
-    },
-    onJumpToPlan: (index) {
-      if (mounted && index >= 0 && index < plan.length) {
-        prepare(plan[index]);
+    } else if (action == 'prev') {
+      setState(() => slideIndex = (slideIndex - 1).clamp(0, slides.isEmpty ? 0 : slides.length - 1));
+      syncOutput();
+    } else if (action == 'black') {
+      toggleBlack();
+    } else if (action == 'next_section') {
+      moveSection(1);
+    } else if (action == 'prev_section') {
+      moveSection(-1);
+    } else if (action == 'jump' && payload != null) {
+      final idx = payload['index'] as int?;
+      if (idx != null && idx >= 0 && idx < plan.length) {
+        prepare(plan[idx]);
       }
-    },
-    onProjectVerse: (b, c, vStart, vEnd) {
-      if (mounted) {
+    } else if (action == 'project_verse' && payload != null) {
+      final b = payload['b'] as int?;
+      final c = payload['c'] as int?;
+      final vStart = payload['vStart'] as int?;
+      final vEnd = payload['vEnd'] as int?;
+      if (b != null && c != null && vStart != null && vEnd != null) {
         final entry = lib.passage(b, c, vStart, vEnd);
         prepare(entry);
       }
-    },
+    }
+  }
+
+  late final remoteServer = RemoteServer(
+    onMove: (delta) => _handleCommand(delta > 0 ? 'next' : 'prev', null),
+    onToggleBlack: () => _handleCommand('black', null),
+    onNextSection: () => _handleCommand('next_section', null),
+    onPrevSection: () => _handleCommand('prev_section', null),
+    onJumpToPlan: (index) => _handleCommand('jump', {'index': index}),
+    onProjectVerse: (b, c, vStart, vEnd) => _handleCommand('project_verse', {
+      'b': b,
+      'c': c,
+      'vStart': vStart,
+      'vEnd': vEnd,
+    }),
     getState: () => getRemoteState(),
   );
 
@@ -193,14 +235,6 @@ class WorkspaceState extends ConsumerState<Workspace> {
 
     // Find which plan item is currently presented
     final planIndex = _presentedPlanIndex;
-    String currentNotes = '';
-    if (presented != null) {
-      if (planIndex >= 0 && planIndex < plan.length) {
-        currentNotes = plan[planIndex].notes;
-      } else {
-        currentNotes = presented!.notes;
-      }
-    }
 
     return {
       'blackout': blackout,
@@ -212,13 +246,15 @@ class WorkspaceState extends ConsumerState<Workspace> {
       'nextTitle': next?.title ?? '',
       'nextLabel': next?.label ?? '',
       'nextText': next?.text ?? '',
+      // Sync info for notes fetching
+      'churchId': ref.read(planProvider).churchId,
+      'planId': ref.read(planProvider).activePlan,
       // Plan info
       'planIndex': planIndex,
       'planCount': plan.length,
       'planItems': plan
-          .map((e) => {'id': e.id, 'title': e.title, 'notes': e.notes})
+          .map((e) => {'id': e.id, 'title': e.title})
           .toList(),
-      'currentNotes': currentNotes,
       // Countdown
       'countdownEndsAt': countdownEndsAt,
       // Bible book names for mobile search
@@ -231,9 +267,20 @@ class WorkspaceState extends ConsumerState<Workspace> {
   final search = TextEditingController();
   final planName = TextEditingController();
   final focus = FocusNode();
-  Entry? selected, presented;
+  Entry? selected;
   List<Entry> get plan => ref.read(planProvider).plan;
-  List<SlideData> slides = [];
+  
+  Entry? get presented => proj.presented;
+  set presented(Entry? v) {
+     if (v == null) {
+       projCtrl.clearPresentation();
+     } else {
+       projCtrl.present(v);
+     }
+  }
+  
+  List<SlideData> get slides => proj.slides;
+  set slides(List<SlideData> v) {} // controlled by projectionProvider
   Set<String> favorites = {};
   List<String> history = [];
   Map<String, dynamic> get savedPlans => ref.read(planProvider).savedPlans;
@@ -458,45 +505,11 @@ class WorkspaceState extends ConsumerState<Workspace> {
     widget.prefs.setStringList('favorites', favorites.toList());
   }
 
-  Map<String, dynamic> get outputState {
-    final nextSlide = (slides.isNotEmpty && slideIndex + 1 < slides.length)
-        ? slides[slideIndex + 1]
-        : null;
-    return {
-      'slide': {
-        ...currentSlide.toJson(),
-        if (currentSlide.mediaId != null &&
-            MediaStore.cache.containsKey(currentSlide.mediaId))
-          'imageData': base64Encode(MediaStore.cache[currentSlide.mediaId]!),
-      },
-      if (nextSlide != null) 'nextSlide': nextSlide.toJson(),
-      'blackout': blackout,
-      'theme': slideTheme,
-      'showTitle': showTitle,
-      'aspect': aspect,
-      'countdownEndsAt': countdownEndsAt,
-      'marqueeText': marqueeText,
-      'videoBackgroundPath': videoBackgroundPath,
-    };
-  }
-
-  SlideData get currentSlide => slides.isEmpty
-      ? const SlideData(
-          'Conferencia General de la Iglesia de Dios',
-          'CGID',
-          'Bienvenidos',
-        )
-      : slides[slideIndex];
   Future<void> syncOutput() async {
-    try {
-      await projection.sendOutput(outputState);
-      if (cloudSessionId != null) {
-        unawaited(
-          CloudRemoteBridge.publishState(cloudSessionId!, getRemoteState()),
-        );
-      }
-    } catch (_) {
-      message('No se pudo sincronizar la salida. Intenta abrirla de nuevo.');
+    if (cloudSessionId != null) {
+      unawaited(
+        CloudRemoteBridge.publishState(cloudSessionId!, getRemoteState()),
+      );
     }
   }
 
@@ -591,6 +604,10 @@ class WorkspaceState extends ConsumerState<Workspace> {
   @override
   Widget build(BuildContext context) {
     ref.watch(planProvider);
+    ref.watch(projectionProvider);
+    ref.listen(projectionProvider, (prev, next) {
+      syncOutput();
+    });
     final authUser = ref.watch(authStateProvider).value;
     final isLoggedIn = authUser != null;
 
@@ -1489,7 +1506,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
                   onPressed: projection.supportsOutput
                       ? () async {
                           try {
-                            await projection.openOutput(outputState);
+                            await projection.openOutput(projCtrl.outputState);
                             message(
                               'Mueve la ventana al proyector con escritorio extendido. F11 activa pantalla completa.',
                             );
@@ -1506,7 +1523,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
                   onPressed: projection.supportsOutput
                       ? () async {
                           try {
-                            await projection.openStage(outputState);
+                            await projection.openStage(projCtrl.outputState);
                             message(
                               'Mueve la ventana al monitor de escenario. F11 activa pantalla completa.',
                             );
@@ -1521,7 +1538,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
                 ),
                 OutlinedButton.icon(
                   onPressed: () =>
-                      StreamOverlayDialog.show(context, outputState),
+                      StreamOverlayDialog.show(context, projCtrl.outputState, sessionId: cloudSessionId),
                   icon: const Icon(Icons.sensors, color: Color(0xFF6366F1)),
                   label: const Text('Salida OBS / Transmisión'),
                 ),
@@ -1605,56 +1622,12 @@ class WorkspaceState extends ConsumerState<Workspace> {
                         await CloudRemoteBridge.publishState(
                           newCode,
                           getRemoteState(),
+                          force: true,
                         );
                         _cloudCommandSub?.cancel();
                         _cloudCommandSub = CloudRemoteBridge.listenCommands(
                           newCode,
-                          (action, payload) {
-                            if (!mounted) return;
-                            if (action == 'next') {
-                              setState(
-                                () => slideIndex = (slideIndex + 1).clamp(
-                                  0,
-                                  slides.isEmpty ? 0 : slides.length - 1,
-                                ),
-                              );
-                              syncOutput();
-                            } else if (action == 'prev') {
-                              setState(
-                                () => slideIndex = (slideIndex - 1).clamp(
-                                  0,
-                                  slides.isEmpty ? 0 : slides.length - 1,
-                                ),
-                              );
-                              syncOutput();
-                            } else if (action == 'black') {
-                              toggleBlack();
-                            } else if (action == 'next_section') {
-                              moveSection(1);
-                            } else if (action == 'prev_section') {
-                              moveSection(-1);
-                            } else if (action == 'jump' && payload != null) {
-                              final idx = payload['index'] as int?;
-                              if (idx != null &&
-                                  idx >= 0 &&
-                                  idx < plan.length) {
-                                prepare(plan[idx]);
-                              }
-                            } else if (action == 'project_verse' &&
-                                payload != null) {
-                              final b = payload['b'] as int?;
-                              final c = payload['c'] as int?;
-                              final vStart = payload['vStart'] as int?;
-                              final vEnd = payload['vEnd'] as int?;
-                              if (b != null &&
-                                  c != null &&
-                                  vStart != null &&
-                                  vEnd != null) {
-                                final entry = lib.passage(b, c, vStart, vEnd);
-                                prepare(entry);
-                              }
-                            }
-                          },
+                          _handleCommand,
                         );
                       }
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 /// Interfaz unificada de conexión para el control remoto móvil
 /// Permite comunicarse vía HTTP local (Wi-Fi) o vía Cloud Bridge (Firestore)
@@ -17,6 +18,12 @@ abstract class RemoteConnection {
 class CloudRemoteBridge {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String collectionName = 'remote_sessions';
+
+  static Timer? _throttleTimer;
+  static Map<String, dynamic>? _lastPublishedState;
+  static Map<String, dynamic>? _pendingState;
+  static String? _pendingSessionId;
+  static bool _isPublishing = false;
 
   /// Genera un código de sesión aleatorio de 10 caracteres (~50 bits).
   /// El identificador funciona también como secreto de emparejamiento, por lo
@@ -34,11 +41,54 @@ class CloudRemoteBridge {
         .doc(sessionId.trim().toUpperCase());
   }
 
-  /// HOST: Publica el estado actual en la nube
+  /// HOST: Publica el estado actual en la nube con Throttling
   static Future<void> publishState(
     String sessionId,
-    Map<String, dynamic> state,
-  ) async {
+    Map<String, dynamic> state, {
+    bool force = false,
+  }) async {
+    _pendingSessionId = sessionId;
+    _pendingState = state;
+
+    if (force) {
+      _throttleTimer?.cancel();
+      await _executePublish();
+      return;
+    }
+
+    if (_throttleTimer?.isActive ?? false) {
+      return;
+    }
+
+    _throttleTimer = Timer(const Duration(milliseconds: 250), _executePublish);
+  }
+
+  static Future<void> _executePublish() async {
+    if (_pendingSessionId == null || _pendingState == null || _isPublishing) return;
+    _isPublishing = true;
+    final sessionId = _pendingSessionId!;
+    final state = _pendingState!;
+    _pendingState = null;
+
+    // Simple diff to avoid redundant writes (deep compare map strings)
+    bool hasChanged = _lastPublishedState == null ||
+        _lastPublishedState!['currentTitle'] != state['currentTitle'] ||
+        _lastPublishedState!['slideIndex'] != state['slideIndex'] ||
+        _lastPublishedState!['blackout'] != state['blackout'] ||
+        _lastPublishedState!['planCount'] != state['planCount'] ||
+        _lastPublishedState!['planIndex'] != state['planIndex'];
+
+    // Plan items only if lengths differ to avoid deep comparison cost
+    if (!hasChanged &&
+        _lastPublishedState!['planItems']?.length != state['planItems']?.length) {
+      hasChanged = true;
+    }
+
+    if (!hasChanged) {
+      _isPublishing = false;
+      return;
+    }
+
     try {
       await sessionDoc(sessionId).set({
         ...state,
@@ -48,65 +98,93 @@ class CloudRemoteBridge {
         ),
         'hostActive': true,
       }, SetOptions(merge: true));
-    } catch (_) {}
+      _lastPublishedState = state;
+    } catch (e) {
+      debugPrint('SesiÃ³n no publicada: permisos/esquema ($e)');
+      rethrow;
+    } finally {
+      _isPublishing = false;
+      // if more arrived while publishing, schedule again
+      if (_pendingState != null) {
+        _throttleTimer = Timer(const Duration(milliseconds: 250), _executePublish);
+      }
+    }
   }
 
-  /// HOST: Escucha los comandos entrantes de los celulares conectados
-  static StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>
+  /// HOST: Escucha los comandos entrantes de los celulares conectados en la subcolecciÃ³n
+  static StreamSubscription<QuerySnapshot<Map<String, dynamic>>>
   listenCommands(
     String sessionId,
     void Function(String action, Map<String, dynamic>? payload) onCommand,
   ) {
-    String? lastProcessedCmdId;
-    return sessionDoc(sessionId).snapshots().listen((snap) {
-      if (!snap.exists) return;
-      final data = snap.data();
-      if (data == null) return;
-      final cmd = data['lastCommand'];
-      if (cmd is Map<String, dynamic>) {
-        final cmdId = cmd['id'] as String?;
-        final action = cmd['action'] as String?;
-        if (cmdId != null && action != null && cmdId != lastProcessedCmdId) {
-          lastProcessedCmdId = cmdId;
-          onCommand(action, cmd['payload'] as Map<String, dynamic>?);
+    return sessionDoc(sessionId)
+        .collection('commands')
+        .orderBy('timestamp')
+        .snapshots()
+        .listen((snap) {
+      for (final change in snap.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data();
+          if (data != null) {
+            final action = data['action'] as String?;
+            if (action != null) {
+              onCommand(action, data['payload'] as Map<String, dynamic>?);
+            }
+          }
+          // Marcar procesado borrando el comando (append-only logic)
+          change.doc.reference.delete().catchError((_) {});
         }
       }
     });
   }
 
-  /// HOST: Cierra la sesión
+  /// HOST: Cierra la sesión borrando los documentos
   static Future<void> closeSession(String sessionId) async {
     try {
-      await sessionDoc(
-        sessionId,
-      ).update({'hostActive': false, 'closedAt': FieldValue.serverTimestamp()});
+      final docRef = sessionDoc(sessionId);
+      await docRef.delete();
     } catch (_) {}
   }
 
-  /// CLIENTE MÓVIL: Envía un comando a la sesión del proyector
+  /// CLIENTE MÃ“VIL: EnvÃ­a un comando a la subcolecciÃ³n del proyector
   static Future<void> sendCommand(
     String sessionId,
     String action, {
     Map<String, dynamic>? payload,
   }) async {
-    final docRef = sessionDoc(sessionId);
-    final cmdId = '${DateTime.now().millisecondsSinceEpoch}_${(action)}';
-    await docRef.update({
-      'lastCommand': {
-        'id': cmdId,
+    final colRef = sessionDoc(sessionId).collection('commands');
+    try {
+      await colRef.add({
         'action': action,
         'payload': payload,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      },
-    });
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('Error enviando comando: $e');
+    }
   }
 
-  /// CLIENTE MÓVIL: Escucha el estado de la sesión en tiempo real
+  /// CLIENTE MÃ“VIL: Escucha el estado de la sesiÃ³n en tiempo real
   static Stream<Map<String, dynamic>> listenState(String sessionId) {
     return sessionDoc(sessionId).snapshots().map((snap) {
       if (!snap.exists) return <String, dynamic>{'connected': false};
       final data = snap.data() ?? <String, dynamic>{};
-      return {...data, 'connected': data['hostActive'] == true};
+      
+      // Parseo robusto
+      final result = <String, dynamic>{
+        ...data,
+        'connected': data['hostActive'] == true,
+        'slideIndex': (data['slideIndex'] as num?)?.toInt() ?? 0,
+        'totalSlides': (data['totalSlides'] as num?)?.toInt() ?? 0,
+        'planIndex': (data['planIndex'] as num?)?.toInt() ?? 0,
+        'planCount': (data['planCount'] as num?)?.toInt() ?? 0,
+      };
+
+      if (data['planItems'] is List) {
+         result['planItems'] = (data['planItems'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+
+      return result;
     });
   }
 }

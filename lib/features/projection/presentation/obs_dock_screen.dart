@@ -3,9 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../content.dart';
-import '../../../projection_native.dart'
-    if (dart.library.js_interop) '../../../projection_web.dart'
-    as projection;
 import '../providers/projection_provider.dart';
 import '../services/obs_client.dart';
 
@@ -17,30 +14,11 @@ class ObsDockScreen extends ConsumerStatefulWidget {
 }
 
 class _ObsDockScreenState extends ConsumerState<ObsDockScreen> {
-  Map<String, dynamic>? _projectionState;
-  late final void Function() _stopListening;
   final TextEditingController _tickerController = TextEditingController();
   bool _isTickerActive = false;
 
   @override
-  void initState() {
-    super.initState();
-    _stopListening = projection.listenOutput((data) {
-      if (mounted) {
-        setState(() {
-          _projectionState = data;
-          final ticker = data['marqueeText'] as String?;
-          if (ticker != null && ticker.isNotEmpty) {
-            _isTickerActive = true;
-          }
-        });
-      }
-    });
-  }
-
-  @override
   void dispose() {
-    _stopListening();
     _tickerController.dispose();
     super.dispose();
   }
@@ -53,24 +31,30 @@ class _ObsDockScreenState extends ConsumerState<ObsDockScreen> {
     } else if (action == 'prev') {
       notifier.move(-1);
     } else if (action == 'toggleBlack') {
-      notifier.toggleBlackout();
+      notifier.toggleBlack();
     } else if (action == 'setTicker') {
       final text = value as String? ?? '';
-      notifier.setMarqueeText(text);
+      notifier.setMarquee(text);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = _projectionState;
-    final blackout = state?['blackout'] == true;
-    final slideData = state?['slide'];
-    final SlideData? slide = slideData is Map
-        ? SlideData.fromJson(Map<String, dynamic>.from(slideData))
-        : null;
-    final nextSlideData = state?['nextSlide'];
-    final SlideData? nextSlide = nextSlideData is Map
-        ? SlideData.fromJson(Map<String, dynamic>.from(nextSlideData))
+    ref.listen(projectionProvider.select((s) => s.marqueeText), (prev, next) {
+      if (next.isNotEmpty) {
+        setState(() {
+          _isTickerActive = true;
+          _tickerController.text = next;
+        });
+      }
+    });
+    
+    final state = ref.watch(projectionProvider);
+    final blackout = state.blackout;
+    final slide = ref.read(projectionProvider.notifier).currentSlide;
+    
+    final nextSlide = (state.slides.isNotEmpty && state.slideIndex + 1 < state.slides.length)
+        ? state.slides[state.slideIndex + 1]
         : null;
 
     final obsClient = ref.watch(obsClientProvider);

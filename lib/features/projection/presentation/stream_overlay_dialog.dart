@@ -11,16 +11,18 @@ import 'obs_dock_screen.dart';
 
 class StreamOverlayDialog extends ConsumerStatefulWidget {
   final Map<String, dynamic> outputState;
+  final String? sessionId;
 
-  const StreamOverlayDialog({super.key, required this.outputState});
+  const StreamOverlayDialog({super.key, required this.outputState, this.sessionId});
 
   static Future<void> show(
     BuildContext context,
-    Map<String, dynamic> outputState,
-  ) {
+    Map<String, dynamic> outputState, {
+    String? sessionId,
+  }) {
     return showDialog(
       context: context,
-      builder: (context) => StreamOverlayDialog(outputState: outputState),
+      builder: (context) => StreamOverlayDialog(outputState: outputState, sessionId: sessionId),
     );
   }
 
@@ -74,14 +76,19 @@ class _StreamOverlayDialogState extends ConsumerState<StreamOverlayDialog>
       if (_position != OverlayPosition.bottom) 'pos': _position.name,
       if (_size != OverlayTextSize.normal) 'size': _size.name,
       if (_liveBadge) 'live': '1',
+      if (widget.sessionId != null) 'session': widget.sessionId!,
     };
     return base.replace(queryParameters: query, fragment: '').toString();
   }
 
   String get _generatedDockUrl {
     final base = Uri.base;
+    final query = <String, String>{
+      'dock': '1',
+      if (widget.sessionId != null) 'session': widget.sessionId!,
+    };
     return base.replace(
-      queryParameters: {'dock': '1'},
+      queryParameters: query,
       fragment: '/obs-dock',
     ).toString();
   }

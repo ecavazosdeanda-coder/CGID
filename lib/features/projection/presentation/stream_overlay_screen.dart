@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:marquee/marquee.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../appearance.dart';
 import '../../../content.dart';
 import '../../../projection_native.dart'
     if (dart.library.js_interop) '../../../projection_web.dart'
     as projection;
+import '../providers/projection_provider.dart';
 
 enum OverlayMode { lowerthird, strip, clean, fullscreen }
 
@@ -17,7 +20,7 @@ enum OverlayBackground { transparent, green, blue, dark, black }
 
 enum OverlayTextSize { normal, large, compact }
 
-class StreamOverlayScreen extends StatefulWidget {
+class StreamOverlayScreen extends ConsumerStatefulWidget {
   final OverlayMode? initialMode;
   final OverlayBackground? initialBackground;
 
@@ -28,13 +31,10 @@ class StreamOverlayScreen extends StatefulWidget {
   });
 
   @override
-  State<StreamOverlayScreen> createState() => _StreamOverlayScreenState();
+  ConsumerState<StreamOverlayScreen> createState() => _StreamOverlayScreenState();
 }
 
-class _StreamOverlayScreenState extends State<StreamOverlayScreen> {
-  Map<String, dynamic>? _state;
-  late final void Function() _stopListening;
-
+class _StreamOverlayScreenState extends ConsumerState<StreamOverlayScreen> {
   late OverlayMode _mode;
   late OverlayBackground _background;
   OverlayPosition _position = OverlayPosition.bottom;
@@ -49,13 +49,6 @@ class _StreamOverlayScreenState extends State<StreamOverlayScreen> {
   void initState() {
     super.initState();
     _parseUrlParameters();
-
-    _stopListening = projection.listenOutput((data) {
-      if (mounted) {
-        setState(() => _state = data);
-      }
-    });
-
     _resetControlsTimer();
   }
 
@@ -128,7 +121,6 @@ class _StreamOverlayScreenState extends State<StreamOverlayScreen> {
   @override
   void dispose() {
     _hideControlsTimer?.cancel();
-    _stopListening();
     super.dispose();
   }
 
@@ -178,18 +170,14 @@ class _StreamOverlayScreenState extends State<StreamOverlayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = _state;
-    final blackout = state?['blackout'] == true;
-    final slideData = state?['slide'];
-    final SlideData? slide = slideData is Map
-        ? SlideData.fromJson(Map<String, dynamic>.from(slideData))
-        : null;
+    final state = ref.watch(projectionProvider);
+    final blackout = state.blackout;
+    final slide = ref.read(projectionProvider.notifier).currentSlide;
 
-    final marqueeText = state?['marqueeText'] as String?;
-    final hasMarquee = marqueeText != null && marqueeText.trim().isNotEmpty && !blackout;
+    final marqueeText = state.marqueeText;
+    final hasMarquee = marqueeText.trim().isNotEmpty && !blackout;
 
-    final hasContent = slide != null &&
-        slide.text.trim().isNotEmpty &&
+    final hasContent = slide.text.trim().isNotEmpty &&
         slide.text.trim() != 'Esperando contenido' &&
         !blackout;
 

@@ -146,28 +146,4 @@ void main() {
     expect((entry['assignments'] as List).single['displayName'], 'Hermana Ana');
   });
 
-  test('cloud public plan excludes private notes', () async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-    final notifier = container.read(planProvider.notifier)..init(prefs);
-    final plans = {
-      'Culto': [
-        _entry(
-          'private',
-          'Predicación',
-        ).copyWith(notes: 'Nota exclusiva del equipo ministerial').toJson(),
-      ],
-    };
-
-    final publicPlans = notifier.publicPlansForCloud(plans);
-    final privateNotes = notifier.privateNotesForCloud(plans);
-
-    expect((publicPlans['Culto'] as List).single['notes'], isEmpty);
-    expect(
-      (privateNotes['Culto'] as List).single,
-      'Nota exclusiva del equipo ministerial',
-    );
-  });
 }

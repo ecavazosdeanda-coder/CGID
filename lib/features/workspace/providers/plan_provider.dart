@@ -1,10 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-
 import '../../../content.dart';
 
 class PlanState {
@@ -13,6 +13,7 @@ class PlanState {
   final Map<String, dynamic> savedPlans;
   final Map<String, dynamic> planMetadata;
   final bool isSyncing;
+  final String? churchId;
 
   const PlanState({
     required this.plan,
@@ -20,6 +21,7 @@ class PlanState {
     required this.savedPlans,
     required this.planMetadata,
     this.isSyncing = false,
+    this.churchId,
   });
 
   PlanState copyWith({
@@ -28,6 +30,7 @@ class PlanState {
     Map<String, dynamic>? savedPlans,
     Map<String, dynamic>? planMetadata,
     bool? isSyncing,
+    String? churchId,
   }) {
     return PlanState(
       plan: plan ?? this.plan,
@@ -35,6 +38,7 @@ class PlanState {
       savedPlans: savedPlans ?? this.savedPlans,
       planMetadata: planMetadata ?? this.planMetadata,
       isSyncing: isSyncing ?? this.isSyncing,
+      churchId: churchId ?? this.churchId,
     );
   }
 }
@@ -45,151 +49,278 @@ final planProvider = NotifierProvider<PlanNotifier, PlanState>(
 
 class PlanNotifier extends Notifier<PlanState> {
   SharedPreferences? _prefs;
+  StreamSubscription? _plansSub;
+  StreamSubscription? _privateNotesSub;
+
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
 
   @override
   PlanState build() {
     return const PlanState(
       plan: [],
-      activePlan: 'Culto del sábado',
+      activePlan: '',
       savedPlans: {},
       planMetadata: {},
     );
   }
 
-  void init(SharedPreferences prefs) {
-    _prefs = prefs;
-    Map<String, dynamic> savedPlans = {};
-    Map<String, dynamic> planMetadata = {};
-    String activePlan = 'Culto del sábado';
-    List<Entry> plan = [];
-
+  Future<void> init([SharedPreferences? prefs]) async {
+    _prefs = prefs ?? await SharedPreferences.getInstance();
+    final activePlan = _prefs!.getString('activePlan') ?? '';
+    
+    // Fallback inicial offline desde _prefs
+    Map<String, dynamic> initialSavedPlans = {};
+    Map<String, dynamic> initialMetadata = {};
+    
     try {
-      savedPlans = jsonDecode(prefs.getString('plans') ?? '{}');
-      planMetadata = jsonDecode(prefs.getString('planMetadata') ?? '{}');
-      activePlan = prefs.getString('activePlan') ?? activePlan;
-      plan = [
-        for (final e in savedPlans[activePlan] ?? [])
-          Entry.fromJson(Map<String, dynamic>.from(e)),
-      ];
+      final savedPlansStr = _prefs!.getString('plans');
+      if (savedPlansStr != null) {
+        initialSavedPlans = jsonDecode(savedPlansStr);
+      }
+      final metadataStr = _prefs!.getString('planMetadata');
+      if (metadataStr != null) {
+        initialMetadata = jsonDecode(metadataStr);
+      }
     } catch (_) {}
 
-    state = PlanState(
-      plan: plan,
+    final initialPlanRaw = initialSavedPlans[activePlan] as List? ?? [];
+    final initialPlan = initialPlanRaw.map((e) => Entry.fromJson(Map<String, dynamic>.from(e))).toList();
+
+    state = state.copyWith(
       activePlan: activePlan,
-      savedPlans: savedPlans,
-      planMetadata: planMetadata,
+      savedPlans: initialSavedPlans,
+      planMetadata: initialMetadata,
+      plan: initialPlan,
     );
   }
 
-  Future<void> syncToCloud(String churchId) async {
+  // --- Real-time Sync ---
+
+  void listenToChurch(String churchId) {
     if (churchId.isEmpty) return;
-    state = state.copyWith(isSyncing: true);
-    try {
-      final db = FirebaseFirestore.instance;
-      final batch = db.batch();
-      final publicRef = db
-          .collection('churches')
-          .doc(churchId)
-          .collection('plans')
-          .doc('weekly_plans');
-      final privateRef = db
-          .collection('churches')
-          .doc(churchId)
-          .collection('private_plans')
-          .doc('weekly_plans');
-      batch.set(publicRef, {
-        'plans': publicPlansForCloud(state.savedPlans),
-        'planMetadata': state.planMetadata,
-        'updatedAt': FieldValue.serverTimestamp(),
+    if (state.churchId == churchId) return;
+
+    _plansSub?.cancel();
+    _privateNotesSub?.cancel();
+
+    state = state.copyWith(churchId: churchId, isSyncing: true);
+
+    // 1. Escuchar los planes públicos
+    _plansSub = _db
+        .collection('churches')
+        .doc(churchId)
+        .collection('plans')
+        .snapshots()
+        .listen((snapshot) {
+      _processSnapshots(churchId, snapshot.docs);
+    }, onError: (e) {
+      debugPrint('Error en planes públicos: $e');
+    });
+
+    // 2. Escuchar las notas privadas
+    _privateNotesSub = _db
+        .collection('churches')
+        .doc(churchId)
+        .collection('private_plans')
+        .snapshots()
+        .listen((snapshot) {
+      // Las combinamos usando Firestore persistentLocalCache de forma transparente
+      // Ya que este listener forzará actualización de UI
+      _db.collection('churches').doc(churchId).collection('plans').get(const GetOptions(source: Source.cache)).then((cachedPlans) {
+         _processSnapshots(churchId, cachedPlans.docs);
       });
-      batch.set(privateRef, {
-        'notes': privateNotesForCloud(state.savedPlans),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      await batch.commit().timeout(
-        const Duration(seconds: 8),
-        onTimeout: () => throw Exception(
-          'Tiempo de espera agotado. Verifica que Cloud Firestore esté creado y habilitado en la consola de Firebase.',
-        ),
-      );
-      debugPrint('Cultos sincronizados a la nube para $churchId');
-    } catch (e) {
-      debugPrint('Error sincronizando a la nube: $e');
-      rethrow;
-    } finally {
-      state = state.copyWith(isSyncing: false);
-    }
+    }, onError: (e) {
+      debugPrint('Error en notas privadas (puede ser normal si no hay permisos): $e');
+    });
   }
 
-  Future<void> fetchFromCloud(String churchId) async {
-    if (churchId.isEmpty) return;
-    state = state.copyWith(isSyncing: true);
-    try {
-      final db = FirebaseFirestore.instance;
-      final doc = await db
-          .collection('churches')
-          .doc(churchId)
-          .collection('plans')
-          .doc('weekly_plans')
-          .get()
-          .timeout(
-            const Duration(seconds: 8),
-            onTimeout: () => throw Exception(
-              'Tiempo de espera agotado. Verifica que Cloud Firestore esté creado y habilitado en la consola de Firebase.',
-            ),
-          );
+  Future<void> _processSnapshots(String churchId, List<QueryDocumentSnapshot> planDocs) async {
+    final Map<String, dynamic> newSavedPlans = {};
+    final Map<String, dynamic> newMetadata = {};
 
-      if (doc.exists && doc.data() != null) {
-        final data = doc.data()!;
-        final cloudPlans = Map<String, dynamic>.from(data['plans'] ?? {});
-        final cloudMetadata = Map<String, dynamic>.from(
-          data['planMetadata'] ?? {},
-        );
-        Map<String, dynamic> privateNotes = {};
-        var preserveLegacyLocalNotes = false;
-        try {
-          final privateDoc = await db
-              .collection('churches')
-              .doc(churchId)
-              .collection('private_plans')
-              .doc('weekly_plans')
-              .get();
-          preserveLegacyLocalNotes = !privateDoc.exists;
-          privateNotes = Map<String, dynamic>.from(
-            privateDoc.data()?['notes'] ?? {},
-          );
-        } catch (_) {
-          // Las pantallas públicas pueden descargar el orden, pero nunca las
-          // notas ministeriales. Ante permisos insuficientes se limpian.
+    // Buscar si existe el formato viejo (weekly_plans) para mantener lectura
+    final legacyDoc = planDocs.cast<QueryDocumentSnapshot?>().firstWhere(
+      (doc) => doc?.id == 'weekly_plans',
+      orElse: () => null,
+    );
+
+    if (legacyDoc != null && legacyDoc.exists) {
+      final data = legacyDoc.data() as Map<String, dynamic>;
+      final legacyPlans = Map<String, dynamic>.from(data['plans'] ?? {});
+      final legacyMeta = Map<String, dynamic>.from(data['planMetadata'] ?? {});
+      
+      newSavedPlans.addAll(legacyPlans);
+      newMetadata.addAll(legacyMeta);
+      
+      // Intentar leer notas legadas
+      try {
+        final legacyPrivate = await _db.collection('churches').doc(churchId).collection('private_plans').doc('weekly_plans').get(const GetOptions(source: Source.cache));
+        if (legacyPrivate.exists) {
+           final legacyNotes = Map<String, dynamic>.from(legacyPrivate.data()?['notes'] ?? {});
+           for (final entry in legacyNotes.entries) {
+              final pName = entry.key;
+              final pNotesList = entry.value as List? ?? [];
+              final targetPlan = newSavedPlans[pName] as List?;
+              if (targetPlan != null) {
+                for (int i=0; i < pNotesList.length && i < targetPlan.length; i++) {
+                   targetPlan[i]['notes'] = pNotesList[i] ?? '';
+                }
+              }
+           }
         }
-        final mergedPlans = _mergePrivateNotes(
-          cloudPlans,
-          privateNotes,
-          state.savedPlans,
-          preserveLegacyLocalNotes: preserveLegacyLocalNotes,
-        );
-        _prefs?.setString('plans', jsonEncode(mergedPlans));
-        _prefs?.setString('planMetadata', jsonEncode(cloudMetadata));
+      } catch (_) {}
+    }
 
-        final newPlan = [
-          for (final e in mergedPlans[state.activePlan] ?? [])
-            Entry.fromJson(Map<String, dynamic>.from(e)),
-        ];
+    // Leer el formato nuevo
+    final newFormatDocs = planDocs.where((d) => d.id != 'weekly_plans').toList();
+    
+    for (final doc in newFormatDocs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final title = data['title'] as String? ?? doc.id;
+      final entries = data['entries'] as List? ?? [];
+      final metadata = data['metadata'] as Map<String, dynamic>? ?? {};
+      metadata['revision'] = data['revision'] as int? ?? 0;
+      
+      // Transformar para el formato actual
+      newSavedPlans[title] = List.from(entries);
+      newMetadata[title] = metadata;
 
-        state = state.copyWith(
-          savedPlans: mergedPlans,
-          planMetadata: cloudMetadata,
-          plan: newPlan,
-        );
-        debugPrint('Cultos descargados de la nube para $churchId');
-      }
+      // Unir con notas privadas del formato nuevo
+      try {
+        final privDoc = await _db.collection('churches').doc(churchId).collection('private_plans').doc(doc.id).get(const GetOptions(source: Source.cache));
+        if (privDoc.exists) {
+          final notesMap = privDoc.data()?['notes'] as Map<String, dynamic>? ?? {};
+          final targetPlan = newSavedPlans[title] as List;
+          for (int i = 0; i < targetPlan.length; i++) {
+             final entryData = targetPlan[i] as Map<String, dynamic>;
+             final eId = entryData['id'];
+             if (notesMap.containsKey(eId)) {
+                entryData['notes'] = notesMap[eId];
+             }
+          }
+        }
+      } catch (_) {}
+    }
+
+    _prefs?.setString('plans', jsonEncode(newSavedPlans));
+    _prefs?.setString('planMetadata', jsonEncode(newMetadata));
+
+    List<Entry> currentPlan = [];
+    if (newSavedPlans.containsKey(state.activePlan)) {
+      currentPlan = (newSavedPlans[state.activePlan] as List)
+          .map((e) => Entry.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+
+    state = state.copyWith(
+      savedPlans: newSavedPlans,
+      planMetadata: newMetadata,
+      plan: currentPlan,
+      isSyncing: false,
+    );
+  }
+
+  // Compatibilidad hacia atrás de la API
+  Future<void> fetchFromCloud(String churchId) async {
+    listenToChurch(churchId);
+  }
+
+  Future<void> syncToCloud(String churchId) async {
+    final active = state.activePlan;
+    if (active.isEmpty) return;
+    
+    state = state.copyWith(isSyncing: true);
+    
+    try {
+       // Save using the new format document (transactional)
+       final planId = active.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+       final planRef = _db.collection('churches').doc(churchId).collection('plans').doc(planId);
+       final privRef = _db.collection('churches').doc(churchId).collection('private_plans').doc(planId);
+       
+       final uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
+
+       await _db.runTransaction((tx) async {
+          final snap = await tx.get(planRef);
+          int newRevision = 1;
+          if (snap.exists) {
+            final remoteRevision = snap.data()?['revision'] as int? ?? 0;
+            final localMetadataRaw = state.planMetadata[active];
+            final localRevision = localMetadataRaw is Map ? (localMetadataRaw['revision'] as int? ?? 0) : 0;
+            if (remoteRevision > localRevision) {
+              throw FirebaseException(plugin: 'cloud_firestore', code: 'aborted', message: 'CONFLICTO: El culto ha sido modificado en la nube por otro usuario. Descarga los cambios antes de volver a guardar.');
+            }
+            newRevision = remoteRevision + 1;
+          }
+
+          final rawEntries = state.savedPlans[active] as List? ?? [];
+          final publicEntries = [];
+          final Map<String, String> privateNotes = {};
+
+          for (final raw in rawEntries) {
+            final e = Map<String, dynamic>.from(raw as Map);
+            final note = e['notes'] as String? ?? '';
+            final eId = e['id'] as String;
+            e['notes'] = ''; // clear for public
+            publicEntries.add(e);
+            
+            if (note.trim().isNotEmpty) {
+               privateNotes[eId] = note;
+            }
+          }
+
+          final publicData = {
+            'title': active,
+            'entries': publicEntries,
+            'metadata': state.planMetadata[active] ?? {},
+            'revision': newRevision,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'updatedBy': uid,
+          };
+
+          final privateData = {
+            'notes': privateNotes,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'updatedBy': uid,
+            'revision': newRevision,
+          };
+
+          tx.set(planRef, publicData);
+          tx.set(privRef, privateData);
+       });
+       debugPrint('Sincronizado a la nube con éxito.');
     } catch (e) {
-      debugPrint('Error descargando de la nube: $e');
+      debugPrint('Error sincronizando plan: $e');
       rethrow;
     } finally {
       state = state.copyWith(isSyncing: false);
     }
   }
+
+  Future<void> deletePlan(String churchId, String planName) async {
+    final planId = planName.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+    final planRef = _db.collection('churches').doc(churchId).collection('plans').doc(planId);
+    final privRef = _db.collection('churches').doc(churchId).collection('private_plans').doc(planId);
+
+    await _db.runTransaction((tx) async {
+      tx.delete(planRef);
+      tx.delete(privRef);
+    });
+
+    final newSavedPlans = Map<String, dynamic>.from(state.savedPlans)..remove(planName);
+    final newMetadata = Map<String, dynamic>.from(state.planMetadata)..remove(planName);
+    
+    _prefs?.setString('plans', jsonEncode(newSavedPlans));
+    _prefs?.setString('planMetadata', jsonEncode(newMetadata));
+
+    state = state.copyWith(
+      savedPlans: newSavedPlans,
+      planMetadata: newMetadata,
+      activePlan: state.activePlan == planName ? '' : state.activePlan,
+      plan: state.activePlan == planName ? [] : state.plan,
+    );
+  }
+
+  // --- Mismos métodos locales de antes ---
 
   void setActivePlan(String name) {
     if (_prefs != null) {
@@ -292,57 +423,4 @@ class PlanNotifier extends Notifier<PlanState> {
     }
     state = state.copyWith(savedPlans: newSavedPlans);
   }
-
-  @visibleForTesting
-  Map<String, dynamic> publicPlansForCloud(Map<String, dynamic> plans) => {
-    for (final plan in plans.entries)
-      plan.key: [
-        for (final raw in plan.value as List? ?? const [])
-          Map<String, dynamic>.from(raw as Map)..['notes'] = '',
-      ],
-  };
-
-  @visibleForTesting
-  Map<String, dynamic> privateNotesForCloud(Map<String, dynamic> plans) => {
-    for (final plan in plans.entries)
-      plan.key: [
-        for (final raw in plan.value as List? ?? const [])
-          (raw as Map)['notes'] as String? ?? '',
-      ],
-  };
-
-  Map<String, dynamic> _mergePrivateNotes(
-    Map<String, dynamic> publicPlans,
-    Map<String, dynamic> privateNotes,
-    Map<String, dynamic> localPlans, {
-    bool preserveLegacyLocalNotes = false,
-  }) {
-    return {
-      for (final plan in publicPlans.entries)
-        plan.key: [
-          for (
-            var index = 0;
-            index < (plan.value as List? ?? const []).length;
-            index++
-          )
-            _entryWithPrivateNote(
-              Map<String, dynamic>.from((plan.value as List)[index] as Map),
-              index < (privateNotes[plan.key] as List? ?? const []).length
-                  ? (privateNotes[plan.key] as List)[index] as String? ?? ''
-                  : preserveLegacyLocalNotes &&
-                        index <
-                            (localPlans[plan.key] as List? ?? const []).length
-                  ? ((localPlans[plan.key] as List)[index] as Map)['notes']
-                            as String? ??
-                        ''
-                  : '',
-            ),
-        ],
-    };
-  }
-
-  Map<String, dynamic> _entryWithPrivateNote(
-    Map<String, dynamic> entry,
-    String note,
-  ) => entry..['notes'] = note;
 }

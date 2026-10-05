@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/firebase_emulator.dart';
 import 'firebase_options.dart';
 
 import 'dart:io';
@@ -89,6 +90,7 @@ Future<void> main(List<String> args) async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await connectFirebaseEmulatorsIfEnabled();
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
   }

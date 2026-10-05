@@ -1,40 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../projection_native.dart'
-    if (dart.library.js_interop) '../../../projection_web.dart'
-    as projection;
+import '../providers/projection_provider.dart';
 import 'projection_output_view.dart';
 
-class OutputScreen extends StatefulWidget {
+class OutputScreen extends ConsumerWidget {
   const OutputScreen({super.key});
-  @override
-  State<OutputScreen> createState() => _OutputScreenState();
-}
-
-class _OutputScreenState extends State<OutputScreen> {
-  Map<String, dynamic>? state;
-  late final void Function() _stopListening;
 
   @override
-  void initState() {
-    super.initState();
-    _stopListening = projection.listenOutput((data) {
-      if (mounted) setState(() => state = data);
-    });
-  }
-
-  @override
-  void dispose() {
-    _stopListening();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (state == null) return const Scaffold(backgroundColor: Colors.black);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(projectionProvider);
     return Scaffold(
       backgroundColor: Colors.black,
-      body: ProjectionOutputView(state: state!),
+      body: ProjectionOutputView(state: state),
     );
   }
 }

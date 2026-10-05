@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -79,7 +79,7 @@ final userManagementServiceProvider = Provider(
 );
 
 class UserManagementService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final _functions = FirebaseFunctions.instance;
 
   Future<void> assignChurchToPastor({
     required String uid,
@@ -87,15 +87,12 @@ class UserManagementService {
     required String churchName,
     String? role,
   }) async {
-    final data = <String, dynamic>{
+    await _functions.httpsCallable('adminUpdateRole').call({
+      'targetUid': uid,
       'churchId': churchId,
       'churchName': churchName,
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-    if (role != null) {
-      data['role'] = role;
-    }
-    await _db.collection('users').doc(uid).set(data, SetOptions(merge: true));
+      'role': role,
+    });
   }
 
   Future<void> sendPasswordResetToPastor(String email) async {
@@ -109,126 +106,43 @@ class UserManagementService {
     String? password,
     String role = 'pastor',
   }) async {
-    final cleanEmail = email.trim().toLowerCase();
-    String? createdUid;
-
-    if (password != null && password.trim().isNotEmpty) {
-      FirebaseApp? tempApp;
-      try {
-        final appName = 'TempAuth_${DateTime.now().millisecondsSinceEpoch}';
-        tempApp = await Firebase.initializeApp(
-          name: appName,
-          options: Firebase.app().options,
-        );
-        final tempAuth = FirebaseAuth.instanceFor(app: tempApp);
-        final cred = await tempAuth.createUserWithEmailAndPassword(
-          email: cleanEmail,
-          password: password.trim(),
-        );
-        createdUid = cred.user?.uid;
-        await tempAuth.signOut();
-      } on FirebaseAuthException catch (e) {
-        if (e.code != 'email-already-in-use') {
-          rethrow;
-        }
-      } finally {
-        if (tempApp != null) {
-          await tempApp.delete();
-        }
-      }
-    }
-
-    Query<Map<String, dynamic>> existingProfileQuery = _db
-        .collection('users')
-        .where('email', isEqualTo: cleanEmail);
-    final actorUid = FirebaseAuth.instance.currentUser?.uid;
-    if (actorUid != null) {
-      final actor = await _db.collection('users').doc(actorUid).get();
-      if (actor.data()?['role'] != 'admin') {
-        // Esta condición no es solo visual: también permite que Firestore
-        // demuestre que una consulta pastoral está limitada a su iglesia.
-        existingProfileQuery = existingProfileQuery.where(
-          'churchId',
-          isEqualTo: churchId,
-        );
-      }
-    }
-
-    final existingProfiles = await existingProfileQuery.get();
-    if (existingProfiles.docs.isNotEmpty) {
-      await existingProfiles.docs.first.reference.update({
-        'churchId': churchId,
-        'churchName': churchName,
-        'role': role,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } else if (createdUid != null) {
-      await _db.collection('users').doc(createdUid).set({
-        'email': cleanEmail,
-        'role': role,
-        'churchId': churchId,
-        'churchName': churchName,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      await _db
-          .collection('account_invitations')
-          .doc(cleanEmail)
-          .delete()
-          .catchError((_) {});
-    } else {
-      await _db.collection('account_invitations').doc(cleanEmail).set({
-        'email': cleanEmail,
-        'role': role,
-        'churchId': churchId,
-        'churchName': churchName,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    }
+    await _functions.httpsCallable('adminCreateUser').call({
+      'email': email,
+      'password': password,
+      'churchId': churchId,
+      'churchName': churchName,
+      'role': role,
+    });
   }
 
   Future<void> setPasswordForPastor({
     required String email,
     required String newPassword,
   }) async {
-    final cleanEmail = email.trim().toLowerCase();
-    FirebaseApp? tempApp;
     try {
-      final appName = 'TempAuth_${DateTime.now().millisecondsSinceEpoch}';
-      tempApp = await Firebase.initializeApp(
-        name: appName,
-        options: Firebase.app().options,
-      );
-      final tempAuth = FirebaseAuth.instanceFor(app: tempApp);
-      await tempAuth.createUserWithEmailAndPassword(
-        email: cleanEmail,
-        password: newPassword.trim(),
-      );
-      await tempAuth.signOut();
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'email-already-in-use') {
-        // La cuenta ya existe en Firebase Auth. Enviamos el enlace de restablecimiento directo
-        await FirebaseAuth.instance.sendPasswordResetEmail(email: cleanEmail);
-        throw Exception(
-          'El pastor ya tiene una cuenta creada en Firebase Auth. Por políticas de seguridad, le hemos enviado un enlace a su correo ($cleanEmail) para que establezca su nueva clave.',
-        );
+      await _functions.httpsCallable('adminSetPassword').call({
+        'email': email,
+        'newPassword': newPassword,
+      });
+    } on FirebaseFunctionsException catch (e) {
+      if (e.code == 'not-found') {
+        throw Exception('Usuario no encontrado en Authentication.');
       }
       rethrow;
-    } finally {
-      if (tempApp != null) {
-        await tempApp.delete();
-      }
     }
   }
 
   Future<void> updateUserRole(String uid, String role) async {
-    await _db.collection('users').doc(uid).update({
+    await _functions.httpsCallable('adminUpdateRole').call({
+      'targetUid': uid,
       'role': role,
-      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
   Future<void> deleteUser(String uid) async {
-    await _db.collection('users').doc(uid).delete();
+    await _functions.httpsCallable('adminDeleteUser').call({
+      'targetUid': uid,
+    });
   }
 
   Future<void> registerNewMember({

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:http/http.dart' as http;
 import 'package:network_info_plus/network_info_plus.dart';
@@ -44,6 +45,10 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
   String? url;
   String? cloudSessionId;
   StreamSubscription? _cloudSubscription;
+  StreamSubscription? _privateNotesSubscription;
+  String? _currentChurchId;
+  String? _currentPlanId;
+  Map<String, dynamic> _privateNotes = {};
   bool _connected = false;
   bool get connected => _connected;
   set connected(bool value) {
@@ -181,6 +186,8 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
     _pingTimer = null;
     _cloudSubscription?.cancel();
     _cloudSubscription = null;
+    _privateNotesSubscription?.cancel();
+    _privateNotesSubscription = null;
     if (mounted) {
       setState(() {
         url = null;
@@ -287,16 +294,16 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
     setState(() {
       connected = data['connected'] as bool? ?? true;
       blackout = data['blackout'] as bool? ?? false;
-      slideIndex = data['slideIndex'] as int? ?? 0;
-      totalSlides = data['totalSlides'] as int? ?? 0;
+      slideIndex = (data['slideIndex'] as num?)?.toInt() ?? 0;
+      totalSlides = (data['totalSlides'] as num?)?.toInt() ?? 0;
       currentTitle = data['currentTitle'] as String? ?? '';
       currentLabel = data['currentLabel'] as String? ?? '';
       currentText = data['currentText'] as String? ?? '';
       nextTitle = data['nextTitle'] as String? ?? '';
       nextLabel = data['nextLabel'] as String? ?? '';
       nextText = data['nextText'] as String? ?? '';
-      planIndex = data['planIndex'] as int? ?? -1;
-      planCount = data['planCount'] as int? ?? 0;
+      planIndex = (data['planIndex'] as num?)?.toInt() ?? -1;
+      planCount = (data['planCount'] as num?)?.toInt() ?? 0;
       final rawPlan = data['planItems'];
       if (rawPlan is List) {
         planItems = rawPlan
@@ -304,8 +311,57 @@ class _RemoteClientScreenState extends State<RemoteClientScreen>
             .toList();
       }
       countdownEndsAt = data['countdownEndsAt'] as int?;
-      currentNotes = data['currentNotes'] as String? ?? '';
+      
+      final newChurchId = data['churchId'] as String?;
+      final newPlanId = data['planId'] as String?;
+      
+      if (newChurchId != _currentChurchId || newPlanId != _currentPlanId) {
+        _currentChurchId = newChurchId;
+        _currentPlanId = newPlanId;
+        _listenToPrivateNotes();
+      }
+
+      _recomputeCurrentNotes();
     });
+  }
+
+  void _listenToPrivateNotes() {
+    _privateNotesSubscription?.cancel();
+    _privateNotes.clear();
+    
+    if (_currentChurchId == null || _currentPlanId == null) return;
+    
+    final planId = _currentPlanId!.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+    _privateNotesSubscription = FirebaseFirestore.instance
+        .collection('churches')
+        .doc(_currentChurchId)
+        .collection('private_plans')
+        .doc(planId)
+        .snapshots()
+        .listen((snap) {
+      if (!mounted) return;
+      setState(() {
+        if (snap.exists) {
+          _privateNotes = snap.data()?['notes'] as Map<String, dynamic>? ?? {};
+        } else {
+          _privateNotes = {};
+        }
+        _recomputeCurrentNotes();
+      });
+    }, onError: (_) {
+      // Permission denied or offline
+    });
+  }
+
+  void _recomputeCurrentNotes() {
+    if (planIndex >= 0 && planIndex < planItems.length) {
+      final entryId = planItems[planIndex]['id'] as String?;
+      if (entryId != null && _privateNotes.containsKey(entryId)) {
+        currentNotes = _privateNotes[entryId] as String? ?? '';
+        return;
+      }
+    }
+    currentNotes = '';
   }
 
   Future<void> _doPing() async {
