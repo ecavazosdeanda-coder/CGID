@@ -120,6 +120,20 @@ class ChordTransposer {
     'A#',
     'B',
   ];
+  static const _notesFlats = [
+    'C',
+    'Db',
+    'D',
+    'Eb',
+    'E',
+    'F',
+    'Gb',
+    'G',
+    'Ab',
+    'A',
+    'Bb',
+    'B',
+  ];
   static const _solfeo = [
     'Do',
     'Do#',
@@ -134,20 +148,36 @@ class ChordTransposer {
     'La#',
     'Si',
   ];
+  static const _solfeoFlats = [
+    'Do',
+    'Reb',
+    'Re',
+    'Mib',
+    'Mi',
+    'Fa',
+    'Solb',
+    'Sol',
+    'Lab',
+    'La',
+    'Sib',
+    'Si',
+  ];
 
   static String transposeText(
     String text,
     int semitones, {
     bool useSolfeo = false,
+    bool preferFlats = false,
   }) => text.replaceAllMapped(RegExp(r'\[([A-G][#b]?)([^\]]*)\]'), (match) {
     final root = transposeNote(
       match.group(1)!,
       semitones,
       useSolfeo: useSolfeo,
+      preferFlats: preferFlats,
     );
     var suffix = match.group(2)!;
     suffix = suffix.replaceAllMapped(RegExp(r'/([A-G][#b]?)'), (bass) {
-      return '/${transposeNote(bass.group(1)!, semitones, useSolfeo: useSolfeo)}';
+      return '/${transposeNote(bass.group(1)!, semitones, useSolfeo: useSolfeo, preferFlats: preferFlats)}';
     });
     return '[$root$suffix]';
   });
@@ -156,6 +186,7 @@ class ChordTransposer {
     String note,
     int semitones, {
     bool useSolfeo = false,
+    bool preferFlats = false,
   }) {
     const enharmonics = {
       'Db': 'C#',
@@ -168,7 +199,10 @@ class ChordTransposer {
     final index = _notes.indexOf(normalized);
     if (index < 0) return note;
     final target = ((index + semitones) % 12 + 12) % 12;
-    return useSolfeo ? _solfeo[target] : _notes[target];
+    if (useSolfeo) {
+      return preferFlats ? _solfeoFlats[target] : _solfeo[target];
+    }
+    return preferFlats ? _notesFlats[target] : _notes[target];
   }
 }
 

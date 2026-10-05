@@ -50,11 +50,15 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
   late final TabController _tabController;
   final FocusNode _focusNode = FocusNode();
 
-  static const _commonRoots = [
+  static const _commonRootsSharps = [
     'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
+  ];
+  static const _commonRootsFlats = [
+    'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
   ];
   static const _commonSuffixes = ['', 'm', '7', 'm7', 'maj7', 'sus4', 'dim', 'add9'];
 
+  bool _preferFlats = false;
   String _selectedRoot = 'G';
   String _selectedSuffix = '';
 
@@ -297,6 +301,7 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
                       textCol: textCol,
                       chordCol: chordCol,
                       showChords: true,
+                      preferFlats: _preferFlats,
                     ),
                   ],
                 ),
@@ -383,6 +388,41 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
                           visualDensity: VisualDensity.compact,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
+                        onPressed: () {
+                          setState(() {
+                            _preferFlats = !_preferFlats;
+                            if (_preferFlats) {
+                              const toFlats = {
+                                'C#': 'Db',
+                                'D#': 'Eb',
+                                'F#': 'Gb',
+                                'G#': 'Ab',
+                                'A#': 'Bb',
+                              };
+                              _selectedRoot = toFlats[_selectedRoot] ?? _selectedRoot;
+                            } else {
+                              const toSharps = {
+                                'Db': 'C#',
+                                'Eb': 'D#',
+                                'Gb': 'F#',
+                                'Ab': 'G#',
+                                'Bb': 'A#',
+                              };
+                              _selectedRoot = toSharps[_selectedRoot] ?? _selectedRoot;
+                            }
+                          });
+                        },
+                        child: Text(
+                          _preferFlats ? '♭ Bemoles' : '♯ Sostenidos',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
                         onPressed: () => _insertText(' '),
                         child: const Text('+ Espacio', style: TextStyle(fontSize: 11)),
                       ),
@@ -414,7 +454,7 @@ class _HymnChordEditorDialogState extends State<HymnChordEditorDialog>
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        for (final root in _commonRoots)
+                        for (final root in (_preferFlats ? _commonRootsFlats : _commonRootsSharps))
                           Padding(
                             padding: const EdgeInsets.only(right: 4),
                             child: ChoiceChip(
