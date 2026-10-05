@@ -103,10 +103,16 @@ export const adminCreateUser = functions.https.onCall(async (request) => {
     if (error.code === 'auth/user-not-found') {
       // User doesn't exist. Create.
       if (!password) {
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          'Debe proporcionar una contraseña para la cuenta nueva.'
-        );
+        const db = getFirestore();
+        await db.collection('account_invitations').doc(email).set({
+          email,
+          role: targetRole,
+          churchId: targetChurchId || null,
+          churchName: targetChurchName || null,
+          invitedBy: callerUid,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        return { success: true, invited: true };
       }
       userRecord = await getAuth().createUser({
         email,

@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/user_profile_model.dart';
@@ -41,36 +40,58 @@ final userProfileProvider = StreamProvider<UserProfile?>((ref) {
   });
 });
 
-/// Future de todos los usuarios registrados (con timeout para evitar congelamiento de UI)
-final allUsersProvider = FutureProvider<List<UserProfile>>((ref) async {
-  try {
-    final profile = await ref.watch(userProfileProvider.future);
-    if (profile == null || (!profile.isAdmin && !profile.isPastor)) {
-      return const [];
-    }
-
-    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection(
-      'users',
-    );
-    if (profile.isPastor) {
-      final churchId = profile.churchId;
-      if (churchId == null || churchId.isEmpty) return const [];
-      query = query.where('churchId', isEqualTo: churchId);
-    }
-
-    final snapshot = await query.get().timeout(
-      const Duration(seconds: 8),
-      onTimeout: () => throw Exception(
-        'Tiempo de espera agotado al conectar con Firestore.',
-      ),
-    );
-    return snapshot.docs
-        .map((doc) => UserProfile.fromFirestore(doc.data(), doc.id))
-        .toList();
-  } catch (e) {
-    debugPrint('Error en allUsersProvider: $e');
-    rethrow;
+/// Stream de todos los usuarios registrados
+final usersStreamProvider = StreamProvider<List<UserProfile>>((ref) {
+  final profileAsync = ref.watch(userProfileProvider);
+  final profile = profileAsync.value;
+  if (profile == null || (!profile.isAdmin && !profile.isPastor)) {
+    return Stream.value([]);
   }
+
+  Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('users');
+  if (profile.isPastor) {
+    final churchId = profile.churchId;
+    if (churchId == null || churchId.isEmpty) return Stream.value([]);
+    query = query.where('churchId', isEqualTo: churchId);
+  }
+
+  return query.snapshots().map(
+    (snap) => snap.docs.map((doc) => UserProfile.fromFirestore(doc.data(), doc.id)).toList()
+  );
+});
+
+/// Stream de todas las invitaciones pendientes
+final invitationsStreamProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
+  final profileAsync = ref.watch(userProfileProvider);
+  final profile = profileAsync.value;
+  if (profile == null || (!profile.isAdmin && !profile.isPastor)) {
+    return Stream.value([]);
+  }
+
+  Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('account_invitations');
+  if (profile.isPastor) {
+    final churchId = profile.churchId;
+    if (churchId == null || churchId.isEmpty) return Stream.value([]);
+    query = query.where('churchId', isEqualTo: churchId);
+  }
+
+  return query.snapshots().map((snap) => snap.docs.map((doc) => doc.data()).toList());
+});
+
+/// Provider que combina usuarios e invitaciones
+final allUsersProvider = Provider<AsyncValue<List<dynamic>>>((ref) {
+  final users = ref.watch(usersStreamProvider);
+  final invitations = ref.watch(invitationsStreamProvider);
+  
+  if (users.isLoading || invitations.isLoading) return const AsyncValue.loading();
+  if (users.hasError) return AsyncValue.error(users.error!, users.stackTrace!);
+  if (invitations.hasError) return AsyncValue.error(invitations.error!, invitations.stackTrace!);
+  
+  final combined = <dynamic>[
+    ...(users.value ?? []),
+    ...(invitations.value ?? []),
+  ];
+  return AsyncValue.data(combined);
 });
 
 /// Servicio para asignación de roles e iglesias a pastores
@@ -142,6 +163,12 @@ class UserManagementService {
   Future<void> deleteUser(String uid) async {
     await _functions.httpsCallable('adminDeleteUser').call({
       'targetUid': uid,
+    });
+  }
+
+  Future<void> deleteInvitation(String email) async {
+    await _functions.httpsCallable('adminDeleteInvitation').call({
+      'email': email,
     });
   }
 

@@ -783,9 +783,11 @@ class _PastorAssignmentDialogState
                 data: (users) {
                   final displayedUsers = isPastor
                       ? users
-                            .where(
-                              (u) => u.churchId == currentProfile?.churchId,
-                            )
+                            .where((u) {
+                              if (u is UserProfile) return u.churchId == currentProfile?.churchId;
+                              if (u is Map<String, dynamic>) return u['churchId'] == currentProfile?.churchId;
+                              return false;
+                            })
                             .toList()
                       : users;
 
@@ -836,16 +838,21 @@ class _PastorAssignmentDialogState
                     itemCount: displayedUsers.length,
                     separatorBuilder: (_, _) => const Divider(),
                     itemBuilder: (context, index) {
-                      final user = displayedUsers[index];
-                      final hasChurch =
-                          user.churchId != null && user.churchId!.isNotEmpty;
-                      final roleColor = _getRoleColor(user.role);
-                      final roleIcon = _getRoleIcon(user.role);
-                      final canModifyThisUser =
-                          !isPastor ||
-                          user.role == 'colaborador' ||
-                          user.role == 'proyeccionista' ||
-                          user.role == 'musico';
+                      final dynamic item = displayedUsers[index];
+                      final bool isInvitation = item is Map;
+                      final UserProfile? user = isInvitation ? null : item as UserProfile;
+                      final Map<String, dynamic>? inv = isInvitation ? item as Map<String, dynamic> : null;
+
+                      final String email = isInvitation ? inv!['email'] : user!.email;
+                      final String role = isInvitation ? inv!['role'] : user!.role;
+                      final String? churchId = isInvitation ? inv!['churchId'] : user!.churchId;
+                      final String? churchName = isInvitation ? inv!['churchName'] : user!.churchName;
+                      final String uid = isInvitation ? email : user!.uid;
+
+                      final hasChurch = churchId != null && churchId.isNotEmpty;
+                      final roleColor = _getRoleColor(role);
+                      final roleIcon = _getRoleIcon(role);
+                      final canModifyThisUser = !isPastor || role == 'colaborador' || role == 'proyeccionista' || role == 'musico';
 
                       return ListTile(
                         leading: CircleAvatar(
@@ -856,15 +863,24 @@ class _PastorAssignmentDialogState
                           children: [
                             Expanded(
                               child: Text(
-                                user.email,
+                                email,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
+                            if (isInvitation)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: Chip(
+                                  label: const Text('InvitaciÃ³n Pendiente', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                  backgroundColor: Colors.amber.withAlpha(50),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ),
                             Chip(
                               label: Text(
-                                user.roleDisplayName,
+                                isInvitation ? role.toUpperCase() : user!.roleDisplayName,
                                 style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -879,7 +895,7 @@ class _PastorAssignmentDialogState
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Text(
                             hasChurch
-                                ? 'Iglesia Asignada: ${user.churchName} (${user.churchId})'
+                                ? 'Iglesia Asignada: ${churchName ?? ''} (${churchId ?? ''})'
                                 : '⚠️ Sin iglesia asignada',
                             style: TextStyle(
                               color: hasChurch
@@ -892,13 +908,13 @@ class _PastorAssignmentDialogState
                         trailing: PopupMenuButton<String>(
                           onSelected: (action) async {
                             if (action == 'assign_church') {
-                              _showAssignChurchPicker(user);
+                              _showAssignChurchPicker(user!);
                             } else if (action == 'manage_password') {
-                              _showManagePasswordDialog(user);
+                              _showManagePasswordDialog(user!);
                             } else if (action == 'change_role') {
-                              _showChangeRoleDialog(user);
+                              _showChangeRoleDialog(user!);
                             } else if (action == 'delete_user') {
-                              _showDeleteUserDialog(user);
+                              _showDeleteUserDialog(user!);
                             }
                           },
                           itemBuilder: (context) => [
@@ -925,7 +941,7 @@ class _PastorAssignmentDialogState
                                 ),
                               ),
                             if (canModifyThisUser ||
-                                user.uid == currentProfile?.uid)
+                                uid == currentProfile?.uid)
                               const PopupMenuItem(
                                 value: 'manage_password',
                                 child: Row(
@@ -937,7 +953,7 @@ class _PastorAssignmentDialogState
                                 ),
                               ),
                             if (canModifyThisUser &&
-                                user.uid != currentProfile?.uid)
+                                uid != currentProfile?.uid)
                               const PopupMenuItem(
                                 value: 'delete_user',
                                 child: Row(
