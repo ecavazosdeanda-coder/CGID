@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Partitura digital CGID</title>
-  <script src="vendor/opensheetmusicdisplay.min.js"></script>
   <style>
     :root { color-scheme: light dark; }
     * { box-sizing: border-box; }
@@ -68,13 +67,14 @@
     <span id="zoom-label">75%</span>
     <button id="plus" type="button" aria-label="Ampliar">+</button>
     <button id="fit" type="button">Ajustar al ancho</button>
-    <span class="notice">Reconocimiento Audiveris · pendiente de revisión musical</span>
+    <span class="notice">Corrección OMR automática · verificación musical obligatoria</span>
   </div>
   <div id="status" role="status">Cargando partitura digital…</div>
   <main id="score-shell" hidden><div id="score"></div></main>
   <script>
     const params = new URLSearchParams(location.search);
     const source = params.get('score');
+    const customKey = params.get('custom_key');
     const dark = params.get('dark') === '1';
     if (dark) document.body.classList.add('dark');
 
@@ -91,8 +91,36 @@
       osmd.render();
       updateLabel();
     }
+    async function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        if (window.opensheetmusicdisplay) return resolve();
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('No se pudo cargar el motor de partituras.'));
+        document.head.appendChild(script);
+      });
+    }
+
     async function start() {
-      if (!source) throw new Error('No se indicó una partitura MusicXML.');
+      let scoreData = source;
+      if (customKey) {
+        try {
+          const stored = window.localStorage.getItem('cgdi_custom_score_' + customKey);
+          if (stored && stored.trim().length > 0) {
+            scoreData = stored;
+            const noticeEl = document.querySelector('.notice');
+            if (noticeEl) noticeEl.textContent = 'Partitura personalizada cargada (reemplazo oficial)';
+          }
+        } catch (e) {
+          console.warn('No se pudo leer la partitura de localStorage', e);
+        }
+      }
+      if (!scoreData) throw new Error('No se indicó una partitura MusicXML.');
+      status.textContent = 'Descargando motor de partituras (OSMD)…';
+      await loadScript('vendor/opensheetmusicdisplay.min.js');
+      status.textContent = 'Renderizando partitura digital…';
       // OSMD needs a measurable container while calculating staff widths.
       shell.hidden = false;
       osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay('score', {
@@ -102,7 +130,7 @@
         drawComposer: true,
         drawLyricist: true,
       });
-      await osmd.load(source);
+      await osmd.load(scoreData);
       await render();
       status.hidden = true;
     }
