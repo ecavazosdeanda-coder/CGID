@@ -37,6 +37,7 @@ class PlaybackController extends ChangeNotifier {
   String? completedHymnId;
   bool playing = false;
   bool isShuffle = false;
+  bool isMinimized = false;
   double speed = 1;
   double volume = 1.0;
   final Map<String, String> tracks = {};
@@ -143,6 +144,11 @@ class PlaybackController extends ChangeNotifier {
 
   void toggleShuffle() {
     isShuffle = !isShuffle;
+    changed();
+  }
+
+  void toggleMinimized() {
+    isMinimized = !isMinimized;
     changed();
   }
 
@@ -837,6 +843,62 @@ class GlobalBottomPlayer extends StatelessWidget {
         final isPlaying = controller.playing;
         final hasError = controller.error != null;
 
+        if (controller.isMinimized) {
+          return Material(
+            color: Colors.transparent,
+            child: GlassSurface(
+              radius: 0,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.music_note, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => onOpenHymn?.call(entry),
+                        child: Text(
+                          entry.title,
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                        size: 26,
+                      ),
+                      color: Theme.of(context).colorScheme.primary,
+                      tooltip: isPlaying ? 'Pausar' : 'Reproducir',
+                      onPressed: () {
+                        if (isPlaying) {
+                          controller.pauseHymn();
+                        } else if (controller.activeId != null) {
+                          controller.resumeHymn();
+                        } else if (controller.completedHymnId != null) {
+                          controller.playHymn(controller.completedHymnId!);
+                        }
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.keyboard_arrow_up, size: 22),
+                      tooltip: 'Expandir reproductor',
+                      onPressed: controller.toggleMinimized,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      tooltip: 'Cerrar reproductor',
+                      onPressed: controller.stop,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
         return Material(
           color: Colors.transparent,
           child: GlassSurface(
@@ -982,6 +1044,8 @@ class GlobalBottomPlayer extends StatelessWidget {
                               controller.setSleepTimer(
                                 int.parse(val.substring(6)),
                               );
+                            } else if (val == 'minimize') {
+                              controller.toggleMinimized();
                             } else if (val == 'stop') {
                               controller.stop();
                             }
@@ -1058,13 +1122,23 @@ class GlobalBottomPlayer extends StatelessWidget {
                             ),
                             const PopupMenuDivider(),
                             const PopupMenuItem(
+                              value: 'minimize',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.keyboard_arrow_down, size: 20),
+                                  SizedBox(width: 8),
+                                  Text('Achicar reproductor'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
                               value: 'stop',
                               child: Row(
                                 children: [
-                                  Icon(Icons.stop, color: Colors.red, size: 20),
+                                  Icon(Icons.close, color: Colors.red, size: 20),
                                   SizedBox(width: 8),
                                   Text(
-                                    'Detener audio',
+                                    'Quitar reproductor',
                                     style: TextStyle(color: Colors.red),
                                   ),
                                 ],
@@ -1181,6 +1255,17 @@ class GlobalBottomPlayer extends StatelessWidget {
                           ),
                         ),
                       ],
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: const Icon(Icons.keyboard_arrow_down),
+                        tooltip: 'Achicar reproductor',
+                        onPressed: controller.toggleMinimized,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Quitar reproductor',
+                        onPressed: controller.stop,
+                      ),
                     ],
                   ),
                 );
