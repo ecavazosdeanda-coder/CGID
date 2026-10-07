@@ -302,7 +302,7 @@ class PlaybackController extends ChangeNotifier {
       }
 
       await tts.setSpeechRate(ttsSpeechRate(speed, isWeb: kIsWeb));
-      await tts.setVolume(1.0);
+      await tts.setVolume(volume);
       await tts.setPitch(1.0);
       await tts.awaitSpeakCompletion(true);
       for (final chunk in speechChunks(
@@ -661,6 +661,7 @@ class PlaybackControls extends StatelessWidget {
                     tooltip: 'Aleatorio',
                     onPressed: controller.toggleShuffle,
                   ),
+                  VerticalVolumeButton(controller: controller),
                   PopupMenuButton<double>(
                     initialValue: controller.speed,
                     tooltip: 'Velocidad (${controller.speed}x)',
@@ -807,6 +808,173 @@ String formatDuration(Duration d) {
   final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
   final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
   return "$minutes:$seconds";
+}
+
+class VerticalVolumeButton extends StatefulWidget {
+  final PlaybackController controller;
+  final double? size;
+  final double? iconSize;
+
+  const VerticalVolumeButton({
+    super.key,
+    required this.controller,
+    this.size,
+    this.iconSize,
+  });
+
+  @override
+  State<VerticalVolumeButton> createState() => _VerticalVolumeButtonState();
+}
+
+class _VerticalVolumeButtonState extends State<VerticalVolumeButton> {
+  final _portalController = OverlayPortalController();
+  final _link = LayerLink();
+  double _lastNonZeroVolume = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.controller,
+      builder: (context, _) {
+        final vol = widget.controller.volume;
+        final IconData volIcon = vol == 0
+            ? Icons.volume_off
+            : vol < 0.5
+                ? Icons.volume_down
+                : Icons.volume_up;
+
+        return CompositedTransformTarget(
+          link: _link,
+          child: OverlayPortal(
+            controller: _portalController,
+            overlayChildBuilder: (context) {
+              return Stack(
+                children: [
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: _portalController.hide,
+                    ),
+                  ),
+                  CompositedTransformFollower(
+                    link: _link,
+                    showWhenUnlinked: false,
+                    targetAnchor: Alignment.topCenter,
+                    followerAnchor: Alignment.bottomCenter,
+                    offset: const Offset(0, -8),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: GlassSurface(
+                        radius: 16,
+                        blur: true,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 8,
+                        ),
+                        child: ListenableBuilder(
+                          listenable: widget.controller,
+                          builder: (context, _) {
+                            final currentVol = widget.controller.volume;
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${(currentVol * 100).round()}%',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                SizedBox(
+                                  height: 120,
+                                  width: 36,
+                                  child: RotatedBox(
+                                    quarterTurns: 3,
+                                    child: SliderTheme(
+                                      data: SliderThemeData(
+                                        trackHeight: 4,
+                                        thumbShape: const RoundSliderThumbShape(
+                                          enabledThumbRadius: 6,
+                                        ),
+                                        overlayShape: const RoundSliderOverlayShape(
+                                          overlayRadius: 12,
+                                        ),
+                                        activeTrackColor:
+                                            Theme.of(context).colorScheme.primary,
+                                        thumbColor:
+                                            Theme.of(context).colorScheme.primary,
+                                      ),
+                                      child: Slider(
+                                        value: currentVol.clamp(0.0, 1.0),
+                                        onChanged: (val) {
+                                          if (val > 0) _lastNonZeroVolume = val;
+                                          widget.controller.setVolume(val);
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                IconButton(
+                                  icon: Icon(
+                                    currentVol == 0
+                                        ? Icons.volume_off
+                                        : Icons.volume_up,
+                                    size: 18,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 28,
+                                    minHeight: 28,
+                                  ),
+                                  tooltip: currentVol == 0
+                                      ? 'Activar sonido'
+                                      : 'Silenciar',
+                                  onPressed: () {
+                                    if (currentVol == 0) {
+                                      widget.controller.setVolume(
+                                        _lastNonZeroVolume > 0
+                                            ? _lastNonZeroVolume
+                                            : 1.0,
+                                      );
+                                    } else {
+                                      _lastNonZeroVolume = currentVol;
+                                      widget.controller.setVolume(0.0);
+                                    }
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+            child: IconButton(
+              icon: Icon(
+                volIcon,
+                size: widget.iconSize ??
+                    (widget.size != null ? widget.size! * 0.75 : null),
+              ),
+              padding: widget.size != null ? EdgeInsets.zero : null,
+              constraints: widget.size != null
+                  ? BoxConstraints(
+                      minWidth: widget.size!,
+                      minHeight: widget.size!,
+                    )
+                  : null,
+              tooltip: 'Volumen (${(vol * 100).round()}%)',
+              onPressed: _portalController.toggle,
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class GlobalBottomPlayer extends StatelessWidget {
@@ -1026,6 +1194,11 @@ class GlobalBottomPlayer extends StatelessWidget {
                           ),
                           onPressed: controller.nextHymn,
                         ),
+                        VerticalVolumeButton(
+                          controller: controller,
+                          size: 32,
+                          iconSize: 20,
+                        ),
                         PopupMenuButton<String>(
                           icon: const Icon(Icons.more_vert, size: 22),
                           padding: EdgeInsets.zero,
@@ -1244,17 +1417,7 @@ class GlobalBottomPlayer extends StatelessWidget {
                         tooltip: 'Aleatorio',
                         onPressed: controller.toggleShuffle,
                       ),
-                      if (MediaQuery.of(context).size.width > 600) ...[
-                        const SizedBox(width: 8),
-                        const Icon(Icons.volume_down, size: 20),
-                        SizedBox(
-                          width: 80,
-                          child: Slider(
-                            value: controller.volume,
-                            onChanged: controller.setVolume,
-                          ),
-                        ),
-                      ],
+                      VerticalVolumeButton(controller: controller),
                       const SizedBox(width: 4),
                       IconButton(
                         icon: const Icon(Icons.keyboard_arrow_down),
