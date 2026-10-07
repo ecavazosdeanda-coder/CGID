@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:audioplayers/audioplayers.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'tts_utils.dart';
 
 import 'audio_manager.dart';
@@ -14,6 +16,12 @@ import 'audio_manager_screen.dart';
 import 'content.dart';
 import 'glass.dart';
 import 'audio_handler.dart';
+
+final playbackControllerProvider = Provider((ref) {
+  final controller = PlaybackController();
+  ref.onDispose(() => controller.dispose());
+  return controller;
+});
 
 // One controller per workspace: a hymn and a reading never overlap.
 class PlaybackController extends ChangeNotifier {
@@ -28,7 +36,9 @@ class PlaybackController extends ChangeNotifier {
   String? activeId, error;
   String? completedHymnId;
   bool playing = false;
+  bool isShuffle = false;
   double speed = 1;
+  double volume = 1.0;
   final Map<String, String> tracks = {};
 
   CgidAudioHandler? audioHandler;
@@ -107,6 +117,13 @@ class PlaybackController extends ChangeNotifier {
     changed();
   }
 
+  Future<void> setVolume(double newVolume) async {
+    volume = newVolume;
+    await _player?.setVolume(volume);
+    await _tts?.setVolume(volume);
+    changed();
+  }
+
   List<String> get sortedHymnIds {
     final ids = tracks.keys.where((k) => k.startsWith('h')).toList();
     ids.sort((a, b) {
@@ -124,10 +141,24 @@ class PlaybackController extends ChangeNotifier {
     changed();
   }
 
+  void toggleShuffle() {
+    isShuffle = !isShuffle;
+    changed();
+  }
+
   Future<void> nextHymn([String? fromId]) async {
     final currentId = fromId ?? activeId ?? completedHymnId;
     if (currentId == null || !currentId.startsWith('h')) return;
     final ids = sortedHymnIds;
+    if (ids.isEmpty) return;
+    
+    if (isShuffle) {
+      ids.shuffle();
+      final randomId = ids.firstWhere((id) => id != currentId, orElse: () => currentId);
+      await playHymn(randomId);
+      return;
+    }
+
     final idx = ids.indexOf(currentId);
     if (idx >= 0 && idx < ids.length - 1) {
       await playHymn(ids[idx + 1]);
@@ -138,6 +169,15 @@ class PlaybackController extends ChangeNotifier {
     final currentId = fromId ?? activeId ?? completedHymnId;
     if (currentId == null || !currentId.startsWith('h')) return;
     final ids = sortedHymnIds;
+    if (ids.isEmpty) return;
+
+    if (isShuffle) {
+      ids.shuffle();
+      final randomId = ids.firstWhere((id) => id != currentId, orElse: () => currentId);
+      await playHymn(randomId);
+      return;
+    }
+
     final idx = ids.indexOf(currentId);
     if (idx > 0) {
       await playHymn(ids[idx - 1]);
@@ -173,6 +213,7 @@ class PlaybackController extends ChangeNotifier {
   }
 
   Future<void> loadTracks() async {
+    if (tracks.isNotEmpty) return;
     try {
       final data = jsonDecode(
         await rootBundle.loadString('assets/audio/catalog_v2.json'),
@@ -221,6 +262,7 @@ class PlaybackController extends ChangeNotifier {
     changed();
     try {
       final tts = _tts ??= FlutterTts();
+      await tts.setVolume(volume);
       tts.setErrorHandler((message) {
         if (token == _generation) {
           error = 'No se pudo reproducir la lectura. Comprueba las voces en español de tu dispositivo.';
@@ -307,6 +349,7 @@ class PlaybackController extends ChangeNotifier {
     try {
       if (_player == null) {
         _player = AudioPlayer();
+        await _player!.setVolume(volume);
         _positionUpdates = _player!.onPositionChanged.listen((value) {
           position = value;
           changed();
@@ -601,6 +644,16 @@ class PlaybackControls extends StatelessWidget {
                         ? 'Modo: Continuo (pasa automáticamente al siguiente himno)'
                         : 'Modo: Repetir (repite este mismo himno)',
                     onPressed: controller.toggleContinuous,
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.shuffle,
+                      color: controller.isShuffle
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    tooltip: 'Aleatorio',
+                    onPressed: controller.toggleShuffle,
                   ),
                   PopupMenuButton<double>(
                     initialValue: controller.speed,
@@ -1107,6 +1160,27 @@ class GlobalBottomPlayer extends StatelessWidget {
                             : 'Repetir uno',
                         onPressed: controller.toggleContinuous,
                       ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.shuffle,
+                          color: controller.isShuffle
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        tooltip: 'Aleatorio',
+                        onPressed: controller.toggleShuffle,
+                      ),
+                      if (MediaQuery.of(context).size.width > 600) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.volume_down, size: 20),
+                        SizedBox(
+                          width: 80,
+                          child: Slider(
+                            value: controller.volume,
+                            onChanged: controller.setVolume,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 );

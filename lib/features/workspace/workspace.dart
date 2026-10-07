@@ -141,7 +141,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
   String? marqueeText;
   String? videoBackgroundPath;
   final marqueeController = TextEditingController();
-  final playback = PlaybackController();
+  late final PlaybackController playback = ref.read(playbackControllerProvider);
   double aspect = 16 / 9;
   List<String> remoteUrls = [];
   String? selectedRemoteUrl;
@@ -397,7 +397,6 @@ class WorkspaceState extends ConsumerState<Workspace> {
 
   @override
   void dispose() {
-    playback.dispose();
     _brandingTimer?.cancel();
     unawaited(remoteServer.stop());
     _cloudCommandSub?.cancel();
@@ -567,7 +566,6 @@ class WorkspaceState extends ConsumerState<Workspace> {
   }
 
   void changeTab(int value) {
-    playback.stop();
     setState(() {
       if (value == 1) selected = lib.hymns.first;
       if (value == 3) selected = lib.faith.first;
