@@ -44,7 +44,9 @@ class _AiLiturgicalDialogState extends ConsumerState<AiLiturgicalDialog> {
     final topic = _topicController.text.trim();
     if (topic.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escribe el tema de predicación o pasaje bíblico.')),
+        const SnackBar(
+          content: Text('Escribe el tema de predicación o pasaje bíblico.'),
+        ),
       );
       return;
     }
@@ -73,7 +75,8 @@ class _AiLiturgicalDialogState extends ConsumerState<AiLiturgicalDialog> {
     });
 
     try {
-      final prompt = '''
+      final prompt =
+          '''
 Eres el Asistente Litúrgico y Pastoral de la Conferencia General de la Iglesia de Dios.
 El ministro predicará sobre el siguiente tema o pasaje bíblico:
 "$topic"
@@ -151,7 +154,8 @@ Mantén tu respuesta organizada, concisa y basada en la sana doctrina de los 32 
                           'Sugerencia de himnos y lecturas según el tema del sermón',
                           style: TextStyle(
                             fontSize: 12,
-                            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                            color: theme.textTheme.bodyMedium?.color
+                                ?.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -172,7 +176,9 @@ Mantén tu respuesta organizada, concisa y basada en la sana doctrina de los 32 
                   decoration: BoxDecoration(
                     color: Colors.amber.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: Colors.amber.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,7 +189,10 @@ Mantén tu respuesta organizada, concisa y basada en la sana doctrina de los 32 
                           SizedBox(width: 8),
                           Text(
                             'Ingresa tu Google AI Studio API Key:',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -223,7 +232,10 @@ Mantén tu respuesta organizada, concisa y basada en la sana doctrina de los 32 
                   FilledButton.icon(
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                     ),
                     icon: _isLoading
                         ? const SizedBox(
@@ -266,46 +278,53 @@ Mantén tu respuesta organizada, concisa y basada en la sana doctrina de los 32 
                             SizedBox(height: 16),
                             Text(
                               'Analizando el tema con los 32 Puntos de Fe y el Himnario...',
-                              style: TextStyle(fontSize: 13, color: Colors.grey),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey,
+                              ),
                             ),
                           ],
                         ),
                       )
                     : _suggestions != null
-                        ? Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: theme.dividerColor.withValues(alpha: 0.15),
-                              ),
-                            ),
-                            child: SingleChildScrollView(
-                              child: SelectableText(
-                                _suggestions!,
-                                style: const TextStyle(fontSize: 13, height: 1.45),
-                              ),
-                            ),
-                          )
-                        : Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.menu_book_outlined,
-                                  size: 48,
-                                  color: Colors.grey.withValues(alpha: 0.4),
-                                ),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'Escribe el tema de tu sermón arriba para recibir sugerencias litúrgicas.',
-                                  style: TextStyle(fontSize: 13, color: Colors.grey),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
+                    ? Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: theme.dividerColor.withValues(alpha: 0.15),
                           ),
+                        ),
+                        child: SingleChildScrollView(
+                          child: SelectableText(
+                            _suggestions!,
+                            style: const TextStyle(fontSize: 13, height: 1.45),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.menu_book_outlined,
+                              size: 48,
+                              color: Colors.grey.withValues(alpha: 0.4),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Escribe el tema de tu sermón arriba para recibir sugerencias litúrgicas.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
               ),
               const SizedBox(height: 14),
 
@@ -321,7 +340,9 @@ Mantén tu respuesta organizada, concisa y basada en la sana doctrina de los 32 
                         Clipboard.setData(ClipboardData(text: _suggestions!));
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Sugerencias litúrgicas copiadas al portapapeles.'),
+                            content: Text(
+                              'Sugerencias litúrgicas copiadas al portapapeles.',
+                            ),
                             duration: Duration(seconds: 2),
                           ),
                         );

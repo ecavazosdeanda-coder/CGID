@@ -316,8 +316,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           color: (!profile.isAdmin && profile.churchId == null)
-                              ? Colors.orange[900]
-                              : Colors.black87,
+                              ? Colors.orange
+                              : null,
                         ),
                       ),
                     ],
@@ -394,7 +394,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                   : 'Santuario: $_currentChurch',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey.shade700,
+                                color: Colors.grey,
                               ),
                             ),
                           ],
@@ -405,7 +405,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   const SizedBox(height: 14),
                   const Text(
                     'Descarga en 1 clic el orden litúrgico preparado por el pastor y proyecta las diapositivas en las pantallas del templo.',
-                    style: TextStyle(fontSize: 14, color: Colors.black87),
+                    style: TextStyle(fontSize: 14),
                   ),
                   const SizedBox(height: 16),
                   StatefulBuilder(
@@ -600,7 +600,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                   : 'Congregación: $_currentChurch',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey.shade700,
+                                color: Colors.grey,
                               ),
                             ),
                           ],
@@ -611,7 +611,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   const SizedBox(height: 14),
                   const Text(
                     'Sincroniza los cantos preparados por el pastor y abre directamente las partituras y acordes para la alabanza.',
-                    style: TextStyle(fontSize: 14, color: Colors.black87),
+                    style: TextStyle(fontSize: 14),
                   ),
                   const SizedBox(height: 16),
                   StatefulBuilder(

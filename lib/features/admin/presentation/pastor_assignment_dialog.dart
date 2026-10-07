@@ -882,9 +882,7 @@ class _PastorAssignmentDialogState
                                 ? 'Iglesia Asignada: ${user.churchName} (${user.churchId})'
                                 : '⚠️ Sin iglesia asignada',
                             style: TextStyle(
-                              color: hasChurch
-                                  ? Colors.black87
-                                  : Colors.orange[800],
+                              color: hasChurch ? null : Colors.orange,
                               fontSize: 13,
                             ),
                           ),

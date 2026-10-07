@@ -157,10 +157,13 @@ class PlaybackController extends ChangeNotifier {
     if (currentId == null || !currentId.startsWith('h')) return;
     final ids = sortedHymnIds;
     if (ids.isEmpty) return;
-    
+
     if (isShuffle) {
       ids.shuffle();
-      final randomId = ids.firstWhere((id) => id != currentId, orElse: () => currentId);
+      final randomId = ids.firstWhere(
+        (id) => id != currentId,
+        orElse: () => currentId,
+      );
       await playHymn(randomId);
       return;
     }
@@ -179,7 +182,10 @@ class PlaybackController extends ChangeNotifier {
 
     if (isShuffle) {
       ids.shuffle();
-      final randomId = ids.firstWhere((id) => id != currentId, orElse: () => currentId);
+      final randomId = ids.firstWhere(
+        (id) => id != currentId,
+        orElse: () => currentId,
+      );
       await playHymn(randomId);
       return;
     }
@@ -840,8 +846,8 @@ class _VerticalVolumeButtonState extends State<VerticalVolumeButton> {
         final IconData volIcon = vol == 0
             ? Icons.volume_off
             : vol < 0.5
-                ? Icons.volume_down
-                : Icons.volume_up;
+            ? Icons.volume_down
+            : Icons.volume_up;
 
         return CompositedTransformTarget(
           link: _link,
@@ -897,13 +903,16 @@ class _VerticalVolumeButtonState extends State<VerticalVolumeButton> {
                                         thumbShape: const RoundSliderThumbShape(
                                           enabledThumbRadius: 6,
                                         ),
-                                        overlayShape: const RoundSliderOverlayShape(
-                                          overlayRadius: 12,
-                                        ),
-                                        activeTrackColor:
-                                            Theme.of(context).colorScheme.primary,
-                                        thumbColor:
-                                            Theme.of(context).colorScheme.primary,
+                                        overlayShape:
+                                            const RoundSliderOverlayShape(
+                                              overlayRadius: 12,
+                                            ),
+                                        activeTrackColor: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        thumbColor: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
                                       ),
                                       child: Slider(
                                         value: currentVol.clamp(0.0, 1.0),
@@ -957,7 +966,8 @@ class _VerticalVolumeButtonState extends State<VerticalVolumeButton> {
             child: IconButton(
               icon: Icon(
                 volIcon,
-                size: widget.iconSize ??
+                size:
+                    widget.iconSize ??
                     (widget.size != null ? widget.size! * 0.75 : null),
               ),
               padding: widget.size != null ? EdgeInsets.zero : null,
@@ -1017,7 +1027,10 @@ class GlobalBottomPlayer extends StatelessWidget {
             child: GlassSurface(
               radius: 0,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 child: Row(
                   children: [
                     const Icon(Icons.music_note, size: 20),
@@ -1027,7 +1040,10 @@ class GlobalBottomPlayer extends StatelessWidget {
                         onTap: () => onOpenHymn?.call(entry),
                         child: Text(
                           entry.title,
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1035,7 +1051,9 @@ class GlobalBottomPlayer extends StatelessWidget {
                     ),
                     IconButton(
                       icon: Icon(
-                        isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                        isPlaying
+                            ? Icons.pause_circle_filled
+                            : Icons.play_circle_filled,
                         size: 26,
                       ),
                       color: Theme.of(context).colorScheme.primary,
@@ -1101,9 +1119,13 @@ class GlobalBottomPlayer extends StatelessWidget {
                     else if (controller.duration.inMilliseconds > 0)
                       Row(
                         children: [
-                          Text(
-                            "${formatDuration(controller.position)} / ${formatDuration(controller.duration)}",
-                            style: const TextStyle(fontSize: 11),
+                          Flexible(
+                            child: Text(
+                              "${formatDuration(controller.position)} / ${formatDuration(controller.duration)}",
+                              style: const TextStyle(fontSize: 11),
+                              maxLines: 1,
+                              overflow: TextOverflow.clip,
+                            ),
                           ),
                           const SizedBox(width: 6),
                           Expanded(
@@ -1308,7 +1330,11 @@ class GlobalBottomPlayer extends StatelessWidget {
                               value: 'stop',
                               child: Row(
                                 children: [
-                                  Icon(Icons.close, color: Colors.red, size: 20),
+                                  Icon(
+                                    Icons.close,
+                                    color: Colors.red,
+                                    size: 20,
+                                  ),
                                   SizedBox(width: 8),
                                   Text(
                                     'Quitar reproductor',
