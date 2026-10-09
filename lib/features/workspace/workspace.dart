@@ -598,16 +598,18 @@ class WorkspaceState extends ConsumerState<Workspace> {
     final specialHymnsList = ref.watch(specialHymnsStreamProvider).value ?? [];
     final combinedHymns = [
       ...widget.library.hymns,
-      ...specialHymnsList.map((sh) => Entry(
-            id: sh.id,
-            title: '✨ ${sh.title}',
-            subtitle: 'Himno Local${sh.eventContext != null ? ' · ${sh.eventContext}' : ''}',
-            sections: sh.lyrics != null ? [Section('Letra', sh.lyrics!)] : [],
-            mediaIds: sh.audioStorageUrl != null ? [sh.audioStorageUrl!] : [],
-            pdf: sh.sheetMusicStorageUrl ?? '',
-          )),
+      ...specialHymnsList.map(
+        (sh) => Entry(
+          id: sh.id,
+          title: '✨ ${sh.title}',
+          subtitle:
+              'Himno Local${sh.eventContext != null ? ' · ${sh.eventContext}' : ''}',
+          sections: sh.lyrics != null ? [Section('Letra', sh.lyrics!)] : [],
+          mediaIds: sh.audioStorageUrl != null ? [sh.audioStorageUrl!] : [],
+          pdf: sh.sheetMusicStorageUrl ?? '',
+        ),
+      ),
     ];
-
 
     const labels = [
       'Inicio',
@@ -620,6 +622,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
       'Literatura',
       'Acerca de',
       'Administración',
+      'Descargas',
     ];
 
     final navItems = <({int tabIndex, String label, IconData icon})>[
@@ -639,6 +642,8 @@ class WorkspaceState extends ConsumerState<Workspace> {
         label: isLoggedIn ? 'Administración' : 'Acceso Ministerial',
         icon: Icons.admin_panel_settings_outlined,
       ),
+      if (kIsWeb)
+        (tabIndex: 10, label: 'Descargas', icon: Icons.download_outlined),
     ];
 
     return LayoutBuilder(
@@ -957,6 +962,10 @@ class WorkspaceState extends ConsumerState<Workspace> {
                                 onPresent: prepare,
                                 onCustomizeChurch: _showChurchSettings,
                               ),
+                              10 =>
+                                kIsWeb
+                                    ? downloads()
+                                    : _buildRestrictedSection('Descargas'),
                               _ => about(),
                             },
                           ),
@@ -1264,9 +1273,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
                   ? () => openDigitalScore(e)
                   : null,
               icon: Icon(
-                scoreCatalog.contains(e.id)
-                    ? Icons.music_note
-                    : Icons.schedule,
+                scoreCatalog.contains(e.id) ? Icons.music_note : Icons.schedule,
               ),
               label: Text(
                 scoreCatalog.contains(e.id)
@@ -1448,9 +1455,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
           icon: const Icon(Icons.picture_as_pdf_outlined),
           label: const Text('Ver libro de partituras originales'),
           onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const OriginalScoreBookScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const OriginalScoreBookScreen()),
           ),
         ),
       ],
@@ -3156,7 +3161,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
     return FutureBuilder(
       future: http.get(
         Uri.parse(
-          'https://api.github.com/repos/ecavazosdeanda-coder/CGID/releases/latest',
+          'https://api.github.com/repos/ecavazosdeanda-coder/CGID/releases?per_page=1',
         ),
       ),
       builder: (context, snapshot) {
@@ -3173,9 +3178,14 @@ class WorkspaceState extends ConsumerState<Workspace> {
         List<dynamic> assets = [];
         try {
           if (snapshot.hasData && snapshot.data!.statusCode == 200) {
-            final data = jsonDecode(snapshot.data!.body);
-            version = data['tag_name'] ?? version;
-            assets = data['assets'] ?? [];
+            final response = jsonDecode(snapshot.data!.body);
+            final data = response is List && response.isNotEmpty
+                ? response.first
+                : null;
+            if (data is Map<String, dynamic>) {
+              version = data['tag_name']?.toString() ?? version;
+              assets = data['assets'] is List ? data['assets'] as List : [];
+            }
           }
         } catch (_) {}
 
@@ -3235,10 +3245,11 @@ class WorkspaceState extends ConsumerState<Workspace> {
           );
         }
 
-        String getAssetUrl(String extension) {
+        String getAssetUrl(String suffix) {
           for (var asset in assets) {
-            if (asset['name'].toString().toLowerCase().endsWith(extension)) {
-              return asset['browser_download_url'];
+            final name = asset['name'].toString().toLowerCase();
+            if (name.endsWith(suffix.toLowerCase())) {
+              return asset['browser_download_url']?.toString() ?? '';
             }
           }
           return '';
@@ -3258,27 +3269,37 @@ class WorkspaceState extends ConsumerState<Workspace> {
             ),
             const SizedBox(height: 32),
             buildDownloadButton(
-              'Windows (.exe)',
+              'Windows · Instalador (.exe)',
               Icons.window,
-              getAssetUrl('.exe'),
+              getAssetUrl('_unsigned_setup.exe'),
             ),
             buildDownloadButton(
-              'Android (.apk)',
+              'Windows · Portable (.zip)',
+              Icons.folder_zip_outlined,
+              getAssetUrl('_windows_x64_portable.zip'),
+            ),
+            buildDownloadButton(
+              'Android · Instalación directa (.apk)',
               Icons.android,
-              getAssetUrl('.apk'),
+              getAssetUrl('_android_debug-signed.apk'),
             ),
             buildDownloadButton(
-              'macOS (.dmg)',
+              'macOS · DMG (.dmg)',
               Icons.apple,
-              getAssetUrl('.dmg'),
+              getAssetUrl('_macos_unsigned.dmg'),
             ),
             buildDownloadButton(
-              'iPhone / iOS (.zip · sin firmar)',
+              'iPhone / iOS · Paquete para firma (.zip)',
               Icons.phone_iphone,
-              getAssetUrl('_ios_sin_firmar.zip'),
+              getAssetUrl('_ios_unsigned.zip'),
+            ),
+            buildDownloadButton(
+              'Linux · Experimental (.tar.gz)',
+              Icons.computer,
+              getAssetUrl('_linux_x64_experimental.tar.gz'),
             ),
             const Text(
-              'iPhone / iOS: esta descarga es una compilación sin firmar. No se puede instalar directamente en un iPhone; requiere firma Apple antes de su instalación.',
+              'Aviso: Android usa firma de depuración y es solo para pruebas. Windows y macOS no tienen firma de editor. El paquete de iOS requiere firma Apple antes de instalarse. Linux es experimental y sus funciones de Firebase están limitadas.',
               style: TextStyle(fontSize: 14),
             ),
           ],

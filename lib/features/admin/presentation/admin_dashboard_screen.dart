@@ -196,6 +196,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   }
 
   Color _getRoleColor(UserProfile? profile) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    if (dark) {
+      if (profile == null) return Colors.blueGrey.shade200;
+      if (profile.isAdmin) return Colors.indigo.shade200;
+      if (profile.isPastor) return Colors.teal.shade200;
+      if (profile.isProyeccionista) return Colors.deepPurple.shade200;
+      if (profile.isMusico) return Colors.amber.shade200;
+      return Colors.blueGrey.shade200;
+    }
     if (profile == null) return Colors.grey;
     if (profile.isAdmin) return Colors.indigo;
     if (profile.isPastor) return Colors.teal;
@@ -217,6 +226,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final projectionAccent = dark
+        ? Colors.deepPurple.shade200
+        : Colors.deepPurple;
+    final musicAccent = dark ? Colors.amber.shade200 : Colors.amber.shade900;
     final profileAsync = ref.watch(userProfileProvider);
     final profile = profileAsync.value;
 
@@ -317,8 +332,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           color: (!profile.isAdmin && profile.churchId == null)
-                              ? Colors.orange[900]
-                              : Colors.black87,
+                              ? (dark
+                                    ? Colors.orange.shade200
+                                    : Colors.orange.shade900)
+                              : colors.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -369,9 +386,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           color: Colors.deepPurple.withAlpha(30),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.connected_tv,
-                          color: Colors.deepPurple,
+                          color: projectionAccent,
                           size: 28,
                         ),
                       ),
@@ -395,7 +412,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                   : 'Santuario: $_currentChurch',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey.shade700,
+                                color: colors.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -404,9 +421,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  const Text(
+                  Text(
                     'Descarga en 1 clic el orden litúrgico preparado por el pastor y proyecta las diapositivas en las pantallas del templo.',
-                    style: TextStyle(fontSize: 14, color: Colors.black87),
+                    style: TextStyle(fontSize: 14, color: colors.onSurface),
                   ),
                   const SizedBox(height: 16),
                   StatefulBuilder(
@@ -572,12 +589,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.amber.shade100,
+                          color: dark
+                              ? Colors.amber.withAlpha(30)
+                              : Colors.amber.shade100,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           Icons.queue_music,
-                          color: Colors.amber.shade900,
+                          color: musicAccent,
                           size: 28,
                         ),
                       ),
@@ -601,7 +620,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                   : 'Congregación: $_currentChurch',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey.shade700,
+                                color: colors.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -610,9 +629,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  const Text(
+                  Text(
                     'Sincroniza los cantos preparados por el pastor y abre directamente las partituras y acordes para la alabanza.',
-                    style: TextStyle(fontSize: 14, color: Colors.black87),
+                    style: TextStyle(fontSize: 14, color: colors.onSurface),
                   ),
                   const SizedBox(height: 16),
                   StatefulBuilder(
@@ -1126,25 +1145,69 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                           final force = await showDialog<bool>(
                                             context: context,
                                             builder: (ctx) => AlertDialog(
-                                              title: const Text('Conflicto de Edición'),
-                                              content: const Text('Alguien más modificó el plan en la nube recientemente. Si subes ahora, sobrescribirás sus cambios.\n\n¿Deseas sobrescribir con tu versión local?'),
+                                              title: const Text(
+                                                'Conflicto de Edición',
+                                              ),
+                                              content: const Text(
+                                                'Alguien más modificó el plan en la nube recientemente. Si subes ahora, sobrescribirás sus cambios.\n\n¿Deseas sobrescribir con tu versión local?',
+                                              ),
                                               actions: [
-                                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(ctx, false),
+                                                  child: const Text('Cancelar'),
+                                                ),
                                                 FilledButton(
-                                                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                                                  onPressed: () => Navigator.pop(ctx, true),
-                                                  child: const Text('Sobrescribir'),
+                                                  style: FilledButton.styleFrom(
+                                                    backgroundColor: Colors.red,
+                                                  ),
+                                                  onPressed: () =>
+                                                      Navigator.pop(ctx, true),
+                                                  child: const Text(
+                                                    'Sobrescribir',
+                                                  ),
                                                 ),
                                               ],
                                             ),
                                           );
-                                          if (force == true && context.mounted) {
-                                            setLocalState(() => _isUploading = true);
+                                          if (force == true &&
+                                              context.mounted) {
+                                            setLocalState(
+                                              () => _isUploading = true,
+                                            );
                                             try {
-                                              await ref.read(planProvider.notifier).syncToCloud(targetChurchId, forceOverwrite: true);
-                                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Colors.green, content: Text('Sobrescrito forzosamente.')));
+                                              await ref
+                                                  .read(planProvider.notifier)
+                                                  .syncToCloud(
+                                                    targetChurchId,
+                                                    forceOverwrite: true,
+                                                  );
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                      const SnackBar(
+                                                        backgroundColor:
+                                                            Colors.green,
+                                                        content: Text(
+                                                          'Sobrescrito forzosamente.',
+                                                        ),
+                                                      ),
+                                                    );
+                                              }
                                             } catch (e2) {
-                                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: Colors.redAccent, content: Text('Error al sobrescribir: $e2')));
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    backgroundColor:
+                                                        Colors.redAccent,
+                                                    content: Text(
+                                                      'Error al sobrescribir: $e2',
+                                                    ),
+                                                  ),
+                                                );
+                                              }
                                             }
                                           }
                                         }

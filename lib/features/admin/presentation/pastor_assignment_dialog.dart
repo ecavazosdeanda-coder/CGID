@@ -883,8 +883,13 @@ class _PastorAssignmentDialogState
                                 : '⚠️ Sin iglesia asignada',
                             style: TextStyle(
                               color: hasChurch
-                                  ? Colors.black87
-                                  : Colors.orange[800],
+                                  ? Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                  : (Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.orange.shade200
+                                        : Colors.orange.shade800),
                               fontSize: 13,
                             ),
                           ),
