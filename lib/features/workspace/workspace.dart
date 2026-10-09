@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 
 import 'providers/plan_provider.dart';
 import 'providers/tab_provider.dart';
+import '../hymnal/providers/special_hymns_provider.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
@@ -594,6 +595,20 @@ class WorkspaceState extends ConsumerState<Workspace> {
     final authUser = ref.watch(authStateProvider).value;
     final isLoggedIn = authUser != null;
 
+    final specialHymnsList = ref.watch(specialHymnsStreamProvider).value ?? [];
+    final combinedHymns = [
+      ...widget.library.hymns,
+      ...specialHymnsList.map((sh) => Entry(
+            id: sh.id,
+            title: '✨ ${sh.title}',
+            subtitle: 'Himno Local${sh.eventContext != null ? ' · ${sh.eventContext}' : ''}',
+            sections: sh.lyrics != null ? [Section('Letra', sh.lyrics!)] : [],
+            mediaIds: sh.audioStorageUrl != null ? [sh.audioStorageUrl!] : [],
+            pdf: sh.sheetMusicStorageUrl ?? '',
+          )),
+    ];
+
+
     const labels = [
       'Inicio',
       'Himnario',
@@ -882,7 +897,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
                             child: switch (tab) {
                               0 => home(isLoggedIn),
                               1 => CatalogScreen(
-                                all: lib.hymns,
+                                all: combinedHymns,
                                 playback: playback,
                                 lib: lib,
                                 selected: selected,

@@ -18,6 +18,7 @@ import '../../projection/presentation/stream_overlay_dialog.dart';
 
 import 'notices_editor_screen.dart';
 import 'service_builder_screen.dart';
+import 'special_hymn_uploader_screen.dart';
 import '../../literature/presentation/document_editor_dialog.dart';
 
 import 'package:file_picker/file_picker.dart';
@@ -924,6 +925,62 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           const SizedBox(height: 24),
         ],
 
+        // GESTIÓN DE HIMNOS ESPECIALES
+        if (profile?.canEditPlans == true || profile?.isAdmin == true) ...[
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.queue_music, color: Colors.amber.shade800),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Gestión de Himnos Especiales',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Sube y administra himnos locales o especiales (ej. Aniversarios) que no están en el himnario oficial. Puedes incluir letra, partitura y audio.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      FilledButton.icon(
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('Subir Himno Especial'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.amber.shade800,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SpecialHymnUploaderScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+
         // GESTIÓN DE LITERATURA OFICIAL (Exclusivo Administrador Master)
         if (profile?.isAdmin == true) ...[
           Card(
@@ -1064,7 +1121,34 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                             );
                                       }
                                     } catch (e) {
-                                      if (context.mounted) {
+                                      if (e.toString().contains('CONFLICT')) {
+                                        if (context.mounted) {
+                                          final force = await showDialog<bool>(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              title: const Text('Conflicto de Edición'),
+                                              content: const Text('Alguien más modificó el plan en la nube recientemente. Si subes ahora, sobrescribirás sus cambios.\n\n¿Deseas sobrescribir con tu versión local?'),
+                                              actions: [
+                                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                                                FilledButton(
+                                                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                                                  onPressed: () => Navigator.pop(ctx, true),
+                                                  child: const Text('Sobrescribir'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (force == true && context.mounted) {
+                                            setLocalState(() => _isUploading = true);
+                                            try {
+                                              await ref.read(planProvider.notifier).syncToCloud(targetChurchId, forceOverwrite: true);
+                                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Colors.green, content: Text('Sobrescrito forzosamente.')));
+                                            } catch (e2) {
+                                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: Colors.redAccent, content: Text('Error al sobrescribir: $e2')));
+                                            }
+                                          }
+                                        }
+                                      } else if (context.mounted) {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(

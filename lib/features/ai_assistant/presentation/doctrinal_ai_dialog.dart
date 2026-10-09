@@ -49,7 +49,9 @@ class _DoctrinalAiDialogState extends ConsumerState<DoctrinalAiDialog> {
         _isInitialized = true;
         _messages.add(
           ChatMessage(
-            '¡Paz a vosotros! Soy el Asistente Doctrinal IA. ¿En qué puedo ayudarte con la planeación de tu culto o dudas doctrinales?',
+            '¡Paz a vosotros! Consulto los 40 Puntos de Fe oficiales y la '
+            'Biblia Reina-Valera 1909. Cada respuesta doctrinal incluirá '
+            'las fuentes recuperadas.',
             false,
           ),
         );
@@ -70,7 +72,9 @@ class _DoctrinalAiDialogState extends ConsumerState<DoctrinalAiDialog> {
         _lastFailedMessage = null;
         _messages.add(
           ChatMessage(
-            '¡Paz a vosotros! Soy el Asistente Doctrinal IA. ¿En qué puedo ayudarte con la planeación de tu culto o dudas doctrinales?',
+            '¡Paz a vosotros! Consulto los 40 Puntos de Fe oficiales y la '
+            'Biblia Reina-Valera 1909. Cada respuesta doctrinal incluirá '
+            'las fuentes recuperadas.',
             false,
           ),
         );
@@ -100,7 +104,7 @@ class _DoctrinalAiDialogState extends ConsumerState<DoctrinalAiDialog> {
       final response = await gemini.sendMessage(text);
       if (!mounted) return;
       setState(() {
-        _messages.add(ChatMessage(response, false));
+        _messages.add(ChatMessage(response.displayText, false));
       });
     } on GeminiServiceException catch (error) {
       if (!mounted) return;
@@ -221,9 +225,12 @@ class _DoctrinalAiDialogState extends ConsumerState<DoctrinalAiDialog> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Versión preliminar: todavía no consulta el corpus doctrinal local. Verifica toda respuesta con la Biblia y los 32 Puntos de Fe.',
+              'Las respuestas se limitan al corpus local: 40 Puntos de Fe '
+              'oficiales y Biblia Reina-Valera 1909. Se mostrarán las fuentes '
+              'consultadas; las decisiones sensibles deben confirmarse con '
+              'el pastor o la comisión doctrinal.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.orange),
+              style: TextStyle(fontSize: 12),
             ),
             const SizedBox(height: 24),
             TextField(
@@ -307,7 +314,9 @@ class _DoctrinalAiDialogState extends ConsumerState<DoctrinalAiDialog> {
             ),
           ),
         Text(
-          'Modelo: ${ref.read(geminiServiceProvider).activeModelName ?? 'sin configurar'} · API Key sólo en esta sesión',
+          'Modelo: ${ref.read(geminiServiceProvider).activeModelName ?? 'sin configurar'} '
+          '· Corpus local: ${ref.read(geminiServiceProvider).corpusStats.totalDocuments} fuentes '
+          '· API Key sólo en esta sesión',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 10),
@@ -324,6 +333,7 @@ class _DoctrinalAiDialogState extends ConsumerState<DoctrinalAiDialog> {
                   filled: true,
                 ),
                 enabled: !_isLoading,
+                maxLength: GeminiService.maxQuestionCharacters,
                 onSubmitted: (_) => _sendMessage(),
               ),
             ),

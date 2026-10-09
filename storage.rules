@@ -1,0 +1,92 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasUserProfile() {
+      return isAuthenticated() &&
+             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+
+    function getUserData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isBootstrapAdmin() {
+      return isAuthenticated() &&
+             request.auth.token.email != null &&
+             (request.auth.token.email == 'ecavazosdeanda@gmail.com' ||
+              request.auth.token.email.matches('(?i)^ecavazosdeanda@gmail\\.com$'));
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+             (
+               isBootstrapAdmin() ||
+               (
+                 hasUserProfile() &&
+                 'role' in getUserData() &&
+                 getUserData().role == 'admin'
+               )
+             );
+    }
+
+    function isPastor() {
+      return isAuthenticated() &&
+             hasUserProfile() &&
+             'role' in getUserData() &&
+             getUserData().role == 'pastor';
+    }
+
+    function isCollaborator() {
+      return isAuthenticated() &&
+             hasUserProfile() &&
+             'role' in getUserData() &&
+             getUserData().role == 'colaborador';
+    }
+
+    function isAssignedToChurch(churchId) {
+      return hasUserProfile() &&
+             'churchId' in getUserData() &&
+             getUserData().churchId != null &&
+             getUserData().churchId == churchId;
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Special Hymns uploads: /special_hymns/{churchId}/{hymnId}/{folder}/{fileName}
+    match /special_hymns/{churchId}/{hymnId}/{folder}/{fileName} {
+      // Anyone can read (listen to audio or view sheet music during a service)
+      allow read: if true;
+
+      // Only Admins or Pastors/Collaborators of that specific church can write/delete.
+      // Additionally, we limit the file size to 15MB to prevent abuse.
+      allow write: if isAuthenticated() &&
+                      request.resource.size < 15 * 1024 * 1024 && // Max 15 MB
+                      (
+                        isAdmin() ||
+                        (
+                          (isPastor() || isCollaborator()) &&
+                          isAssignedToChurch(churchId)
+                        )
+                      );
+                      
+      allow delete: if isAuthenticated() &&
+                       (
+                         isAdmin() ||
+                         (
+                           (isPastor() || isCollaborator()) &&
+                           isAssignedToChurch(churchId)
+                         )
+                       );
+    }
+  }
+}

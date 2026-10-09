@@ -109,6 +109,12 @@ class ChurchModel {
   final String pastorName; // 'Pbro. Juan Pérez'
   final String defaultMeetUrl; // 'https://meet.google.com/xxx-yyyy-zzz'
   final String audioStreamUrl; // Transmisión de solo audio de bajo ancho de banda (ej. Icecast, Shoutcast, Radio)
+  final String contactPhone;
+  final String email;
+  final String postalCode;
+  final String sourceUrl;
+  final String verificationStatus; // verified, pending o outdated
+  final String lastVerifiedAt; // ISO-8601 o vacío
   final List<ServiceMeeting> weeklyServices;
   final List<String> currentNotices;
   final bool isUnifiedServiceActive;
@@ -126,6 +132,12 @@ class ChurchModel {
     required this.pastorName,
     required this.defaultMeetUrl,
     this.audioStreamUrl = '',
+    this.contactPhone = '',
+    this.email = '',
+    this.postalCode = '',
+    this.sourceUrl = '',
+    this.verificationStatus = 'pending',
+    this.lastVerifiedAt = '',
     required this.weeklyServices,
     this.currentNotices = const [],
     this.isUnifiedServiceActive = false,
@@ -133,6 +145,13 @@ class ChurchModel {
 
   ChurchModel copyWith({
     String? audioStreamUrl,
+    String? defaultMeetUrl,
+    String? contactPhone,
+    String? email,
+    String? postalCode,
+    String? sourceUrl,
+    String? verificationStatus,
+    String? lastVerifiedAt,
     List<ServiceMeeting>? weeklyServices,
     List<String>? currentNotices,
     bool? isUnifiedServiceActive,
@@ -147,8 +166,14 @@ class ChurchModel {
     longitude: longitude,
     googleMapsUrl: googleMapsUrl,
     pastorName: pastorName,
-    defaultMeetUrl: defaultMeetUrl,
+    defaultMeetUrl: defaultMeetUrl ?? this.defaultMeetUrl,
     audioStreamUrl: audioStreamUrl ?? this.audioStreamUrl,
+    contactPhone: contactPhone ?? this.contactPhone,
+    email: email ?? this.email,
+    postalCode: postalCode ?? this.postalCode,
+    sourceUrl: sourceUrl ?? this.sourceUrl,
+    verificationStatus: verificationStatus ?? this.verificationStatus,
+    lastVerifiedAt: lastVerifiedAt ?? this.lastVerifiedAt,
     weeklyServices: weeklyServices ?? this.weeklyServices,
     currentNotices: currentNotices ?? this.currentNotices,
     isUnifiedServiceActive:
@@ -168,6 +193,12 @@ class ChurchModel {
     'pastorName': pastorName,
     'defaultMeetUrl': defaultMeetUrl,
     'audioStreamUrl': audioStreamUrl,
+    'contactPhone': contactPhone,
+    'email': email,
+    'postalCode': postalCode,
+    'sourceUrl': sourceUrl,
+    'verificationStatus': verificationStatus,
+    'lastVerifiedAt': lastVerifiedAt,
     'weeklyServices': weeklyServices.map((s) => s.toJson()).toList(),
     'currentNotices': currentNotices,
     'isUnifiedServiceActive': isUnifiedServiceActive,
@@ -186,6 +217,12 @@ class ChurchModel {
     pastorName: json['pastorName'] as String? ?? '',
     defaultMeetUrl: json['defaultMeetUrl'] as String? ?? '',
     audioStreamUrl: json['audioStreamUrl'] as String? ?? '',
+    contactPhone: json['contactPhone'] as String? ?? '',
+    email: json['email'] as String? ?? '',
+    postalCode: json['postalCode'] as String? ?? '',
+    sourceUrl: json['sourceUrl'] as String? ?? '',
+    verificationStatus: json['verificationStatus'] as String? ?? 'pending',
+    lastVerifiedAt: json['lastVerifiedAt'] as String? ?? '',
     weeklyServices: (json['weeklyServices'] as List? ?? [])
         .map((s) => ServiceMeeting.fromJson(Map<String, dynamic>.from(s)))
         .toList(),

@@ -416,6 +416,36 @@ service cloud.firestore {
       allow write: if isAdmin() && isValidId(hymnId);
     }
 
+    // Special Hymns (Custom local hymns for specific congregations)
+    match /special_hymns/{hymnId} {
+      // Reads: Anyone can read (so the congregation apps can fetch them during the service)
+      allow read: if true;
+
+      // Writes (create, update): Admins, or Pastors/Collaborators for their own assigned church
+      allow create, update: if isAuthenticated() &&
+                               isValidId(hymnId) &&
+                               (
+                                 isAdmin() ||
+                                 (
+                                   (isPastor() || isCollaborator()) &&
+                                   'churchId' in request.resource.data &&
+                                   isAssignedToChurch(request.resource.data.churchId)
+                                 )
+                               );
+
+      // Deletes: Admins, or Pastors/Collaborators for their own assigned church
+      allow delete: if isAuthenticated() &&
+                       isValidId(hymnId) &&
+                       (
+                         isAdmin() ||
+                         (
+                           (isPastor() || isCollaborator()) &&
+                           'churchId' in resource.data &&
+                           isAssignedToChurch(resource.data.churchId)
+                         )
+                       );
+    }
+
     // Remote Control Sessions (Host screen and paired mobile remotes)
     match /remote_sessions/{sessionId} {
       // The high-entropy document ID is the pairing secret. Sessions expire

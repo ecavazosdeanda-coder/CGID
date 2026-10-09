@@ -90,7 +90,8 @@ class CloudRemoteBridge {
     Map<String, dynamic>? payload,
   }) async {
     final docRef = sessionDoc(sessionId);
-    final cmdId = '${DateTime.now().millisecondsSinceEpoch}_${(action)}';
+    final randomPart = Random.secure().nextInt(1000000);
+    final cmdId = '${DateTime.now().millisecondsSinceEpoch}_${randomPart}_$action';
     await docRef.update({
       'lastCommand': {
         'id': cmdId,

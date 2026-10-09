@@ -17,6 +17,12 @@ void main() {
       pastorName: 'Pbro. Prueba',
       defaultMeetUrl: 'https://meet.google.com/test-room',
       audioStreamUrl: 'https://stream.zeno.fm/f3wvbbqmdg8uv',
+      contactPhone: '81 0000 0000',
+      email: 'iglesia@example.org',
+      postalCode: '64000',
+      sourceUrl: 'https://example.org/directorio',
+      verificationStatus: 'verified',
+      lastVerifiedAt: '2026-10-07',
       weeklyServices: [
         ServiceMeeting(
           weekday: DateTime.saturday,
@@ -36,6 +42,9 @@ void main() {
     expect(restored.id, original.id);
     expect(restored.regionId, original.regionId);
     expect(restored.audioStreamUrl, 'https://stream.zeno.fm/f3wvbbqmdg8uv');
+    expect(restored.contactPhone, '81 0000 0000');
+    expect(restored.verificationStatus, 'verified');
+    expect(restored.lastVerifiedAt, '2026-10-07');
     expect(restored.weeklyServices.single.weekday, DateTime.saturday);
     expect(restored.weeklyServices.single.startTime.hour, 9);
     expect(restored.weeklyServices.single.startTime.minute, 30);

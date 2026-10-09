@@ -43,6 +43,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/.kotlin/
+/.build-tools/nuget.exe
+/.build-tools/gradle-home/
+/.build-tools/innosetup-*.exe
+/.build-tools/inno6/
+/release/
 
 # Widget Preview related
 .widget_preview/

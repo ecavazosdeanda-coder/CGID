@@ -39,6 +39,10 @@ final tenantProvider = FutureProvider<ChurchModel?>((ref) async {
     if (customAudio != null && customAudio.trim().isNotEmpty) {
       church = church.copyWith(audioStreamUrl: customAudio.trim());
     }
+    final customMeet = prefs.getString('custom_meet_url_${church.id}');
+    if (customMeet != null && customMeet.trim().isNotEmpty) {
+      church = church.copyWith(defaultMeetUrl: customMeet.trim());
+    }
     return church;
   } catch (e) {
     return null;

@@ -81,12 +81,11 @@ class PlanNotifier extends Notifier<PlanState> {
     );
   }
 
-  Future<void> syncToCloud(String churchId) async {
+  Future<void> syncToCloud(String churchId, {bool forceOverwrite = false}) async {
     if (churchId.isEmpty) return;
     state = state.copyWith(isSyncing: true);
     try {
       final db = FirebaseFirestore.instance;
-      final batch = db.batch();
       final publicRef = db
           .collection('churches')
           .doc(churchId)
@@ -97,21 +96,40 @@ class PlanNotifier extends Notifier<PlanState> {
           .doc(churchId)
           .collection('private_plans')
           .doc('weekly_plans');
-      batch.set(publicRef, {
-        'plans': publicPlansForCloud(state.savedPlans),
-        'planMetadata': state.planMetadata,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      batch.set(privateRef, {
-        'notes': privateNotesForCloud(state.savedPlans),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      await batch.commit().timeout(
-        const Duration(seconds: 8),
+
+      final lastSyncTimeRaw = _prefs?.getString('lastSyncTime_$churchId');
+
+      await db.runTransaction((transaction) async {
+        final publicDoc = await transaction.get(publicRef);
+
+        if (!forceOverwrite && publicDoc.exists && publicDoc.data()!.containsKey('updatedAt')) {
+          final cloudUpdatedAt = publicDoc.data()!['updatedAt'] as Timestamp?;
+          if (cloudUpdatedAt != null && lastSyncTimeRaw != null) {
+            final localLastSync = DateTime.tryParse(lastSyncTimeRaw);
+            // Tolerancia de 2 segundos para evitar falsos positivos
+            if (localLastSync != null && cloudUpdatedAt.toDate().difference(localLastSync).inSeconds > 2) {
+              throw Exception('CONFLICT: Hay cambios más recientes en la nube. Por favor, descarga la última versión primero para evitar sobrescribir el trabajo de otro.');
+            }
+          }
+        }
+
+        transaction.set(publicRef, {
+          'plans': publicPlansForCloud(state.savedPlans),
+          'planMetadata': state.planMetadata,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        transaction.set(privateRef, {
+          'notes': privateNotesForCloud(state.savedPlans),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }).timeout(
+        const Duration(seconds: 15),
         onTimeout: () => throw Exception(
-          'Tiempo de espera agotado. Verifica que Cloud Firestore esté creado y habilitado en la consola de Firebase.',
+          'Tiempo de espera agotado. Verifica tu conexión a internet.',
         ),
       );
+
+      _prefs?.setString('lastSyncTime_$churchId', DateTime.now().toUtc().toIso8601String());
       debugPrint('Cultos sincronizados a la nube para $churchId');
     } catch (e) {
       debugPrint('Error sincronizando a la nube: $e');
@@ -175,6 +193,11 @@ class PlanNotifier extends Notifier<PlanState> {
           for (final e in mergedPlans[state.activePlan] ?? [])
             Entry.fromJson(Map<String, dynamic>.from(e)),
         ];
+
+        final cloudUpdatedAt = data['updatedAt'] as Timestamp?;
+        if (cloudUpdatedAt != null) {
+          _prefs?.setString('lastSyncTime_$churchId', cloudUpdatedAt.toDate().toUtc().toIso8601String());
+        }
 
         state = state.copyWith(
           savedPlans: mergedPlans,

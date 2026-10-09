@@ -11,6 +11,7 @@ import '../../low_bandwidth_audio/presentation/audio_stream_player_modal.dart';
 import '../../events/presentation/church_events_screen.dart';
 import '../../notifications/services/web_push_service.dart';
 import '../services/meet_scheduler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LiveMeetCard extends ConsumerStatefulWidget {
   const LiveMeetCard({super.key});
@@ -60,6 +61,63 @@ class _LiveMeetCardState extends ConsumerState<LiveMeetCard> {
   void dispose() {
     _refreshTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _editMeetUrl(String churchId, String currentUrl) async {
+    final controller = TextEditingController(text: currentUrl);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Configurar Sala de Meet'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Puedes pegar aquí el enlace de la videollamada de tu iglesia.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Enlace de Google Meet',
+                hintText: 'https://meet.google.com/xxx-yyyy-zzz',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final uri = Uri.parse('https://meet.google.com/new');
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+              icon: const Icon(Icons.add_box),
+              label: const Text('Hacer nueva sala temporal'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      final prefs = await SharedPreferences.getInstance();
+      if (result.isEmpty) {
+        await prefs.remove('custom_meet_url_$churchId');
+      } else {
+        await prefs.setString('custom_meet_url_$churchId', result);
+      }
+      ref.invalidate(tenantProvider);
+    }
   }
 
   @override
@@ -247,7 +305,7 @@ class _LiveMeetCardState extends ConsumerState<LiveMeetCard> {
                             : () async {
                                 final uri = Uri.parse(activeMeetUrl);
                                 if (await canLaunchUrl(uri)) {
-                                  await launchUrl(uri);
+                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
                                 }
                               },
                         icon: const Icon(Icons.video_call),
@@ -268,6 +326,11 @@ class _LiveMeetCardState extends ConsumerState<LiveMeetCard> {
                         icon: const Icon(Icons.radio, size: 20, color: Colors.teal),
                         label: const Text('Solo Audio (Ahorro Datos)'),
                       ),
+                      IconButton(
+                        tooltip: 'Configurar enlace de Meet',
+                        onPressed: () => _editMeetUrl(church.id, activeMeetUrl),
+                        icon: const Icon(Icons.settings, size: 20, color: Colors.grey),
+                      ),
                     ],
                   ),
                 ] else ...[
@@ -283,7 +346,7 @@ class _LiveMeetCardState extends ConsumerState<LiveMeetCard> {
                             : () async {
                                 final uri = Uri.parse(church.defaultMeetUrl.trim());
                                 if (await canLaunchUrl(uri)) {
-                                  await launchUrl(uri);
+                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
                                 }
                               },
                         icon: const Icon(Icons.video_call),
@@ -311,6 +374,11 @@ class _LiveMeetCardState extends ConsumerState<LiveMeetCard> {
                         },
                         icon: const Icon(Icons.event, size: 20),
                         label: const Text('Eventos y Convocatorias'),
+                      ),
+                      IconButton(
+                        tooltip: 'Configurar enlace de Meet',
+                        onPressed: () => _editMeetUrl(church.id, church.defaultMeetUrl),
+                        icon: const Icon(Icons.settings, size: 20, color: Colors.grey),
                       ),
                     ],
                   ),

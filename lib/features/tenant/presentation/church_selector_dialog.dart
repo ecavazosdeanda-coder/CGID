@@ -65,7 +65,8 @@ class _ChurchSelectorDialogState extends State<ChurchSelectorDialog> {
     final filtered = _churches.where((church) {
       final matchesQuery =
           normalizedQuery.isEmpty ||
-          '${church.name} ${church.city} ${church.state}'
+          '${church.name} ${church.city} ${church.state} '
+                  '${church.address} ${church.contactPhone}'
               .toLowerCase()
               .contains(normalizedQuery);
       return matchesQuery &&
@@ -153,7 +154,8 @@ class _ChurchSelectorDialogState extends State<ChurchSelectorDialog> {
                                 leading: const Icon(Icons.church),
                                 title: Text(church.name),
                                 subtitle: Text(
-                                  '${church.city}, ${church.state}',
+                                  '${church.city}, ${church.state}'
+                                  '${church.verificationStatus == 'verified' ? '' : ' · Información por verificar'}',
                                 ),
                                 onTap: () async {
                                   final prefs =

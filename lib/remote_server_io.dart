@@ -16,8 +16,7 @@ class RemoteServer {
   HttpServer? _server;
   Future<List<String>>? _starting;
 
-  String? _connectedIp;
-  Timer? _timeoutTimer;
+  final Map<String, Timer> _activeClients = {};
   final _connectionController = StreamController<String?>.broadcast();
 
   RemoteServer({
@@ -37,10 +36,11 @@ class RemoteServer {
   int? get boundPort => _server?.port;
 
   void disconnectDevice() {
-    final wasConnected = _connectedIp != null;
-    _connectedIp = null;
-    _timeoutTimer?.cancel();
-    _timeoutTimer = null;
+    final wasConnected = _activeClients.isNotEmpty;
+    for (final timer in _activeClients.values) {
+      timer.cancel();
+    }
+    _activeClients.clear();
     if (wasConnected) _connectionController.add(null);
   }
 
@@ -107,14 +107,23 @@ class RemoteServer {
       ..add('Access-Control-Allow-Headers', 'Content-Type');
   }
 
-  bool _claimConnection(String clientIp) {
-    if (_connectedIp != null && _connectedIp != clientIp) return false;
-    if (_connectedIp == null) {
-      _connectedIp = clientIp;
-      _connectionController.add(clientIp);
+  void _updateConnectionStatus() {
+    if (_activeClients.isEmpty) {
+      _connectionController.add(null);
+    } else if (_activeClients.length == 1) {
+      _connectionController.add(_activeClients.keys.first);
+    } else {
+      _connectionController.add('${_activeClients.length} dispositivos');
     }
-    _timeoutTimer?.cancel();
-    _timeoutTimer = Timer(connectionTimeout, disconnectDevice);
+  }
+
+  bool _claimConnection(String clientIp) {
+    _activeClients[clientIp]?.cancel();
+    _activeClients[clientIp] = Timer(connectionTimeout, () {
+      _activeClients.remove(clientIp);
+      _updateConnectionStatus();
+    });
+    _updateConnectionStatus();
     return true;
   }
 

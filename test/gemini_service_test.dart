@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cgid/features/ai_assistant/services/gemini_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('Gemini requires a non-empty session key', () async {
     final service = GeminiService();
 
@@ -47,6 +49,37 @@ void main() {
               'safe output',
               isNot(contains('{')),
             ),
+      ),
+    );
+  });
+
+  test('out-of-scope questions are refused without calling Gemini', () async {
+    final service = GeminiService();
+    await service.initialize('test-session-key');
+
+    final answer = await service.sendMessage(
+      '¿Cómo programo una aplicación bancaria en Flutter?',
+    );
+
+    expect(answer.isRefusal, isTrue);
+    expect(answer.sources, isEmpty);
+    expect(answer.text, contains('No encontré base suficiente'));
+  });
+
+  test('question length is limited before calling Gemini', () async {
+    final service = GeminiService();
+    await service.initialize('test-session-key');
+
+    expect(
+      () => service.sendMessage(
+        List.filled(GeminiService.maxQuestionCharacters + 1, 'x').join(),
+      ),
+      throwsA(
+        isA<GeminiServiceException>().having(
+          (error) => error.message,
+          'message',
+          contains('600 caracteres'),
+        ),
       ),
     );
   });

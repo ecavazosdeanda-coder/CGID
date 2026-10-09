@@ -1,13 +1,19 @@
+[Code]
+
+#ifndef MyAppVersion
+  #define MyAppVersion "2.0.0-rc.1"
+#endif
+
 [Setup]
 AppId={{AC8B9840-0542-4261-9A17-4CB4A8DE84F4}
 AppName=CGID
-AppVersion=1.0
+AppVersion={#MyAppVersion}
 AppPublisher=Eustolio Cavazos de Anda
 DefaultDirName={localappdata}\Programs\CGID
 DefaultGroupName=CGID
 PrivilegesRequired=lowest
 OutputDir=..\release
-OutputBaseFilename=CGID_Setup_v1.0
+OutputBaseFilename=CGID_{#MyAppVersion}_Windows_x64_unsigned_Setup
 SetupIconFile=..\windows\runner\resources\app_icon.ico
 UninstallDisplayIcon={app}\cgid.exe
 Compression=lzma2

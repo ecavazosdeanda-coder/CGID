@@ -1,109 +1,186 @@
-name: Instaladores v1.0
+name: Instaladores multiplataforma v2
+
 on:
   workflow_dispatch:
   push:
-    tags: [v1.0]
+    tags:
+      - 'v2.*'
+
 permissions:
-  contents: read
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.47.2'
+  RELEASE_VERSION: '2.0.0-rc.1'
+
 jobs:
-  windows:
-    runs-on: windows-latest
+  quality:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.2'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter test
-      - run: flutter build windows --release
-      - name: Crear instalador EXE
-        shell: pwsh
-        run: |
-          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' tool/installer.iss
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Windows-v1.0
-          path: release/*.exe
-  macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.2'
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      - run: flutter build macos --release
-      - name: Crear DMG
-        run: |
-          mkdir -p release/dmg
-          cp -R build/macos/Build/Products/Release/*.app release/dmg/
-          ln -s /Applications release/dmg/Applications
-          hdiutil create -volname CGID -srcfolder release/dmg -ov -format UDZO release/CGID_v1.0_macos.dmg
-      - uses: actions/upload-artifact@v4
-        with:
-          name: macOS-v1.0
-          path: release/*.dmg
-  ios:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.2'
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      - run: flutter build ios --release --no-codesign
-      - name: Conservar compilación para firma Apple
-        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app CGID_iOS_sin_firmar.zip
-      - uses: actions/upload-artifact@v4
-        with:
-          name: iOS-requiere-firma-Apple
-          path: CGID_iOS_sin_firmar.zip
+      - run: flutter analyze --no-pub
+      - run: flutter test --no-pub
 
   android:
+    needs: quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.2'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter test
-      - run: flutter build apk --release
-      - run: flutter build appbundle --release
+      - run: flutter build apk --release --no-pub
+      - run: flutter build appbundle --release --no-pub
+      - name: Nombrar paquetes sin firma de producción
+        run: |
+          mkdir -p release
+          cp build/app/outputs/flutter-apk/app-release.apk release/CGID_${RELEASE_VERSION}_Android_debug-signed.apk
+          cp build/app/outputs/bundle/release/app-release.aab release/CGID_${RELEASE_VERSION}_Android_debug-signed.aab
       - uses: actions/upload-artifact@v4
         with:
-          name: Android-v2.0
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+          name: CGID-${{ env.RELEASE_VERSION }}-Android
+          path: release/*
+          if-no-files-found: error
+
+  windows:
+    needs: quality
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build windows --release --no-pub
+      - name: Instalar Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+      - name: Crear EXE instalable y ZIP portable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' "/DMyAppVersion=$env:RELEASE_VERSION" tool/installer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "release/CGID_${env:RELEASE_VERSION}_Windows_x64_portable.zip" -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CGID-${{ env.RELEASE_VERSION }}-Windows
+          path: release/*
+          if-no-files-found: error
+
+  apple:
+    needs: quality
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Compilar macOS sin firma de distribución
+        run: flutter build macos --release --no-pub
+      - name: Crear DMG macOS
+        run: |
+          mkdir -p release/dmg
+          cp -R build/macos/Build/Products/Release/*.app release/dmg/
+          ln -s /Applications release/dmg/Applications
+          hdiutil create -volname CGID -srcfolder release/dmg -ov -format UDZO "release/CGID_${RELEASE_VERSION}_macOS_unsigned.dmg"
+      - name: Compilar iOS sin firma
+        run: flutter build ios --release --no-codesign --no-pub
+      - name: Empaquetar aplicación iOS para firma posterior
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app "release/CGID_${RELEASE_VERSION}_iOS_unsigned.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CGID-${{ env.RELEASE_VERSION }}-Apple-unsigned
+          path: release/*
+          if-no-files-found: error
+
+  linux-experimental:
+    needs: quality
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar bibliotecas nativas
+        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libmpv-dev
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Generar runner Linux
+        run: flutter create --platforms=linux --project-name cgid .
+      - run: flutter build linux --release --no-pub
+      - name: Empaquetar bundle Linux
+        run: |
+          mkdir -p release
+          tar -czf "release/CGID_${RELEASE_VERSION}_Linux_x64_experimental.tar.gz" -C build/linux/x64/release/bundle .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CGID-${{ env.RELEASE_VERSION }}-Linux-experimental
+          path: release/*
+          if-no-files-found: error
 
   web:
+    needs: quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.2'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter test
-      - run: flutter build web --release --base-href /
+      - run: flutter build web --release --base-href / --no-pub --no-wasm-dry-run
       - uses: actions/upload-artifact@v4
         with:
-          name: Web-PWA-v2.0
+          name: CGID-${{ env.RELEASE_VERSION }}-Web-PWA
           path: build/web/
+          if-no-files-found: error
+
+  github-release:
+    if: >-
+      ${{ always() && startsWith(github.ref, 'refs/tags/') &&
+          needs.android.result == 'success' &&
+          needs.windows.result == 'success' &&
+          needs.apple.result == 'success' &&
+          needs.web.result == 'success' }}
+    needs: [android, windows, apple, linux-experimental, web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          prerelease: ${{ contains(github.ref_name, '-rc.') }}
+          generate_release_notes: true
+          body: |
+            Compilación candidata v2.0 sin firma de distribución.
+
+            - Android usa temporalmente la clave de depuración y se distribuye sólo para pruebas directas.
+            - Windows y macOS pueden mostrar advertencias del sistema por editor no verificado.
+            - iOS requiere firma de Apple antes de poder instalarse en dispositivos.
+            - Linux es experimental: las funciones de Firebase/Auth/Firestore no están disponibles de forma nativa.
+          files: dist/**
 

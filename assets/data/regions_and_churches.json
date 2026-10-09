@@ -1,30 +1,33 @@
 {
+  "directory": {
+    "schemaVersion": 2,
+    "isComplete": false,
+    "lastReviewedAt": "2026-10-07",
+    "officialRegionsSource": "https://cgiglesiadedios.online/templos",
+    "churchesSourceStatus": "El mapa oficial enlazado por la Conferencia devuelve 404; los templos actuales permanecen pendientes de verificación.",
+    "requiredForCompletion": "Directorio oficial vigente en CSV, XLSX, JSON o KML."
+  },
   "regions": [
-    {
-      "id": "region-15",
-      "name": "Región 15",
-      "states": [
-        "Nuevo León",
-        "Tamaulipas"
-      ],
-      "presbyterName": "Pbro. Encargado de Región"
-    },
-    {
-      "id": "region-1",
-      "name": "Región 1",
-      "states": [
-        "Ciudad de México"
-      ],
-      "presbyterName": ""
-    },
-    {
-      "id": "region-5",
-      "name": "Región 5",
-      "states": [
-        "Jalisco"
-      ],
-      "presbyterName": ""
-    }
+    {"id": "region-1", "name": "Región 1 - CDMX", "states": ["Ciudad de México"], "presbyterName": ""},
+    {"id": "region-2", "name": "Región 2 - Estado de México", "states": ["Estado de México"], "presbyterName": ""},
+    {"id": "region-3", "name": "Región 3 - Estado de México", "states": ["Estado de México"], "presbyterName": ""},
+    {"id": "region-4", "name": "Región 4 - Hidalgo", "states": ["Hidalgo"], "presbyterName": ""},
+    {"id": "region-5", "name": "Región 5 - Morelos", "states": ["Morelos"], "presbyterName": ""},
+    {"id": "region-6", "name": "Región 6 - Michoacán", "states": ["Michoacán"], "presbyterName": ""},
+    {"id": "region-7", "name": "Región 7 - Puebla", "states": ["Puebla"], "presbyterName": ""},
+    {"id": "region-8", "name": "Región 8 - Guanajuato", "states": ["Guanajuato"], "presbyterName": ""},
+    {"id": "region-9", "name": "Región 9 - Veracruz Norte", "states": ["Veracruz"], "presbyterName": ""},
+    {"id": "region-10", "name": "Región 10 - Guadalajara", "states": ["Jalisco"], "presbyterName": ""},
+    {"id": "region-11", "name": "Región 11 - Chiapas", "states": ["Chiapas"], "presbyterName": ""},
+    {"id": "region-12", "name": "Región 12 - Tabasco", "states": ["Tabasco"], "presbyterName": ""},
+    {"id": "region-13", "name": "Región 13 - Quintana Roo", "states": ["Quintana Roo"], "presbyterName": ""},
+    {"id": "region-15", "name": "Región 15 - Nuevo León", "states": ["Nuevo León"], "presbyterName": ""},
+    {"id": "region-16", "name": "Región 16 - Chihuahua", "states": ["Chihuahua"], "presbyterName": ""},
+    {"id": "region-17", "name": "Región 17 - Tamaulipas", "states": ["Tamaulipas"], "presbyterName": ""},
+    {"id": "region-18", "name": "Región 18 - Baja California y Sonora", "states": ["Baja California", "Sonora"], "presbyterName": ""},
+    {"id": "region-19", "name": "Región 19 - Guerrero", "states": ["Guerrero"], "presbyterName": ""},
+    {"id": "region-20", "name": "Región 20 - Michoacán", "states": ["Michoacán"], "presbyterName": ""},
+    {"id": "region-21", "name": "Región 21 - Yucatán", "states": ["Yucatán"], "presbyterName": ""}
   ],
   "churches": [
     {
@@ -40,6 +43,12 @@
       "pastorName": "Pbro. Local",
       "defaultMeetUrl": "",
       "audioStreamUrl": "https://stream.zeno.fm/f3wvbbqmdg8uv",
+      "contactPhone": "",
+      "email": "",
+      "postalCode": "",
+      "sourceUrl": "",
+      "verificationStatus": "pending",
+      "lastVerifiedAt": "",
       "weeklyServices": [
         {
           "weekday": 5,
@@ -113,13 +122,19 @@
       "googleMapsUrl": "",
       "pastorName": "Pbro. Local",
       "defaultMeetUrl": "",
+      "contactPhone": "",
+      "email": "",
+      "postalCode": "",
+      "sourceUrl": "",
+      "verificationStatus": "pending",
+      "lastVerifiedAt": "",
       "weeklyServices": [],
       "currentNotices": [],
       "isUnifiedServiceActive": false
     },
     {
       "id": "mx-jal-gdl",
-      "regionId": "region-5",
+      "regionId": "region-10",
       "name": "Iglesia de Dios en Guadalajara",
       "state": "Jalisco",
       "city": "Guadalajara",
@@ -129,6 +144,12 @@
       "googleMapsUrl": "",
       "pastorName": "Pbro. Local",
       "defaultMeetUrl": "",
+      "contactPhone": "",
+      "email": "",
+      "postalCode": "",
+      "sourceUrl": "",
+      "verificationStatus": "pending",
+      "lastVerifiedAt": "",
       "weeklyServices": [],
       "currentNotices": [],
       "isUnifiedServiceActive": false

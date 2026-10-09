@@ -22,19 +22,43 @@ final userProfileProvider = StreamProvider<UserProfile?>((ref) {
     if (!snapshot.exists || snapshot.data() == null) {
       final isInitialAdmin =
           authUser.email?.toLowerCase() == 'ecavazosdeanda@gmail.com';
-      if (!isInitialAdmin) {
-        return null;
+      if (isInitialAdmin) {
+        final defaultProfile = UserProfile(
+          uid: authUser.uid,
+          email: authUser.email ?? '',
+          role: 'admin',
+          churchId: null,
+          churchName: null,
+        );
+        await docRef.set(defaultProfile.toFirestore());
+        return defaultProfile;
       }
-      final defaultProfile = UserProfile(
-        uid: authUser.uid,
-        email: authUser.email ?? '',
-        role: 'admin',
-        churchId: null,
-        churchName: null,
-      );
 
-      await docRef.set(defaultProfile.toFirestore());
-      return defaultProfile;
+      // Check for invitation
+      if (authUser.email != null) {
+        final invRef = FirebaseFirestore.instance
+            .collection('account_invitations')
+            .doc(authUser.email);
+        final invSnap = await invRef.get();
+        if (invSnap.exists && invSnap.data() != null) {
+          final invData = invSnap.data()!;
+          final profile = UserProfile(
+            uid: authUser.uid,
+            email: authUser.email!,
+            role: invData['role'] as String? ?? 'colaborador',
+            churchId: invData['churchId'] as String?,
+            churchName: invData['churchName'] as String?,
+          );
+          await docRef.set(profile.toFirestore());
+          // We can delete the invitation after consuming it
+          try {
+            await invRef.delete();
+          } catch (_) {}
+          return profile;
+        }
+      }
+
+      return null;
     }
 
     return UserProfile.fromFirestore(snapshot.data()!, authUser.uid);
