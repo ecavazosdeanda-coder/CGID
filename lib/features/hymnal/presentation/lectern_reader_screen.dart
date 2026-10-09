@@ -55,10 +55,14 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
     currentEntry = widget.entry;
     try {
       if (Firebase.apps.isNotEmpty) {
-        unawaited(HymnCustomizationService.refreshAdminStatus().then((_) {
-          if (mounted) setState(() {});
-        }));
-        _authSubscription = FirebaseAuth.instance.authStateChanges().listen((_) async {
+        unawaited(
+          HymnCustomizationService.refreshAdminStatus().then((_) {
+            if (mounted) setState(() {});
+          }),
+        );
+        _authSubscription = FirebaseAuth.instance.authStateChanges().listen((
+          _,
+        ) async {
           await HymnCustomizationService.refreshAdminStatus();
           if (mounted) setState(() {});
         });
@@ -73,6 +77,20 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
 
   Future<void> _loadChordChart({bool keepShowChords = false}) async {
     final hymnId = currentEntry.id;
+
+    if (!currentEntry.supportsChordTools) {
+      if (mounted) {
+        setState(() {
+          chordChart = null;
+          customSections = null;
+          chordLoading = false;
+          showChords = false;
+          transposeAmount = 0;
+        });
+      }
+      return;
+    }
+
     setState(() {
       chordLoading = true;
       if (!keepShowChords) {
@@ -193,7 +211,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
 
   int _determineColumnCount(double width, int sectionCount) {
     if (userColumnsPreference != null && userColumnsPreference! > 0) {
-      return userColumnsPreference!.clamp(1, sectionCount > 0 ? sectionCount : 1);
+      return userColumnsPreference!.clamp(
+        1,
+        sectionCount > 0 ? sectionCount : 1,
+      );
     }
     if (sectionCount <= 1) return 1;
     if (width >= 1200 && sectionCount >= 3) return 3;
@@ -214,12 +235,18 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
     }
 
     int sectionWeight(Section s) {
-      final lineCount = s.text.split('\n').where((l) => l.trim().isNotEmpty).length;
+      final lineCount = s.text
+          .split('\n')
+          .where((l) => l.trim().isNotEmpty)
+          .length;
       return lineCount + (s.label.isNotEmpty ? 2 : 0);
     }
 
     if (numCols == 2) {
-      final totalWeight = sections.fold<int>(0, (sum, s) => sum + sectionWeight(s));
+      final totalWeight = sections.fold<int>(
+        0,
+        (sum, s) => sum + sectionWeight(s),
+      );
       var currentWeight = 0;
       var splitIdx = 1;
       var bestDiff = double.infinity;
@@ -239,7 +266,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
     }
 
     // 3 columnas
-    final totalWeight = sections.fold<int>(0, (sum, s) => sum + sectionWeight(s));
+    final totalWeight = sections.fold<int>(
+      0,
+      (sum, s) => sum + sectionWeight(s),
+    );
     final targetColWeight = totalWeight / 3.0;
     var currentWeight = 0;
     var colIdx = 0;
@@ -324,7 +354,11 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.tune, size: 20, color: dark ? Colors.tealAccent : Colors.teal),
+                        Icon(
+                          Icons.tune,
+                          size: 20,
+                          color: dark ? Colors.tealAccent : Colors.teal,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -350,7 +384,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                         Expanded(
                           child: Text(
                             'Tamaño de letra:',
-                            style: TextStyle(fontWeight: FontWeight.w600, color: sheetTextCol),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: sheetTextCol,
+                            ),
                           ),
                         ),
                         IconButton.filledTonal(
@@ -368,7 +405,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
                             '${fontSize.toInt()} pt',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: sheetTextCol),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: sheetTextCol,
+                            ),
                           ),
                         ),
                         IconButton.filledTonal(
@@ -388,7 +428,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                     // Tema Claro / Oscuro
                     Text(
                       'Tema visual:',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: sheetTextCol),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: sheetTextCol,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     SizedBox(
@@ -400,8 +443,16 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                         segments: const [
-                          ButtonSegment(value: false, icon: Icon(Icons.light_mode, size: 16), label: Text('Claro')),
-                          ButtonSegment(value: true, icon: Icon(Icons.dark_mode, size: 16), label: Text('Oscuro')),
+                          ButtonSegment(
+                            value: false,
+                            icon: Icon(Icons.light_mode, size: 16),
+                            label: Text('Claro'),
+                          ),
+                          ButtonSegment(
+                            value: true,
+                            icon: Icon(Icons.dark_mode, size: 16),
+                            label: Text('Oscuro'),
+                          ),
                         ],
                         selected: {dark},
                         onSelectionChanged: (set) {
@@ -414,7 +465,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                     // Columnas
                     Text(
                       'Columnas:',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: sheetTextCol),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: sheetTextCol,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     SizedBox(
@@ -442,7 +496,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                     // Pedales Bluetooth
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.keyboard_outlined, color: sheetTextCol),
+                      leading: Icon(
+                        Icons.keyboard_outlined,
+                        color: sheetTextCol,
+                      ),
                       title: Text(
                         'Pedales Bluetooth (PageFlip/AirTurn)',
                         style: TextStyle(fontSize: 14, color: sheetTextCol),
@@ -475,8 +532,11 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
 
     final hasRepertoire =
         widget.repertoireList != null && widget.repertoireList!.isNotEmpty;
+    final supportsChordTools = currentEntry.supportsChordTools;
     final hasCustomChords =
-        customSections != null && customSections!.isNotEmpty;
+        supportsChordTools &&
+        customSections != null &&
+        customSections!.isNotEmpty;
     final displayedSections = (showChords && hasCustomChords)
         ? customSections!
         : currentEntry.sections;
@@ -625,13 +685,16 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                     ],
                   ),
                 ),
-              if (chordLoading) const LinearProgressIndicator(minHeight: 3),
+              if (supportsChordTools && chordLoading)
+                const LinearProgressIndicator(minHeight: 3),
               // Barra compacta de controles de Acordes (Transporte, Cifrado, Armadura)
               if (showChords && hasCustomChords)
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: dark ? const Color(0xff142831) : const Color(0xffe1ece8),
+                    color: dark
+                        ? const Color(0xff142831)
+                        : const Color(0xffe1ece8),
                     border: Border(
                       bottom: BorderSide(
                         color: dark ? Colors.white12 : Colors.black12,
@@ -639,7 +702,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                       ),
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -660,14 +726,20 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
                           tooltip: 'Bajar medio tono (-1 semitono)',
-                          icon: const Icon(Icons.remove_circle_outline, size: 20),
+                          icon: const Icon(
+                            Icons.remove_circle_outline,
+                            size: 20,
+                          ),
                           onPressed: () => setState(() => transposeAmount--),
                         ),
                         InkWell(
                           borderRadius: BorderRadius.circular(6),
                           onTap: () => setState(() => transposeAmount = 0),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: transposeAmount != 0
                                   ? Colors.amber.withAlpha(40)
@@ -684,12 +756,14 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                               transposeAmount == 0
                                   ? 'Original (0)'
                                   : (transposeAmount > 0
-                                      ? '+$transposeAmount'
-                                      : '$transposeAmount'),
+                                        ? '+$transposeAmount'
+                                        : '$transposeAmount'),
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
-                                color: transposeAmount != 0 ? Colors.amber : textCol,
+                                color: transposeAmount != 0
+                                    ? Colors.amber
+                                    : textCol,
                               ),
                             ),
                           ),
@@ -719,7 +793,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                             borderRadius: BorderRadius.circular(6),
                             onTap: () => setState(() => useSolfeo = !useSolfeo),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
@@ -741,7 +818,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                                   const SizedBox(width: 4),
                                   Text(
                                     useSolfeo ? 'Solfeo' : 'Cifrado',
-                                    style: TextStyle(fontSize: 11, color: textCol),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: textCol,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -764,9 +844,13 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                               : 'Cambiar a bemoles (b)',
                           child: InkWell(
                             borderRadius: BorderRadius.circular(6),
-                            onTap: () => setState(() => preferFlats = !preferFlats),
+                            onTap: () =>
+                                setState(() => preferFlats = !preferFlats),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
@@ -788,7 +872,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                                   const SizedBox(width: 4),
                                   Text(
                                     preferFlats ? 'Bemoles' : 'Sostenidos',
-                                    style: TextStyle(fontSize: 11, color: textCol),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: textCol,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -809,12 +896,18 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                             visualDensity: VisualDensity.compact,
                             padding: EdgeInsets.zero,
                             tooltip: 'Editar acordes (Admin)',
-                            icon: const Icon(Icons.edit, size: 18, color: Colors.amberAccent),
+                            icon: const Icon(
+                              Icons.edit,
+                              size: 18,
+                              color: Colors.amberAccent,
+                            ),
                             onPressed: () async {
                               final result = await HymnChordEditorDialog.show(
                                 context,
                                 hymn: currentEntry,
-                                initialSections: hasCustomChords ? customSections! : currentEntry.sections,
+                                initialSections: hasCustomChords
+                                    ? customSections!
+                                    : currentEntry.sections,
                               );
                               if (result != null) {
                                 await _loadChordChart(keepShowChords: true);
@@ -826,7 +919,7 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                     ),
                   ),
                 ),
-              if (HymnCustomizationService.isAdmin) ...[
+              if (supportsChordTools && HymnCustomizationService.isAdmin) ...[
                 if (hasCustomChords)
                   Container(
                     width: double.infinity,
@@ -837,7 +930,11 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.admin_panel_settings, color: Colors.white, size: 16),
+                        const Icon(
+                          Icons.admin_panel_settings,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
@@ -851,16 +948,26 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                             backgroundColor: Colors.white,
                             foregroundColor: Colors.teal.shade900,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
                             visualDensity: VisualDensity.compact,
                           ),
                           icon: const Icon(Icons.edit, size: 16),
-                          label: const Text('Editar acordes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          label: const Text(
+                            'Editar acordes',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
                           onPressed: () async {
                             final result = await HymnChordEditorDialog.show(
                               context,
                               hymn: currentEntry,
-                              initialSections: customSections ?? currentEntry.sections,
+                              initialSections:
+                                  customSections ?? currentEntry.sections,
                             );
                             if (result != null) {
                               await _loadChordChart(keepShowChords: true);
@@ -873,7 +980,9 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                 else
                   Container(
                     width: double.infinity,
-                    color: dark ? const Color(0xff152e35) : const Color(0xffe6f4ea),
+                    color: dark
+                        ? const Color(0xff152e35)
+                        : const Color(0xffe6f4ea),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 6,
@@ -882,7 +991,9 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                       children: [
                         Icon(
                           Icons.admin_panel_settings,
-                          color: dark ? Colors.tealAccent : Colors.teal.shade800,
+                          color: dark
+                              ? Colors.tealAccent
+                              : Colors.teal.shade800,
                           size: 16,
                         ),
                         const SizedBox(width: 8),
@@ -890,7 +1001,9 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                           child: Text(
                             'Modo Administrador · Este canto aún no tiene acordes.',
                             style: TextStyle(
-                              color: dark ? Colors.tealAccent : Colors.teal.shade900,
+                              color: dark
+                                  ? Colors.tealAccent
+                                  : Colors.teal.shade900,
                               fontSize: 12,
                             ),
                           ),
@@ -901,13 +1014,19 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                             backgroundColor: Colors.teal.shade700,
                             foregroundColor: Colors.white,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             visualDensity: VisualDensity.compact,
                           ),
                           icon: const Icon(Icons.add_circle_outline, size: 15),
                           label: const Text(
                             'Agregar acordes',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
                           ),
                           onPressed: () async {
                             final result = await HymnChordEditorDialog.show(
@@ -931,7 +1050,10 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                       constraints.maxWidth,
                       displayedSections.length,
                     );
-                    final partitioned = _partitionSections(displayedSections, numCols);
+                    final partitioned = _partitionSections(
+                      displayedSections,
+                      numCols,
+                    );
 
                     return SingleChildScrollView(
                       controller: _scrollController,
@@ -977,13 +1099,19 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    for (var c = 0; c < partitioned.length; c++) ...[
+                                    for (
+                                      var c = 0;
+                                      c < partitioned.length;
+                                      c++
+                                    ) ...[
                                       if (c > 0) const SizedBox(width: 16),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
                                           children: [
-                                            for (final section in partitioned[c])
+                                            for (final section
+                                                in partitioned[c])
                                               _buildSectionCard(
                                                 section,
                                                 cardBg: cardBg,

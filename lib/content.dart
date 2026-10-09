@@ -150,6 +150,13 @@ class Entry {
 
   String get searchable =>
       normalized('$title $subtitle ${sections.map((s) => s.text).join(' ')}');
+
+  /// Las herramientas de acordes pertenecen exclusivamente al contenido
+  /// musical. Los himnos oficiales usan IDs `h...`; los himnos especiales
+  /// se identifican por su subtítulo al convertirlos en [Entry].
+  bool get supportsChordTools =>
+      id.startsWith('h') || subtitle.startsWith('Himno Local');
+
   // Keep verse numbers for display/projection, but never speak their prefixes.
   String get spokenText => sections
       .map(

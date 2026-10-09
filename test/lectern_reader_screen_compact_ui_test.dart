@@ -2,9 +2,60 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cgid/content.dart';
 import 'package:cgid/features/hymnal/presentation/lectern_reader_screen.dart';
+import 'package:cgid/features/hymnal/services/hymn_customization_service.dart';
 
 void main() {
-  testWidgets('LecternReaderScreen UI has compact layout and settings modal', (WidgetTester tester) async {
+  test('only hymns and local special hymns support chord tools', () {
+    const bible = Entry(
+      id: 'b0:0:1:3',
+      title: 'Génesis 1:1-3',
+      sections: [Section('Versículos', '1 En el principio...')],
+    );
+    const hymn = Entry(
+      id: 'h1',
+      title: 'Himno oficial',
+      sections: [Section('1', 'Letra')],
+    );
+    const specialHymn = Entry(
+      id: 'firestore-document-id',
+      title: 'Himno especial',
+      subtitle: 'Himno Local · Evento',
+      sections: [Section('Letra', 'Letra especial')],
+    );
+
+    expect(bible.supportsChordTools, isFalse);
+    expect(hymn.supportsChordTools, isTrue);
+    expect(specialHymn.supportsChordTools, isTrue);
+  });
+
+  testWidgets('Bible lectern never offers chord administration', (
+    WidgetTester tester,
+  ) async {
+    HymnCustomizationService.setAdminForTesting(true);
+    addTearDown(() => HymnCustomizationService.setAdminForTesting(false));
+
+    const bibleEntry = Entry(
+      id: 'b0:0:1:3',
+      title: 'Génesis 1:1-3',
+      subtitle: 'Santa Biblia',
+      sections: [Section('Versículos', '1 En el principio...')],
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(home: LecternReaderScreen(entry: bibleEntry)),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Agregar acordes'), findsNothing);
+    expect(find.textContaining('Modo Administrador'), findsNothing);
+    expect(find.byTooltip('Ver acordes'), findsNothing);
+    expect(find.byTooltip('Editar acordes (Admin)'), findsNothing);
+    expect(find.text('Tono:'), findsNothing);
+  });
+
+  testWidgets('LecternReaderScreen UI has compact layout and settings modal', (
+    WidgetTester tester,
+  ) async {
     // Definir tamaño de pantalla móvil estándar (390 x 844 dp)
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -20,9 +71,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: LecternReaderScreen(entry: testEntry),
-      ),
+      const MaterialApp(home: LecternReaderScreen(entry: testEntry)),
     );
     await tester.pump(const Duration(milliseconds: 300));
 
