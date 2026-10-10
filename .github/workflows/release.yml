@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 env:
   FLUTTER_VERSION: '3.47.2'
