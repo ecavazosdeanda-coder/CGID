@@ -5,7 +5,7 @@ on:
     inputs:
       release_ref:
         description: Tag de la candidata a publicar
-        default: v2.0.0-rc.2
+        default: v2.0.0-rc.3
         required: true
       existing_run_id:
         description: Run anterior con Android y Windows listos (opcional)
@@ -21,7 +21,7 @@ permissions:
 
 env:
   FLUTTER_VERSION: '3.47.2'
-  RELEASE_VERSION: '2.0.0-rc.2'
+  RELEASE_VERSION: '2.0.0-rc.3'
 
 jobs:
   quality:

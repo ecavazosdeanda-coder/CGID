@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cgdi-v2-cache-2.0.0-rc.2-reading-comments';
+const CACHE_NAME = 'cgdi-v2-cache-2.0.0-rc.3-literature-viewer';
 
 // Recursos estáticos iniciales a cachear para asegurar funcionamiento offline
 const PRECACHE_ASSETS = [
@@ -44,10 +44,26 @@ self.addEventListener('fetch', (event) => {
   // Ignorar llamadas de esquemas no HTTP/HTTPS o extensiones
   if (!event.request.url.startsWith('http')) return;
 
-  // Solo almacenar recursos de la app. PDF remotos se guardan explícitamente
-  // en IndexedDB desde el visor, nunca por una descarga automática del SW.
+  // Solo almacenar recursos de la app. Nunca guardar PDF remotos en web.
   // No excluir nuestro propio dominio *.firebaseapp.com.
   if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // Release entry points must not keep running an old build after deployment.
+  if (['/main.dart.js', '/flutter_bootstrap.js', '/version.json'].includes(url.pathname)) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME);
+      try {
+        const response = await fetch(event.request, { cache: 'no-cache' });
+        if (response.ok) await cache.put(event.request, response.clone());
+        return response;
+      } catch (error) {
+        const cached = await cache.match(event.request);
+        if (cached) return cached;
+        throw error;
+      }
+    })());
     return;
   }
 

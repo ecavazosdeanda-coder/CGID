@@ -7,7 +7,7 @@ se conservan. La consulta de producción al implementar devolvió un catálogo v
 
 ## Publicación por el administrador
 
-1. Subir un archivo PDF a Drive, máximo 20 MB. No documentos nativos de Google Docs.
+1. Subir un archivo PDF a Drive, hasta 100 MB (recomendado: 20 MB o menos). No documentos nativos de Google Docs.
 2. Compartir como lector con cualquier persona que tenga el enlace y permitir descarga.
 3. En Administración/Literatura, usar Publicar Literatura y pegar el enlace.
 4. La aplicación comprueba acceso y contenido PDF antes de guardar el registro.
@@ -30,7 +30,9 @@ copia sin hacer llamadas a Drive. Web no lee copias guardadas por versiones prev
 La clave incluye ID y hash del enlace para no reutilizar otro archivo al cambiar
 la publicación. Para publicar una revisión del PDF usar un archivo/enlace nuevo;
 si se reemplaza el contenido bajo el mismo enlace, la copia offline anterior se
-mantiene. Máximo 20 MB por documento. No hay borrado automático de copias locales.
+mantiene. Máximo de seguridad: 100 MB por documento. Por encima de 20 MB se pide
+confirmación antes de publicar por el consumo de memoria y datos. La lectura
+remota permite hasta tres minutos. No hay borrado automático de copias locales.
 
 En web Literatura requiere conexión. La compilación usa --no-web-resources-cdn
 y el SW conserva recursos de la interfaz, pero no PDF remotos. Desinstalar la app

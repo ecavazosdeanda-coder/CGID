@@ -8,8 +8,13 @@ import '../../comments/reading_comments.dart';
 
 class DocumentViewerScreen extends StatefulWidget {
   final DocumentModel document;
+  final LiteraturePdfService? pdfService;
 
-  const DocumentViewerScreen({super.key, required this.document});
+  const DocumentViewerScreen({
+    super.key,
+    required this.document,
+    this.pdfService,
+  });
 
   @override
   State<DocumentViewerScreen> createState() => _DocumentViewerScreenState();
@@ -18,9 +23,9 @@ class DocumentViewerScreen extends StatefulWidget {
 class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   final _controller = PdfViewerController();
   final _searchController = TextEditingController();
-  late final PdfTextSearcher _searcher = PdfTextSearcher(_controller);
+  PdfTextSearcher? _searcher;
   bool _showSearch = false;
-  final _pdfService = LiteraturePdfService();
+  late final _pdfService = widget.pdfService ?? LiteraturePdfService();
   Uint8List? _bytes;
   bool _offline = false;
   bool _loading = true;
@@ -31,12 +36,15 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   @override
   void initState() {
     super.initState();
-    _searcher.addListener(_onSearchChanged);
     _load();
   }
 
   Future<void> _load() async {
+    _searcher?.removeListener(_onSearchChanged);
+    _searcher?.dispose();
+    _searcher = null;
     setState(() {
+      _showSearch = false;
       _loading = true;
       _error = null;
       _cacheWarning = null;
@@ -103,8 +111,8 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
 
   @override
   void dispose() {
-    _searcher.removeListener(_onSearchChanged);
-    _searcher.dispose();
+    _searcher?.removeListener(_onSearchChanged);
+    _searcher?.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -121,7 +129,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                   hintText: 'Buscar dentro del documento',
                   border: InputBorder.none,
                 ),
-                onChanged: _searcher.startTextSearch,
+                onChanged: (text) => _searcher?.startTextSearch(text),
               )
             : Text(widget.document.title),
         actions: [
@@ -133,31 +141,33 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
             ),
             compact: true,
           ),
-          if (_showSearch && _searcher.hasMatches) ...[
+          if (_showSearch && _searcher?.hasMatches == true) ...[
             Center(
               child: Text(
-                '${(_searcher.currentIndex ?? 0) + 1}/${_searcher.matches.length}',
+                '${(_searcher!.currentIndex ?? 0) + 1}/${_searcher!.matches.length}',
               ),
             ),
             IconButton(
               icon: const Icon(Icons.keyboard_arrow_up),
-              onPressed: _searcher.goToPrevMatch,
+              onPressed: _searcher?.goToPrevMatch,
             ),
             IconButton(
               icon: const Icon(Icons.keyboard_arrow_down),
-              onPressed: _searcher.goToNextMatch,
+              onPressed: _searcher?.goToNextMatch,
             ),
           ],
           IconButton(
             icon: Icon(_showSearch ? Icons.close : Icons.search),
             tooltip: _showSearch ? 'Cerrar búsqueda' : 'Buscar en el documento',
-            onPressed: () {
-              setState(() => _showSearch = !_showSearch);
-              if (!_showSearch) {
-                _searchController.clear();
-                _searcher.resetTextSearch();
-              }
-            },
+            onPressed: _searcher == null
+                ? null
+                : () {
+                    setState(() => _showSearch = !_showSearch);
+                    if (!_showSearch) {
+                      _searchController.clear();
+                      _searcher?.resetTextSearch();
+                    }
+                  },
           ),
           if (!kIsWeb && widget.document.url != null)
             IconButton(
@@ -207,7 +217,19 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
     final hasUrl = document.url != null && document.url!.isNotEmpty;
     final params = PdfViewerParams(
       textSelectionParams: const PdfTextSelectionParams(enabled: !kIsWeb),
-      pagePaintCallbacks: [_searcher.pageTextMatchPaintCallback],
+      // PdfTextSearcher requires a controller attached to a ready PdfViewer.
+      // Constructing it in initState crashes before the back button is built.
+      onViewerReady: (document, controller) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || !controller.isReady || _searcher != null) return;
+          final searcher = PdfTextSearcher(controller)
+            ..addListener(_onSearchChanged);
+          setState(() => _searcher = searcher);
+        });
+      },
+      pagePaintCallbacks: [
+        if (_searcher != null) _searcher!.pageTextMatchPaintCallback,
+      ],
     );
 
     if (hasAsset) {

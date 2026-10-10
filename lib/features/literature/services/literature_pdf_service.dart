@@ -11,11 +11,12 @@ import '../models/document_model.dart';
 import 'drive_document_link.dart';
 import 'drive_api_config.dart';
 
-const maxLiteraturePdfBytes = 20 * 1024 * 1024;
+const recommendedLiteraturePdfBytes = 20 * 1024 * 1024;
+const maxLiteraturePdfBytes = 100 * 1024 * 1024;
 
 void validateLiteraturePdf(Uint8List bytes) {
   if (bytes.length > maxLiteraturePdfBytes) {
-    throw ArgumentError('El PDF supera el máximo de 20 MB.');
+    throw ArgumentError('El PDF supera el máximo de seguridad de 100 MB.');
   }
   if (bytes.length < 5 ||
       ascii.decode(bytes.sublist(0, 5), allowInvalid: true) != '%PDF-') {
@@ -109,19 +110,19 @@ class LiteraturePdfService {
           );
         }
         if ((response.contentLength ?? 0) > maxLiteraturePdfBytes) {
-          throw ArgumentError('El PDF supera el máximo de 20 MB.');
+          throw ArgumentError('El PDF supera el máximo de seguridad de 100 MB.');
         }
         final builder = BytesBuilder(copy: false);
         await for (final chunk in response.stream) {
           if (builder.length + chunk.length > maxLiteraturePdfBytes) {
-            throw ArgumentError('El PDF supera el máximo de 20 MB.');
+            throw ArgumentError('El PDF supera el máximo de seguridad de 100 MB.');
           }
           builder.add(chunk);
         }
         final bytes = builder.takeBytes();
         validateLiteraturePdf(bytes);
         return bytes;
-      })().timeout(const Duration(seconds: 45));
+      })().timeout(const Duration(minutes: 3));
     } on TimeoutException {
       throw StateError(
         'La descarga tardó demasiado. Revisa tu conexión e intenta de nuevo.',

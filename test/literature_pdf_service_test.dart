@@ -29,6 +29,18 @@ class MemoryPdfCache implements LiteraturePdfCache {
 }
 
 void main() {
+  test('PDF mayor de 20 MB se abre y conserva offline', () async {
+    final bytes = Uint8List(recommendedLiteraturePdfBytes + 1)
+      ..setRange(0, 5, '%PDF-'.codeUnits);
+    final service = LiteraturePdfService(
+      cache: MemoryPdfCache(),
+      transport: MockClient((_) async => http.Response.bytes(bytes, 200)),
+    );
+    final received = await service.fetch(pdfDocument);
+    expect(received.length, bytes.length);
+    await service.saveOffline(pdfDocument, received);
+    expect((await service.downloaded(pdfDocument))!.length, bytes.length);
+  });
   test('normaliza variantes de enlace y conserva resource key', () {
     final link = DriveDocumentLink.tryParse(pdfDocument.url!)!;
     expect(link.fileId, '1234567890abcdef');

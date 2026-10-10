@@ -104,7 +104,36 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
         url: url.isNotEmpty ? url : null,
       );
 
-      await LiteraturePdfService().fetch(newDoc);
+      final bytes = await LiteraturePdfService().fetch(newDoc);
+      if (!mounted) return;
+      if (bytes.length > recommendedLiteraturePdfBytes) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Documento grande'),
+            content: Text(
+              'Este PDF pesa ${(bytes.length / (1024 * 1024)).toStringAsFixed(1)} MB. '
+              'Se recomienda no superar 20 MB: puede tardar más en abrirse y '
+              'consumir más datos y memoria en los dispositivos. ¿Publicarlo de todos modos?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Publicar'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted) return;
+        if (confirmed != true) {
+          setState(() => _isSaving = false);
+          return;
+        }
+      }
       await ref.read(literatureProvider.notifier).addOrUpdateDocument(newDoc);
 
       if (mounted) {
@@ -261,7 +290,7 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Solo PDF, máximo 20 MB. Se comprueba el acceso antes de publicar. No se utiliza Firebase Storage.',
+                  'Solo PDF, hasta 100 MB; recomendado: 20 MB o menos. Se pedirá confirmación para archivos grandes. Se comprueba el acceso antes de publicar. No se utiliza Firebase Storage.',
                   style: TextStyle(fontSize: 11, color: Colors.grey),
                 ),
                 if (_errorMessage != null) ...[
