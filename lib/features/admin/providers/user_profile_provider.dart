@@ -13,6 +13,10 @@ final userProfileProvider = StreamProvider<UserProfile?>((ref) {
   if (authUser == null) {
     return Stream.value(null);
   }
+  if (!authUser.emailVerified &&
+      authUser.email?.toLowerCase() != 'ecavazosdeanda@gmail.com') {
+    return Stream.value(null);
+  }
 
   final docRef = FirebaseFirestore.instance
       .collection('users')
@@ -34,30 +38,7 @@ final userProfileProvider = StreamProvider<UserProfile?>((ref) {
         return defaultProfile;
       }
 
-      // Check for invitation
-      if (authUser.email != null) {
-        final invRef = FirebaseFirestore.instance
-            .collection('account_invitations')
-            .doc(authUser.email);
-        final invSnap = await invRef.get();
-        if (invSnap.exists && invSnap.data() != null) {
-          final invData = invSnap.data()!;
-          final profile = UserProfile(
-            uid: authUser.uid,
-            email: authUser.email!,
-            role: invData['role'] as String? ?? 'colaborador',
-            churchId: invData['churchId'] as String?,
-            churchName: invData['churchName'] as String?,
-          );
-          await docRef.set(profile.toFirestore());
-          // We can delete the invitation after consuming it
-          try {
-            await invRef.delete();
-          } catch (_) {}
-          return profile;
-        }
-      }
-
+      // AuthService consume la invitación de forma transaccional al ingresar.
       return null;
     }
 
@@ -135,6 +116,7 @@ class UserManagementService {
   }) async {
     final cleanEmail = email.trim().toLowerCase();
     String? createdUid;
+    FirebaseAuthException? verificationError;
 
     if (password != null && password.trim().isNotEmpty) {
       FirebaseApp? tempApp;
@@ -150,6 +132,14 @@ class UserManagementService {
           password: password.trim(),
         );
         createdUid = cred.user?.uid;
+        if (cred.user != null) {
+          try {
+            await sendVerificationEmail(cred.user!);
+          } on FirebaseAuthException catch (error) {
+            // Completar la asignación aunque falle el envío, sin perder la cuenta.
+            verificationError = error;
+          }
+        }
         await tempAuth.signOut();
       } on FirebaseAuthException catch (e) {
         if (e.code != 'email-already-in-use') {
@@ -208,6 +198,7 @@ class UserManagementService {
         'createdAt': FieldValue.serverTimestamp(),
       });
     }
+    if (verificationError != null) throw verificationError;
   }
 
   Future<void> setPasswordForPastor({
@@ -223,11 +214,17 @@ class UserManagementService {
         options: Firebase.app().options,
       );
       final tempAuth = FirebaseAuth.instanceFor(app: tempApp);
-      await tempAuth.createUserWithEmailAndPassword(
+      final credential = await tempAuth.createUserWithEmailAndPassword(
         email: cleanEmail,
         password: newPassword.trim(),
       );
-      await tempAuth.signOut();
+      try {
+        if (credential.user != null) {
+          await sendVerificationEmail(credential.user!);
+        }
+      } finally {
+        await tempAuth.signOut();
+      }
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
         // La cuenta ya existe en Firebase Auth. Enviamos el enlace de restablecimiento directo

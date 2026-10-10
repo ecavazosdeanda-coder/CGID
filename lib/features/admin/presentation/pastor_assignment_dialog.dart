@@ -284,7 +284,7 @@ class _PastorAssignmentDialogState
                             backgroundColor: Colors.green,
                             content: Text(
                               password.isNotEmpty
-                                  ? 'Usuario $email registrado con rol y contraseña asignada.'
+                                  ? 'Asignación guardada para $email. Si la cuenta es nueva, revisa el correo de verificación y spam; si ya existía, puede usar Reenviar verificación.'
                                   : 'Invitación creada para $email en $churchName. Ya puede activar su cuenta desde Primer Acceso.',
                             ),
                           ),
@@ -591,7 +591,7 @@ class _PastorAssignmentDialogState
                                 SnackBar(
                                   backgroundColor: Colors.green,
                                   content: Text(
-                                    'Contraseña establecida con éxito para ${user.email}.',
+                                    'Cuenta creada para ${user.email}. Firebase aceptó el envío de la verificación; revisa el correo y spam.',
                                   ),
                                 ),
                               );

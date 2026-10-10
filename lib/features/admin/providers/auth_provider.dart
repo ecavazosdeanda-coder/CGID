@@ -9,7 +9,12 @@ final authStateProvider = StreamProvider<User?>((ref) {
 final authServiceProvider = Provider((ref) => AuthService());
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  AuthService({FirebaseAuth? auth, this.firestore})
+    : _auth = auth ?? FirebaseAuth.instance;
+
+  final FirebaseAuth _auth;
+  final FirebaseFirestore? firestore;
+  FirebaseFirestore get _db => firestore ?? FirebaseFirestore.instance;
 
   Future<void> signInWithEmail(String email, String password) async {
     final credential = await _auth.signInWithEmailAndPassword(
@@ -41,39 +46,52 @@ class AuthService {
     required String password,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
-    User? createdUser;
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
         email: cleanEmail,
         password: password,
       );
-      createdUser = cred.user;
-      final uid = createdUser!.uid;
-      final db = FirebaseFirestore.instance;
+      final createdUser = cred.user;
+      if (createdUser == null) {
+        throw FirebaseAuthException(code: 'user-not-found');
+      }
+      final uid = createdUser.uid;
 
       // La cuenta maestra puede inicializarse sin invitación. Cualquier otra
       // cuenta necesita una invitación creada previamente por un administrador
       // o por el pastor responsable de su congregación.
       if (cleanEmail == 'ecavazosdeanda@gmail.com') {
-        await db.collection('users').doc(uid).set({
+        await _db.collection('users').doc(uid).set({
           'email': cleanEmail,
           'role': 'admin',
           'updatedAt': FieldValue.serverTimestamp(),
         });
-        return;
       }
 
-      await createdUser.sendEmailVerification();
+      await sendVerificationEmail(createdUser);
+    } finally {
+      // Un fallo del correo no debe borrar una cuenta válida. Se puede reenviar.
       await _auth.signOut();
-    } catch (_) {
-      // Si ni siquiera fue posible enviar la verificación, elimina la cuenta
-      // recién creada para que el usuario pueda volver a intentarlo.
-      try {
-        await createdUser?.delete();
-      } catch (_) {
-        await _auth.signOut();
+    }
+  }
+
+  Future<void> resendVerificationEmail(String email, String password) async {
+    try {
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email.trim().toLowerCase(),
+        password: password,
+      );
+      final user = credential.user;
+      if (user == null) throw FirebaseAuthException(code: 'user-not-found');
+      if (user.emailVerified) {
+        throw FirebaseAuthException(
+          code: 'email-already-verified',
+          message: 'Tu correo ya está verificado. Inicia sesión.',
+        );
       }
-      rethrow;
+      await sendVerificationEmail(user);
+    } finally {
+      await _auth.signOut();
     }
   }
 
@@ -86,7 +104,15 @@ class AuthService {
       );
     }
 
-    final db = FirebaseFirestore.instance;
+    // Comprobar antes de leer el perfil: las altas administrativas ya lo tienen.
+    if (email != 'ecavazosdeanda@gmail.com' && !user.emailVerified) {
+      throw FirebaseAuthException(
+        code: 'email-not-verified',
+        message: 'Verifica tu correo antes de ingresar.',
+      );
+    }
+
+    final db = _db;
     final profileRef = db.collection('users').doc(user.uid);
     final existingProfile = await profileRef.get();
     if (existingProfile.exists) return;
@@ -98,14 +124,6 @@ class AuthService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
       return;
-    }
-
-    if (!user.emailVerified) {
-      await user.sendEmailVerification();
-      throw FirebaseAuthException(
-        code: 'email-not-verified',
-        message: 'Verifica tu correo antes de ingresar.',
-      );
     }
 
     final invitationRef = db.collection('account_invitations').doc(email);
@@ -143,5 +161,24 @@ class AuthService {
 
   Future<void> signOut() async {
     await _auth.signOut();
+  }
+}
+
+/// Firebase acepta el envío; no garantiza la entrega en la bandeja de entrada.
+Future<void> sendVerificationEmail(User user) async {
+  try {
+    await user.sendEmailVerification();
+  } on FirebaseAuthException catch (error) {
+    throw FirebaseAuthException(
+      code: 'verification-email-failed',
+      message: error.code == 'too-many-requests'
+          ? 'La cuenta existe, pero Firebase limitó los envíos. Espera unos minutos y usa Reenviar verificación.'
+          : 'La cuenta existe, pero no se pudo enviar la verificación (${error.code}). Usa Reenviar verificación con tu correo y contraseña.',
+    );
+  } catch (_) {
+    throw FirebaseAuthException(
+      code: 'verification-email-failed',
+      message: 'La cuenta existe, pero no se pudo enviar la verificación. Revisa tu conexión y usa Reenviar verificación.',
+    );
   }
 }

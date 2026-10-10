@@ -180,7 +180,8 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
     );
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit({bool resendVerification = false}) async {
+    if (_loading) return;
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
@@ -189,7 +190,7 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
       return;
     }
 
-    if (_isActivating) {
+    if (_isActivating && !resendVerification) {
       final confirmPassword = _confirmPasswordController.text;
       if (password.length < 6) {
         setState(
@@ -210,22 +211,31 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
     });
 
     try {
-      if (_isActivating) {
+      if (resendVerification) {
+        await ref
+            .read(authServiceProvider)
+            .resendVerificationEmail(email, password);
+        if (mounted) {
+          setState(
+            () => _notice = 'Firebase aceptó el envío de la verificación. Revisa tu bandeja de entrada y spam; abre el enlace y después inicia sesión.',
+          );
+        }
+      } else if (_isActivating) {
         await ref
             .read(authServiceProvider)
             .activateAccountWithEmail(email: email, password: password);
         if (mounted) {
           setState(() {
             _isActivating = false;
-            _passwordController.clear();
             _confirmPasswordController.clear();
-            _notice = 'Te enviamos un enlace de verificación. Ábrelo y después inicia sesión con la contraseña que acabas de crear.';
+            _notice = 'Firebase aceptó el envío de la verificación. Revisa tu bandeja de entrada y spam; abre el enlace y después inicia sesión. Si no llega, usa Reenviar verificación.';
           });
         }
       } else {
         await ref.read(authServiceProvider).signInWithEmail(email, password);
       }
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       setState(() {
         switch (e.code) {
           case 'user-not-found':
@@ -249,14 +259,21 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
             _error = 'La invitación está incompleta. Solicita al administrador que la renueve.';
             break;
           case 'email-not-verified':
-            _error = 'Debes verificar tu correo. Te enviamos un enlace nuevo; después vuelve a iniciar sesión.';
+            _error = 'Debes verificar tu correo. Si no recibiste el enlace, usa Reenviar verificación con tu correo y contraseña.';
+            break;
+          case 'verification-email-failed':
+            _isActivating = false;
+            _error = e.message;
+            break;
+          case 'too-many-requests':
+            _error = 'Demasiados intentos. Espera unos minutos antes de volver a intentar.';
             break;
           default:
             _error = e.message ?? 'Error de autenticación (${e.code}).';
         }
       });
     } catch (e) {
-      setState(() => _error = 'Error inesperado: $e');
+      if (mounted) setState(() => _error = 'Error inesperado: $e');
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -266,6 +283,7 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) return const Center(child: CircularProgressIndicator());
     if (!_firebaseReady) {
       return Center(
         child: Padding(
@@ -304,6 +322,12 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
     return authState.when(
       data: (user) {
         if (user != null) {
+          if (!user.emailVerified &&
+              user.email?.toLowerCase() != 'ecavazosdeanda@gmail.com') {
+            return _buildUnauthorizedProfile(
+              'Debes verificar tu correo. Cierra sesión y usa Reenviar verificación con tu correo y contraseña si no recibiste el enlace.',
+            );
+          }
           final profileAsync = ref.watch(userProfileProvider);
           return profileAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -624,6 +648,14 @@ class _AdminGateScreenState extends ConsumerState<AdminGateScreen> {
                           ),
                         ),
                       ],
+
+                      TextButton.icon(
+                        onPressed: _loading
+                            ? null
+                            : () => _submit(resendVerification: true),
+                        icon: const Icon(Icons.forward_to_inbox_outlined),
+                        label: const Text('Reenviar verificación'),
+                      ),
 
                       // Mensaje de Error
                       if (_error != null) ...[
