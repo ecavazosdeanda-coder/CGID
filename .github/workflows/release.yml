@@ -2,6 +2,15 @@ name: Instaladores multiplataforma v2
 
 on:
   workflow_dispatch:
+    inputs:
+      release_ref:
+        description: Tag de la candidata a publicar
+        default: v2.0.0-rc.1
+        required: true
+      existing_run_id:
+        description: Run anterior con Android y Windows listos (opcional)
+        default: ''
+        required: false
   push:
     tags:
       - 'v2.*'
@@ -18,6 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref || github.ref }}
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -28,10 +39,13 @@ jobs:
       - run: flutter test --no-pub
 
   android:
+    if: inputs.existing_run_id == ''
     needs: quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref || github.ref }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -56,10 +70,13 @@ jobs:
           if-no-files-found: error
 
   windows:
+    if: inputs.existing_run_id == ''
     needs: quality
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref || github.ref }}
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -88,6 +105,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref || github.ref }}
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -109,7 +128,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: CGID-${{ env.RELEASE_VERSION }}-Apple-unsigned
-          path: release/*
+          compression-level: 0
+          path: |
+            release/*.dmg
+            release/*.zip
           if-no-files-found: error
 
   linux-experimental:
@@ -118,8 +140,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref || github.ref }}
       - name: Instalar bibliotecas nativas
-        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libmpv-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libmpv-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -144,6 +168,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref || github.ref }}
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -159,9 +185,9 @@ jobs:
 
   github-release:
     if: >-
-      ${{ always() && startsWith(github.ref, 'refs/tags/') &&
-          needs.android.result == 'success' &&
-          needs.windows.result == 'success' &&
+      ${{ always() && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') &&
+          (needs.android.result == 'success' || inputs.existing_run_id != '') &&
+          (needs.windows.result == 'success' || inputs.existing_run_id != '') &&
           needs.apple.result == 'success' &&
           needs.web.result == 'success' }}
     needs: [android, windows, apple, linux-experimental, web]
@@ -171,10 +197,14 @@ jobs:
         with:
           name: CGID-${{ env.RELEASE_VERSION }}-Android
           path: dist
+          run-id: ${{ inputs.existing_run_id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/download-artifact@v4
         with:
           name: CGID-${{ env.RELEASE_VERSION }}-Windows
           path: dist
+          run-id: ${{ inputs.existing_run_id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/download-artifact@v4
         with:
           name: CGID-${{ env.RELEASE_VERSION }}-Apple-unsigned
@@ -186,7 +216,8 @@ jobs:
           path: dist
       - uses: softprops/action-gh-release@v2
         with:
-          prerelease: ${{ contains(github.ref_name, '-rc.') }}
+          tag_name: ${{ inputs.release_ref || github.ref_name }}
+          prerelease: ${{ contains(inputs.release_ref || github.ref_name, '-rc.') }}
           generate_release_notes: true
           body: |
             Compilación candidata v2.0 sin firma de distribución.
