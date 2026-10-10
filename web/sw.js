@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cgdi-v2-cache-2.0.0-rc.1-role-simulation';
+const CACHE_NAME = 'cgdi-v2-cache-2.0.0-rc.1-literature-drive-offline';
 
 // Recursos estáticos iniciales a cachear para asegurar funcionamiento offline
 const PRECACHE_ASSETS = [
@@ -44,8 +44,10 @@ self.addEventListener('fetch', (event) => {
   // Ignorar llamadas de esquemas no HTTP/HTTPS o extensiones
   if (!event.request.url.startsWith('http')) return;
 
-  // Para Firebase Auth o Firestore APIs, dejar pasar directo a la red sin interceptar
-  if (url.hostname.includes('firebase') || url.hostname.includes('googleapis.com') || url.hostname.includes('identitytoolkit')) {
+  // Solo almacenar recursos de la app. PDF remotos se guardan explícitamente
+  // en IndexedDB desde el visor, nunca por una descarga automática del SW.
+  // No excluir nuestro propio dominio *.firebaseapp.com.
+  if (url.origin !== self.location.origin) {
     return;
   }
 

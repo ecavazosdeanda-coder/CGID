@@ -37,9 +37,9 @@ class _LiteratureScreenState extends ConsumerState<LiteratureScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar Literatura'),
+        title: const Text('Quitar del catálogo'),
         content: Text(
-          '¿Estás seguro de que deseas quitar "${doc.title}" del catálogo nacional de literatura?\n\nEsta acción se sincronizará con todos los dispositivos.',
+          '¿Deseas ocultar "${doc.title}" del catálogo nacional?\n\nSe sincronizará con todos los dispositivos. El PDF y los archivos locales se conservarán.',
         ),
         actions: [
           TextButton(
@@ -51,24 +51,28 @@ class _LiteratureScreenState extends ConsumerState<LiteratureScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
               try {
-                await ref.read(literatureProvider.notifier).deleteDocument(doc.id);
+                await ref
+                    .read(literatureProvider.notifier)
+                    .deleteDocument(doc.id);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       backgroundColor: Colors.redAccent,
-                      content: Text('Documento "${doc.title}" eliminado del catálogo.'),
+                      content: Text(
+                        'Documento "${doc.title}" oculto del catálogo. El archivo se conserva.',
+                      ),
                     ),
                   );
                 }
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error al eliminar: $e')),
+                    SnackBar(content: Text(literatureErrorMessage(e))),
                   );
                 }
               }
             },
-            child: const Text('Eliminar'),
+            child: const Text('Quitar del catálogo'),
           ),
         ],
       ),
@@ -88,7 +92,7 @@ class _LiteratureScreenState extends ConsumerState<LiteratureScreen> {
               backgroundColor: Colors.indigo,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.post_add),
-              label: const Text('Subir Literatura'),
+              label: const Text('Publicar Literatura'),
             )
           : null,
       body: docsAsync.when(
@@ -97,10 +101,18 @@ class _LiteratureScreenState extends ConsumerState<LiteratureScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (ref.read(literatureProvider.notifier).syncWarning != null)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    ref.read(literatureProvider.notifier).syncWarning!,
+                  ),
+                ),
               Text('Error al cargar literatura: $e'),
               const SizedBox(height: 12),
               ElevatedButton.icon(
-                onPressed: () => ref.read(literatureProvider.notifier).refresh(),
+                onPressed: () =>
+                    ref.read(literatureProvider.notifier).refresh(),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Reintentar'),
               ),
@@ -110,9 +122,11 @@ class _LiteratureScreenState extends ConsumerState<LiteratureScreen> {
         data: (documents) {
           final query = _query.trim().toLowerCase();
           final filteredDocs = documents.where((document) {
-            final matchesCategory = _selectedCategory == null ||
+            final matchesCategory =
+                _selectedCategory == null ||
                 document.category == _selectedCategory;
-            final matchesQuery = query.isEmpty ||
+            final matchesQuery =
+                query.isEmpty ||
                 '${document.title} ${document.description} ${document.author}'
                     .toLowerCase()
                     .contains(query);
@@ -122,6 +136,13 @@ class _LiteratureScreenState extends ConsumerState<LiteratureScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (ref.read(literatureProvider.notifier).syncWarning != null)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    ref.read(literatureProvider.notifier).syncWarning!,
+                  ),
+                ),
               // Barra de Búsqueda y Botón Refrescar
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
@@ -149,7 +170,7 @@ class _LiteratureScreenState extends ConsumerState<LiteratureScreen> {
                       FilledButton.icon(
                         onPressed: () => DocumentEditorDialog.show(context),
                         icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Subir'),
+                        label: const Text('Publicar'),
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.indigo,
                           visualDensity: VisualDensity.compact,
@@ -163,7 +184,10 @@ class _LiteratureScreenState extends ConsumerState<LiteratureScreen> {
               // Filtros por Categoría
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Padding(
@@ -183,7 +207,9 @@ class _LiteratureScreenState extends ConsumerState<LiteratureScreen> {
                           label: Text(_getCategoryName(cat)),
                           selected: _selectedCategory == cat,
                           onSelected: (val) {
-                            setState(() => _selectedCategory = val ? cat : null);
+                            setState(
+                              () => _selectedCategory = val ? cat : null,
+                            );
                           },
                         ),
                       ),
@@ -195,7 +221,15 @@ class _LiteratureScreenState extends ConsumerState<LiteratureScreen> {
               // Lista de Documentos
               Expanded(
                 child: filteredDocs.isEmpty
-                    ? const Center(child: Text('No se encontraron documentos.'))
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text(
+                            'No hay publicaciones visibles. Los originales locales están ocultos de Literatura; sus archivos se conservan.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      )
                     : ListView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                         itemCount: filteredDocs.length,
@@ -246,7 +280,9 @@ class _LiteratureScreenState extends ConsumerState<LiteratureScreen> {
                                         Chip(
                                           label: Text(
                                             _getCategoryName(doc.category),
-                                            style: const TextStyle(fontSize: 11),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
                                           ),
                                           visualDensity: VisualDensity.compact,
                                           padding: EdgeInsets.zero,
@@ -277,10 +313,11 @@ class _LiteratureScreenState extends ConsumerState<LiteratureScreen> {
                                         color: Colors.indigo,
                                       ),
                                       tooltip: 'Editar documento',
-                                      onPressed: () => DocumentEditorDialog.show(
-                                        context,
-                                        document: doc,
-                                      ),
+                                      onPressed: () =>
+                                          DocumentEditorDialog.show(
+                                            context,
+                                            document: doc,
+                                          ),
                                     ),
                                     IconButton(
                                       icon: const Icon(

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+
+import 'package:uuid/uuid.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/document_model.dart';
 import '../providers/literature_provider.dart';
+import '../services/literature_pdf_service.dart';
 
 class DocumentEditorDialog extends ConsumerStatefulWidget {
   final DocumentModel? document;
@@ -30,7 +33,7 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
   late final TextEditingController _authorController;
   late final TextEditingController _yearController;
   late final TextEditingController _urlController;
-  late final TextEditingController _assetPathController;
+  late final String _documentId;
 
   late DocumentCategory _selectedCategory;
   bool _isSaving = false;
@@ -41,8 +44,9 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
     super.initState();
     final doc = widget.document;
     _titleController = TextEditingController(text: doc?.title ?? '');
-    _descriptionController =
-        TextEditingController(text: doc?.description ?? '');
+    _descriptionController = TextEditingController(
+      text: doc?.description ?? '',
+    );
     _authorController = TextEditingController(
       text: doc?.author ?? 'Conferencia General de la Iglesia de Dios',
     );
@@ -50,7 +54,7 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
       text: doc?.year ?? DateTime.now().year.toString(),
     );
     _urlController = TextEditingController(text: doc?.url ?? '');
-    _assetPathController = TextEditingController(text: doc?.assetPath ?? '');
+    _documentId = doc?.id ?? 'doc-${const Uuid().v4()}';
     _selectedCategory = doc?.category ?? DocumentCategory.puntosDeFe;
   }
 
@@ -61,7 +65,6 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
     _authorController.dispose();
     _yearController.dispose();
     _urlController.dispose();
-    _assetPathController.dispose();
     super.dispose();
   }
 
@@ -80,26 +83,10 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
     }
   }
 
-  String _generateSlug(String text) {
-    return text
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-        .replaceAll(RegExp(r'^-+|-+$'), '');
-  }
-
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
     final url = _urlController.text.trim();
-    final assetPath = _assetPathController.text.trim();
-
-    if (url.isEmpty && assetPath.isEmpty) {
-      setState(() {
-        _errorMessage =
-            'Debes ingresar al menos una URL o una ruta de archivo PDF.';
-      });
-      return;
-    }
 
     setState(() {
       _isSaving = true;
@@ -107,25 +94,23 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
     });
 
     try {
-      final docId = widget.document?.id ??
-          'doc-${_generateSlug(_titleController.text.trim())}-${DateTime.now().millisecondsSinceEpoch % 10000}';
-
       final newDoc = DocumentModel(
-        id: docId,
+        id: _documentId,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         category: _selectedCategory,
         author: _authorController.text.trim(),
         year: _yearController.text.trim(),
         url: url.isNotEmpty ? url : null,
-        assetPath: assetPath.isNotEmpty ? assetPath : null,
       );
 
+      await LiteraturePdfService().fetch(newDoc);
       await ref.read(literatureProvider.notifier).addOrUpdateDocument(newDoc);
 
       if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             backgroundColor: Colors.green,
             content: Text(
@@ -140,7 +125,7 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
       if (mounted) {
         setState(() {
           _isSaving = false;
-          _errorMessage = 'Error al guardar: $e';
+          _errorMessage = literatureErrorMessage(e);
         });
       }
     }
@@ -158,7 +143,11 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
             color: Colors.indigo,
           ),
           const SizedBox(width: 8),
-          Text(isEditing ? 'Editar Literatura' : 'Subir Nueva Literatura'),
+          Expanded(
+            child: Text(
+              isEditing ? 'Editar Literatura' : 'Publicar desde Drive',
+            ),
+          ),
         ],
       ),
       content: SizedBox(
@@ -182,8 +171,9 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.title),
                   ),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'Ingresa el título' : null,
+                  validator: (v) => v == null || v.trim().isEmpty
+                      ? 'Ingresa el título'
+                      : null,
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
@@ -201,6 +191,7 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<DocumentCategory>(
+                  isExpanded: true,
                   initialValue: _selectedCategory,
                   decoration: const InputDecoration(
                     labelText: 'Categoría *',
@@ -246,8 +237,13 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
                   ],
                 ),
                 const SizedBox(height: 14),
+                const Text(
+                  'Sube el PDF a Drive, comparte como lector con cualquier persona que tenga el enlace y pega aquí su enlace. Los lectores lo verán dentro de la app.',
+                ),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _urlController,
+                  enabled: !_isSaving,
                   keyboardType: TextInputType.url,
                   decoration: const InputDecoration(
                     labelText: 'Enlace web / URL del archivo PDF',
@@ -255,10 +251,17 @@ class _DocumentEditorDialogState extends ConsumerState<DocumentEditorDialog> {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.link),
                   ),
+                  validator: (value) {
+                    final uri = Uri.tryParse(value?.trim() ?? '');
+                    return uri?.scheme == 'https' &&
+                            uri?.host.isNotEmpty == true
+                        ? null
+                        : 'Ingresa el enlace HTTPS del PDF.';
+                  },
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Puedes enlazar un archivo PDF de Google Drive (enlace público), Dropbox, o tu servidor.',
+                  'Solo PDF, máximo 20 MB. Se comprueba el acceso antes de publicar. No se utiliza Firebase Storage.',
                   style: TextStyle(fontSize: 11, color: Colors.grey),
                 ),
                 if (_errorMessage != null) ...[

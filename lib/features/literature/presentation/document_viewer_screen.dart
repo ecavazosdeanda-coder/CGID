@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
-import 'package:url_launcher/url_launcher.dart';
+
+import 'dart:typed_data';
 
 import '../models/document_model.dart';
+import '../services/literature_pdf_service.dart';
 
 class DocumentViewerScreen extends StatefulWidget {
   final DocumentModel document;
@@ -18,11 +20,81 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   final _searchController = TextEditingController();
   late final PdfTextSearcher _searcher = PdfTextSearcher(_controller);
   bool _showSearch = false;
+  final _pdfService = LiteraturePdfService();
+  Uint8List? _bytes;
+  bool _offline = false;
+  bool _loading = true;
+  bool _saving = false;
+  String? _error;
+  String? _cacheWarning;
 
   @override
   void initState() {
     super.initState();
     _searcher.addListener(_onSearchChanged);
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+      _cacheWarning = null;
+    });
+    try {
+      if (widget.document.assetPath?.isNotEmpty == true) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+      Uint8List? cached;
+      try {
+        cached = await _pdfService.downloaded(widget.document);
+      } catch (_) {
+        _cacheWarning = 'No se pudo leer la copia local. Se intentará abrir online; vuelve a descargarla para usarla sin conexión.';
+      }
+      final bytes = cached ?? await _pdfService.fetch(widget.document);
+      if (mounted) {
+        setState(() {
+          _bytes = bytes;
+          _offline = cached != null;
+          _loading = false;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _error = error.toString();
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _saveOffline() async {
+    setState(() => _saving = true);
+    try {
+      await _pdfService.saveOffline(widget.document, _bytes!);
+      if (mounted) {
+        setState(() => _offline = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Guardado en la app para leer sin conexión.'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo guardar. Revisa el espacio disponible o los permisos de almacenamiento del navegador.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   void _onSearchChanged() {
@@ -81,22 +153,46 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
           ),
           if (widget.document.url != null)
             IconButton(
-              icon: const Icon(Icons.download),
-              tooltip: 'Abrir o descargar documento original',
-              onPressed: () async {
-                final uri = Uri.tryParse(widget.document.url ?? '');
-                if (uri != null && await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
+              icon: Icon(_offline ? Icons.offline_pin : Icons.download),
+              tooltip: _offline
+                  ? 'Disponible sin conexión en esta app'
+                  : 'Descargar para leer sin conexión',
+              onPressed: _bytes == null || _saving || _offline
+                  ? null
+                  : _saveOffline,
             ),
         ],
       ),
-      body: _buildPdfViewer(context),
+      body: Column(
+        children: [
+          if (_cacheWarning != null)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(_cacheWarning!),
+            ),
+          Expanded(child: _buildPdfViewer(context)),
+        ],
+      ),
     );
   }
 
   Widget _buildPdfViewer(BuildContext context) {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_error!, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              FilledButton(onPressed: _load, child: const Text('Reintentar')),
+            ],
+          ),
+        ),
+      );
+    }
     final document = widget.document;
     final hasAsset =
         document.assetPath != null && document.assetPath!.isNotEmpty;
@@ -112,8 +208,9 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
         params: params,
       );
     } else if (hasUrl) {
-      return PdfViewer.uri(
-        Uri.parse(document.url!),
+      return PdfViewer.data(
+        _bytes!,
+        sourceName: document.id,
         controller: _controller,
         params: params,
       );
