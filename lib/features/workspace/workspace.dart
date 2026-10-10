@@ -15,6 +15,7 @@ import 'package:go_router/go_router.dart';
 import 'providers/plan_provider.dart';
 import 'providers/tab_provider.dart';
 import '../hymnal/providers/special_hymns_provider.dart';
+import '../comments/reading_comments.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
@@ -1238,6 +1239,11 @@ class WorkspaceState extends ConsumerState<Workspace> {
       ),
       const SizedBox(height: 8),
       Text(e.subtitle, style: TextStyle(color: secondaryText, height: 1.5)),
+      if (ReadingTarget.forEntry(e) case final target?)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: ReadingCommentsButton(target: target),
+        ),
       const SizedBox(height: 22),
       Wrap(
         spacing: 8,
@@ -1344,6 +1350,8 @@ class WorkspaceState extends ConsumerState<Workspace> {
           child: ListView(
             shrinkWrap: true,
             children: [
+              if (ReadingTarget.forEntry(entry) case final target?)
+                ReadingCommentsButton(target: target),
               for (final s in entry.sections) ...[
                 SelectableText(
                   s.text,

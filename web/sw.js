@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cgdi-v2-cache-2.0.0-rc.1-literature-drive-offline';
+const CACHE_NAME = 'cgdi-v2-cache-2.0.0-rc.2-reading-comments';
 
 // Recursos estáticos iniciales a cachear para asegurar funcionamiento offline
 const PRECACHE_ASSETS = [

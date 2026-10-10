@@ -1,7 +1,7 @@
 [Code]
 
 #ifndef MyAppVersion
-  #define MyAppVersion "2.0.0-rc.1"
+  #define MyAppVersion "2.0.0-rc.2"
 #endif
 
 [Setup]

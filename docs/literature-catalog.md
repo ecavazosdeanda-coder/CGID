@@ -20,22 +20,22 @@ Se admiten URLs HTTPS directas de otros servidores si permiten CORS en web.
 ## Visor y descarga offline
 
 El visor recibe bytes PDF por Drive API (files.get, alt=media), no usa iframe ni
-redirección. Incluye búsqueda y Descargar para leer sin conexión. No ofrece abrir
+redirección. Incluye búsqueda; Descargar para leer sin conexión solo está disponible
+en aplicaciones instaladas. Desde RC2, web no ofrece descarga ni selección/copia
+de texto y el servicio rechaza escrituras de caché PDF. No ofrece abrir
 Drive, exportar, compartir, imprimir ni guardar en la carpeta Descargas.
 
-La copia se almacena en Hive: almacenamiento interno de aplicación en nativo,
-IndexedDB del origen en web. Se lee primero esa copia sin hacer llamadas a Drive.
+La copia se almacena en Hive en las aplicaciones instaladas. Se lee primero esa
+copia sin hacer llamadas a Drive. Web no lee copias guardadas por versiones previas.
 La clave incluye ID y hash del enlace para no reutilizar otro archivo al cambiar
 la publicación. Para publicar una revisión del PDF usar un archivo/enlace nuevo;
 si se reemplaza el contenido bajo el mismo enlace, la copia offline anterior se
 mantiene. Máximo 20 MB por documento. No hay borrado automático de copias locales.
 
-En web abrir primero la app y el visor online para cachear los recursos de PDF;
-la compilación usa --no-web-resources-cdn y el SW conserva los recursos del origen.
-Offline requiere ese mismo navegador/perfil. Borrar datos del sitio, desinstalar
-la app o la expulsión del almacenamiento por el navegador puede eliminar copias.
-No se garantiza lectura offline en modo privado ni acceso desde otro dispositivo
-sin descargar otra vez. La publicación oculta deja de mostrarse al reconectar;
+En web Literatura requiere conexión. La compilación usa --no-web-resources-cdn
+y el SW conserva recursos de la interfaz, pero no PDF remotos. Desinstalar la app
+nativa o borrar sus datos puede eliminar las copias descargadas. La publicación
+oculta deja de mostrarse al reconectar;
 sin conexión se muestra la última caché confirmada y una advertencia.
 
 ## Catálogo y errores
@@ -71,5 +71,4 @@ Fuentes oficiales:
 - https://developers.google.com/workspace/drive/api/guides/resource-keys
 - https://developers.google.com/workspace/drive/api/guides/limits
 
-Los instaladores ya publicados son anteriores a este cambio y no se reemplazan
-con la publicación web. Nuevas compilaciones nativas incorporarán estas funciones.
+La candidata v2.0.0-rc.2 compila estas funciones también en los paquetes nativos.

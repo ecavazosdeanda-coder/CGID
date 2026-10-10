@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../content.dart';
+import '../../comments/reading_comments.dart';
 import '../services/hymn_customization_service.dart';
 import '../services/score_catalog.dart';
 import 'chord_lyrics_view.dart';
@@ -575,6 +576,8 @@ class _LecternReaderScreenState extends State<LecternReaderScreen> {
             ],
           ),
           actions: [
+            if (ReadingTarget.forEntry(currentEntry) case final target?)
+              ReadingCommentsButton(target: target, compact: true),
             // Repertoire Navigation
             if (hasRepertoire) ...[
               IconButton(

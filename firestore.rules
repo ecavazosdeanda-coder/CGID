@@ -398,6 +398,38 @@ service cloud.firestore {
       }
     }
 
+    // Public pastoral commentary; hidden drafts remain readable only to their
+    // assigned author or conference administrators. Geography comes from the
+    // church directory, never from author-supplied region/state labels.
+    match /reading_comments/{targetKey}/comments/{commentId} {
+      function ownsComment() {
+        return isPastor() && resource.data.authorId == request.auth.uid &&
+          isAssignedToChurch(resource.data.churchId);
+      }
+      function validComment(data) {
+        return data.keys().hasAll(['body', 'visible', 'churchId', 'authorId', 'authorRole', 'targetType', 'targetLabel', 'createdAt', 'updatedAt']) &&
+          data.keys().hasOnly(['body', 'visible', 'churchId', 'authorId', 'authorRole', 'targetType', 'targetLabel', 'createdAt', 'updatedAt']) &&
+          data.body is string && data.body.size() > 0 && data.body.size() <= 3000 &&
+          data.visible is bool && data.churchId is string && data.churchId.size() <= 100 &&
+          isValidId(data.authorId) && data.authorRole in ['admin', 'pastor'] &&
+          data.targetType in ['bible', 'faith', 'literature'] &&
+          targetKey.matches('^' + data.targetType + '_[a-f0-9]{64}$') &&
+          data.targetLabel is string && data.targetLabel.size() > 0 && data.targetLabel.size() <= 500 &&
+          data.createdAt is timestamp && data.updatedAt == request.time;
+      }
+      allow read: if resource.data.visible == true || isAdmin() || ownsComment();
+      allow create: if isAuthenticated() && request.auth.token.email_verified == true &&
+        isValidId(commentId) && validComment(request.resource.data) &&
+        request.resource.data.authorId == request.auth.uid &&
+        request.resource.data.createdAt == request.time &&
+        ((isAdmin() && request.resource.data.authorRole == 'admin') ||
+         (isPastor() && request.resource.data.authorRole == 'pastor' && isAssignedToChurch(request.resource.data.churchId)));
+      allow update: if isAuthenticated() && request.auth.token.email_verified == true &&
+        (isAdmin() || ownsComment()) && validComment(request.resource.data) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['body', 'visible', 'updatedAt']);
+      allow delete: if false;
+    }
+
     // Literature catalog collection
     match /literature/{docId} {
       // Reads: Open for all members, visitors, and offline synchronization
@@ -414,36 +446,6 @@ service cloud.firestore {
 
       // Writes: Restricted to administrators
       allow write: if isAdmin() && isValidId(hymnId);
-    }
-
-    // Special Hymns (Custom local hymns for specific congregations)
-    match /special_hymns/{hymnId} {
-      // Reads: Anyone can read (so the congregation apps can fetch them during the service)
-      allow read: if true;
-
-      // Writes (create, update): Admins, or Pastors/Collaborators for their own assigned church
-      allow create, update: if isAuthenticated() &&
-                               isValidId(hymnId) &&
-                               (
-                                 isAdmin() ||
-                                 (
-                                   (isPastor() || isCollaborator()) &&
-                                   'churchId' in request.resource.data &&
-                                   isAssignedToChurch(request.resource.data.churchId)
-                                 )
-                               );
-
-      // Deletes: Admins, or Pastors/Collaborators for their own assigned church
-      allow delete: if isAuthenticated() &&
-                       isValidId(hymnId) &&
-                       (
-                         isAdmin() ||
-                         (
-                           (isPastor() || isCollaborator()) &&
-                           'churchId' in resource.data &&
-                           isAssignedToChurch(resource.data.churchId)
-                         )
-                       );
     }
 
     // Remote Control Sessions (Host screen and paired mobile remotes)

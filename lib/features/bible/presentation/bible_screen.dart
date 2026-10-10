@@ -5,6 +5,7 @@ import '../../../playback.dart';
 import '../../../glass.dart';
 import '../../../main.dart' show highlightSearchText;
 import '../../hymnal/presentation/lectern_reader_screen.dart';
+import '../../comments/reading_comments.dart';
 
 class BibleScreen extends StatefulWidget {
   final Library lib;
@@ -324,6 +325,9 @@ class _BibleScreenState extends State<BibleScreen> {
                       onPressed: () => widget.onPrepare(entry),
                       icon: const Icon(Icons.cast),
                       label: const Text('Proyectar selección'),
+                    ),
+                    ReadingCommentsButton(
+                      target: ReadingTarget.forEntry(entry)!,
                     ),
                     OutlinedButton.icon(
                       onPressed: () => widget.onAddPlan(entry),

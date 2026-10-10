@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:pdfrx/pdfrx.dart';
-
-import 'dart:typed_data';
 
 import '../models/document_model.dart';
 import '../services/literature_pdf_service.dart';
+import '../../comments/reading_comments.dart';
 
 class DocumentViewerScreen extends StatefulWidget {
   final DocumentModel document;
@@ -125,6 +125,14 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
               )
             : Text(widget.document.title),
         actions: [
+          ReadingCommentsButton(
+            target: ReadingTarget(
+              'literature',
+              widget.document.id,
+              widget.document.title,
+            ),
+            compact: true,
+          ),
           if (_showSearch && _searcher.hasMatches) ...[
             Center(
               child: Text(
@@ -151,7 +159,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
               }
             },
           ),
-          if (widget.document.url != null)
+          if (!kIsWeb && widget.document.url != null)
             IconButton(
               icon: Icon(_offline ? Icons.offline_pin : Icons.download),
               tooltip: _offline
@@ -198,6 +206,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
         document.assetPath != null && document.assetPath!.isNotEmpty;
     final hasUrl = document.url != null && document.url!.isNotEmpty;
     final params = PdfViewerParams(
+      textSelectionParams: const PdfTextSelectionParams(enabled: !kIsWeb),
       pagePaintCallbacks: [_searcher.pageTextMatchPaintCallback],
     );
 

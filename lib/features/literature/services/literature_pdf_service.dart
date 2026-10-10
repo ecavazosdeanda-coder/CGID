@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 
@@ -61,12 +62,18 @@ class LiteraturePdfService {
       '${doc.id}:${sha256.convert(utf8.encode(normalizeLiteratureUrl(doc.url ?? '')))}';
 
   Future<Uint8List?> downloaded(DocumentModel doc) async {
+    if (kIsWeb) return null;
     final bytes = await cache.read(cacheKey(doc));
     if (bytes != null) validateLiteraturePdf(bytes);
     return bytes;
   }
 
   Future<void> saveOffline(DocumentModel doc, Uint8List bytes) async {
+    if (kIsWeb) {
+      throw StateError(
+        'La descarga de literatura está disponible solo en la aplicación instalada.',
+      );
+    }
     validateLiteraturePdf(bytes);
     await cache.write(cacheKey(doc), bytes);
   }
