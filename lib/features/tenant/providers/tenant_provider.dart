@@ -5,11 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/church_model.dart';
+import '../../admin/providers/user_profile_provider.dart';
 
 final tenantProvider = FutureProvider<ChurchModel?>((ref) async {
+  final simulation = ref.watch(activeRoleSimulationProvider);
   final prefs = await SharedPreferences.getInstance();
-  final churchId = prefs.getString('selected_church_id');
-  final churchName = prefs.getString('tenant_church_name');
+  final churchId =
+      simulation?.church.id ?? prefs.getString('selected_church_id');
+  final churchName =
+      simulation?.church.name ?? prefs.getString('tenant_church_name');
   if ((churchId == null || churchId.isEmpty) &&
       (churchName == null || churchName.isEmpty)) {
     return null;
@@ -74,8 +78,7 @@ final churchEventsProvider = FutureProvider<List<ChurchEvent>>((ref) async {
         return evt.churchId == activeChurch.id;
       }
       return false;
-    }).toList()
-      ..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+    }).toList()..sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
   } catch (e) {
     return [];
   }

@@ -8,12 +8,17 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ChurchSelectorDialog extends StatefulWidget {
-  const ChurchSelectorDialog({super.key});
+  const ChurchSelectorDialog({super.key, this.persistSelection = true});
+  final bool persistSelection;
 
-  static Future<ChurchModel?> show(BuildContext context) {
+  static Future<ChurchModel?> show(
+    BuildContext context, {
+    bool persistSelection = true,
+  }) {
     return showDialog<ChurchModel>(
       context: context,
-      builder: (context) => const ChurchSelectorDialog(),
+      builder: (context) =>
+          ChurchSelectorDialog(persistSelection: persistSelection),
     );
   }
 
@@ -158,16 +163,18 @@ class _ChurchSelectorDialogState extends State<ChurchSelectorDialog> {
                                   '${church.verificationStatus == 'verified' ? '' : ' · Información por verificar'}',
                                 ),
                                 onTap: () async {
-                                  final prefs =
-                                      await SharedPreferences.getInstance();
-                                  await prefs.setString(
-                                    'selected_church_id',
-                                    church.id,
-                                  );
-                                  await prefs.setString(
-                                    'tenant_church_name',
-                                    church.name,
-                                  );
+                                  if (widget.persistSelection) {
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
+                                    await prefs.setString(
+                                      'selected_church_id',
+                                      church.id,
+                                    );
+                                    await prefs.setString(
+                                      'tenant_church_name',
+                                      church.name,
+                                    );
+                                  }
                                   if (context.mounted) {
                                     Navigator.of(context).pop(church);
                                   }

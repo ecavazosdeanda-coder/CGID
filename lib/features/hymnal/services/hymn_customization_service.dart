@@ -42,6 +42,8 @@ class ScoreVerification {
 }
 
 class HymnCustomizationService {
+  /// Restricción local de la interfaz durante la simulación; nunca da permisos.
+  static bool suppressAdminTools = false;
   static const masterAdminEmail = 'ecavazosdeanda@gmail.com';
   static const _chordsPrefix = 'cgdi_chords_v2_';
   static const _scorePrefix = 'cgdi_custom_score_';
@@ -58,6 +60,7 @@ class HymnCustomizationService {
 
   /// Determina si el usuario actualmente autenticado tiene rol de Administrador
   static bool get isAdmin {
+    if (suppressAdminTools) return false;
     try {
       if (Firebase.apps.isEmpty) return _cachedRoleIsAdmin;
       final user = FirebaseAuth.instance.currentUser;

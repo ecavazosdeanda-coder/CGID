@@ -37,6 +37,8 @@ import '../../cult_picker_native.dart'
     as cult_picker;
 
 import '../admin/presentation/admin_gate_screen.dart';
+import '../admin/presentation/role_simulation_panel.dart';
+import '../tenant/providers/tenant_provider.dart';
 import '../admin/providers/auth_provider.dart';
 import '../../main.dart'
     show
@@ -898,6 +900,7 @@ class WorkspaceState extends ConsumerState<Workspace> {
                                 ],
                               ),
                             ),
+                          const RoleSimulationBanner(),
                           Expanded(
                             child: switch (tab) {
                               0 => home(isLoggedIn),
@@ -2639,7 +2642,9 @@ class WorkspaceState extends ConsumerState<Workspace> {
         planName.text.trim(),
         plan,
         churchName:
-            widget.prefs.getString('tenant_church_name') ?? globalChurchName,
+            (await ref.read(tenantProvider.future))?.name ??
+            widget.prefs.getString('tenant_church_name') ??
+            globalChurchName,
         metadata: ref.read(planProvider.notifier).metadataFor(activePlan),
       );
       await Printing.sharePdf(

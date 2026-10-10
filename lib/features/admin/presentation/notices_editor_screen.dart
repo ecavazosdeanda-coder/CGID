@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NoticesEditorScreen extends StatefulWidget {
-  const NoticesEditorScreen({super.key});
+  const NoticesEditorScreen({
+    super.key,
+    this.churchId,
+    this.migrateLegacyNotices = true,
+  });
+  final String? churchId;
+  final bool migrateLegacyNotices;
 
   @override
   State<NoticesEditorScreen> createState() => _NoticesEditorScreenState();
@@ -29,10 +35,15 @@ class _NoticesEditorScreenState extends State<NoticesEditorScreen> {
 
   Future<void> _loadNotices() async {
     final prefs = await SharedPreferences.getInstance();
-    final churchId = prefs.getString('selected_church_id') ?? 'unassigned';
+    final churchId =
+        widget.churchId ??
+        prefs.getString('selected_church_id') ??
+        'unassigned';
     _storageKey = 'local_notices_$churchId';
     final scoped = prefs.getStringList(_storageKey);
-    final legacy = prefs.getStringList('local_notices');
+    final legacy = widget.migrateLegacyNotices
+        ? prefs.getStringList('local_notices')
+        : null;
     if (scoped == null && legacy != null) {
       await prefs.setStringList(_storageKey, legacy);
     }

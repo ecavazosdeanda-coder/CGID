@@ -10,6 +10,7 @@ import '../../tenant/providers/tenant_provider.dart';
 import '../models/user_profile_model.dart';
 import '../providers/user_profile_provider.dart';
 import 'pastor_assignment_dialog.dart';
+import 'role_simulation_panel.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -234,9 +235,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final musicAccent = dark ? Colors.amber.shade200 : Colors.amber.shade900;
     final profileAsync = ref.watch(userProfileProvider);
     final profile = profileAsync.value;
+    final simulation = ref.watch(activeRoleSimulationProvider);
 
     // Si es pastor, proyeccionista o músico con iglesia asignada, asegurar sincronización del tenant local
-    if (profile != null && !profile.isAdmin && profile.churchId != null) {
+    if (simulation == null &&
+        profile != null &&
+        !profile.isAdmin &&
+        profile.churchId != null) {
       if (_currentChurch != profile.churchName) {
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           final prefs = await SharedPreferences.getInstance();
@@ -280,6 +285,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ],
         ),
         const SizedBox(height: 16),
+
+        const RoleSimulationPanel(),
 
         // Banner de Rol y Perfil de Usuario
         if (profile != null) ...[
@@ -409,7 +416,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                       !profile.isAdmin &&
                                       profile.churchId != null)
                                   ? 'Santuario: ${profile.churchName ?? "Iglesia Asignada"}'
-                                  : 'Santuario: $_currentChurch',
+                                  : 'Santuario: ${simulation?.church.name ?? _currentChurch}',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: colors.onSurfaceVariant,
@@ -617,7 +624,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                                       !profile.isAdmin &&
                                       profile.churchId != null)
                                   ? 'Congregación: ${profile.churchName ?? "Iglesia Asignada"}'
-                                  : 'Congregación: $_currentChurch',
+                                  : 'Congregación: ${simulation?.church.name ?? _currentChurch}',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: colors.onSurfaceVariant,
@@ -930,7 +937,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const NoticesEditorScreen(),
+                              builder: (_) => NoticesEditorScreen(
+                                churchId: simulation?.church.id,
+                                migrateLegacyNotices: simulation == null,
+                              ),
                             ),
                           );
                         },
@@ -1347,7 +1357,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       ? (profile.churchId != null
                             ? 'Esta cuenta ministerial solo tiene permisos asignados sobre: ${profile.churchName}'
                             : '⚠️ Sin iglesia asignada por la Conferencia General. Contacta al Administrador.')
-                      : 'Configuración actual: $_currentChurch',
+                      : 'Configuración actual: ${simulation?.church.name ?? _currentChurch}',
                   style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
                 const SizedBox(height: 16),

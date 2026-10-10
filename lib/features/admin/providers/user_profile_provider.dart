@@ -5,10 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/user_profile_model.dart';
+import '../../tenant/models/church_model.dart';
+import '../../hymnal/services/hymn_customization_service.dart';
 import 'auth_provider.dart';
 
 /// Stream del perfil del usuario actualmente autenticado
-final userProfileProvider = StreamProvider<UserProfile?>((ref) {
+final authenticatedUserProfileProvider = StreamProvider<UserProfile?>((ref) {
   final authUser = ref.watch(authStateProvider).value;
   if (authUser == null) {
     return Stream.value(null);
@@ -44,6 +46,83 @@ final userProfileProvider = StreamProvider<UserProfile?>((ref) {
 
     return UserProfile.fromFirestore(snapshot.data()!, authUser.uid);
   });
+});
+
+/// Solo memoria de esta sesión/dispositivo; nunca se escribe en Firebase.
+class RoleSimulation {
+  const RoleSimulation({
+    required this.ownerUid,
+    required this.role,
+    required this.church,
+  });
+  final String ownerUid;
+  final String role;
+  final ChurchModel church;
+  static const roles = ['pastor', 'colaborador', 'proyeccionista', 'musico'];
+}
+
+final roleSimulationProvider =
+    NotifierProvider<RoleSimulationNotifier, RoleSimulation?>(
+      RoleSimulationNotifier.new,
+    );
+
+class RoleSimulationNotifier extends Notifier<RoleSimulation?> {
+  @override
+  RoleSimulation? build() {
+    ref.onDispose(() => HymnCustomizationService.suppressAdminTools = false);
+    ref.listen(authenticatedUserProfileProvider, (_, next) {
+      final profile = next.value;
+      if (state != null &&
+          (profile?.isAdmin != true || profile?.uid != state?.ownerUid)) {
+        stop();
+      }
+    });
+    return null;
+  }
+
+  void start(String role, ChurchModel church) {
+    final profile = ref.read(authenticatedUserProfileProvider).value;
+    if (profile?.isAdmin != true) {
+      throw StateError('Solo administradores pueden simular perfiles.');
+    }
+    if (!RoleSimulation.roles.contains(role) || church.id.trim().isEmpty) {
+      throw ArgumentError('Selecciona un rol válido y una iglesia.');
+    }
+    state = RoleSimulation(ownerUid: profile!.uid, role: role, church: church);
+    HymnCustomizationService.suppressAdminTools = true;
+  }
+
+  void stop() {
+    state = null;
+    HymnCustomizationService.suppressAdminTools = false;
+  }
+}
+
+final activeRoleSimulationProvider = Provider<RoleSimulation?>((ref) {
+  final actual = ref.watch(authenticatedUserProfileProvider).value;
+  final simulation = ref.watch(roleSimulationProvider);
+  return actual?.isAdmin == true && actual?.uid == simulation?.ownerUid
+      ? simulation
+      : null;
+});
+
+/// Perfil efectivo para la interfaz; el perfil real siempre queda separado.
+final userProfileProvider = StreamProvider<UserProfile?>((ref) {
+  final actual = ref.watch(authenticatedUserProfileProvider);
+  final simulation = ref.watch(activeRoleSimulationProvider);
+  return actual.when(
+    data: (profile) => Stream.value(
+      simulation == null
+          ? profile
+          : profile?.copyWith(
+              role: simulation.role,
+              churchId: simulation.church.id,
+              churchName: simulation.church.name,
+            ),
+    ),
+    loading: () => const Stream.empty(),
+    error: (error, stack) => Stream.error(error, stack),
+  );
 });
 
 /// Future de todos los usuarios registrados (con timeout para evitar congelamiento de UI)

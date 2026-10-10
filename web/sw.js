@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cgdi-v2-cache-2.0.0-rc.1-auth-verification';
+const CACHE_NAME = 'cgdi-v2-cache-2.0.0-rc.1-role-simulation';
 
 // Recursos estáticos iniciales a cachear para asegurar funcionamiento offline
 const PRECACHE_ASSETS = [
